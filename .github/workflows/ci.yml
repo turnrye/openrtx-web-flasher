@@ -1,0 +1,145 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Checks, builds and tests the site, then publishes it:
+#   push to main, nightly, manual  -> https://<owner>.github.io/<repo>/
+#   pull request from this repo    -> https://<owner>.github.io/<repo>/pr-preview/pr-<n>/
+#   pull request from a fork       -> built and tested; download the "site" artifact
+# The nightly run only refreshes the bundled firmware (new releases, latest master build).
+#
+# ci/build.sh enforces formatting (Prettier), lint (ESLint, stylelint, shellcheck), types
+# and unit tests; ci/e2e.sh runs the browser tests. All of it is shared with
+# .forgejo/workflows/ci.yml. Actions are pinned to commits; Dependabot proposes updates.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      # Everything the build downloads lives in ~/.cache/openrtx-web-flasher (scripts/cache.mjs).
+      # The caches below keep it between runs, so a run does not depend on those servers being up.
+      - name: Restore pinned downloads and the cskburn build
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/openrtx-web-flasher/files
+            ~/.cache/openrtx-web-flasher/cskburn
+            ~/.cache/openrtx-web-flasher/cskburn-wasm
+            ~/.cache/openrtx-web-flasher/tools
+          key: vendor-${{ runner.os }}-${{ hashFiles('vendor.json', 'scripts/vendor.mjs', 'tools/cskburn-wasm/**') }}
+          restore-keys: vendor-${{ runner.os }}-
+      - name: Work out the other cache keys
+        id: keys
+        run: ci/cache-keys.sh
+      - name: Restore Emscripten (only when cskburn has to be compiled)
+        if: ${{ steps.keys.outputs.needs_emsdk == 'true' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/openrtx-web-flasher/emsdk
+          key: emsdk-${{ runner.os }}-${{ steps.keys.outputs.emsdk }}
+      - name: Restore downloaded firmware
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/openrtx-web-flasher/firmware
+          key: firmware-${{ runner.os }}-${{ steps.keys.outputs.week }}
+          restore-keys: firmware-${{ runner.os }}-
+      - name: Restore the test browser
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Vendor, check, mirror firmware, test and build
+        run: ci/build.sh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # The commit the page says it was built from: the branch's, not the merge commit CI checks out.
+          BUILD_ID: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Browser tests against simulated radios
+        run: ci/e2e.sh
+      - name: Keep the built site
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: site
+          path: dist
+          include-hidden-files: true
+          retention-days: 14
+      - name: Keep the browser test report
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 14
+
+  publish:
+    needs: build
+    # Fork pull requests get a read-only token, so they cannot publish a preview.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: pages-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: site
+          path: dist
+      - name: Publish the site
+        if: github.event_name != 'pull_request'
+        run: ci/publish-pages-branch.sh site dist
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Publish the preview
+        if: github.event_name == 'pull_request'
+        run: |
+          ci/publish-pages-branch.sh preview "$NUMBER" dist
+          ci/comment-preview.sh "$NUMBER" "https://${GITHUB_REPOSITORY_OWNER}.github.io/${GITHUB_REPOSITORY#*/}/pr-preview/pr-${NUMBER}/"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
+
+  remove-preview:
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    concurrency:
+      group: pages-branch
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: ci/publish-pages-branch.sh remove "$NUMBER"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.pull_request.number }}
