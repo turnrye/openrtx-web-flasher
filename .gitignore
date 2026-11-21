@@ -1,6 +1,8 @@
 node_modules/
 dist/
-public/firmware/
+# Everything in public/ is produced at build time: scripts/vendor.mjs and scripts/mirror-firmware.mjs.
+public/
+.vendor/
 test-results/
 playwright-report/
 *.local

@@ -1,0 +1,130 @@
+{
+  "comment": "Everything this project takes from elsewhere that is not an npm package. scripts/vendor.mjs fetches each entry at the pinned commit and refuses a file whose checksum differs. Change a pin, then run `npm run vendor -- --update` to record the new checksums.",
+  "emsdk": {
+    "repo": "https://github.com/emscripten-core/emsdk.git",
+    "version": "6.0.10",
+    "commit": "a2b92777574c2feda07994cd4f1079a3dfc151f8"
+  },
+  "cskburn": {
+    "repo": "https://github.com/LISTENAI/cskburn.git",
+    "commit": "e00ec448225387c8a0788f93e86d0f8c9e7b3819",
+    "license": "Apache-2.0",
+    "use": "Compiled to WebAssembly for the Retevis C62 flasher (public/cskburn/)."
+  },
+  "files": {
+    "device-mockups.svg": {
+      "url": "https://raw.githubusercontent.com/ranguli/openrtx-device-mockups/6f4f0d2bdffde0499afc43d84b61bc966dc78e3b/device-mockups.svg",
+      "sha256": "47a17af9136ce6d63d31e8b9f3e19b5fd89bebdedb8e5a68c221d419ef58f3e5",
+      "license": "GPL-3.0",
+      "use": "Radio drawings by Joshua Murphy (ranguli, VO1RFX): CS7000 and MD-380, and the style the other drawings follow."
+    },
+    "openrtx_logo.svg": {
+      "url": "https://raw.githubusercontent.com/OpenRTX/openrtx.github.io/a939a79474fb2e8772820dedcd4a1aa4b931991b/_media/openrtx_logo.svg",
+      "sha256": "9f4c00932038bb106d3c311a0d1f158f4e404915aaef75790c47734f7e6c7f89",
+      "license": "OpenRTX project logo",
+      "use": "Page header and icon."
+    },
+    "screen-colour.png": {
+      "url": "https://raw.githubusercontent.com/turnrye/OpenRTX/8ec91b719886ab30bbf285ead4de246fa118dc43/tests/e2e/golden/theme/default/theme_vfo.png",
+      "sha256": "6197b86b87ac4effd47c83ec552ba85f0801b40f5c890af51efe8306b4c5bb69",
+      "license": "GPL-3.0-or-later",
+      "use": "What the screen of a colour-display radio shows in the drawings."
+    },
+    "screen-mono.png": {
+      "url": "https://raw.githubusercontent.com/turnrye/OpenRTX/8ec91b719886ab30bbf285ead4de246fa118dc43/tests/e2e/golden/theme/smallscreen/theme_vfo.png",
+      "sha256": "fd94dcd00d4b0d1a7b6706ce33aac12146d6825039f65df219a3bdc20ee17e82",
+      "license": "GPL-3.0-or-later",
+      "use": "What the screen of a monochrome-display radio shows in the drawings."
+    }
+  },
+  "tools": {
+    "comment": "Programs the checks run that do not come from npm. Downloaded once per machine into the cache.",
+    "shellcheck": {
+      "version": "v0.11.0",
+      "license": "GPL-3.0",
+      "builds": {
+        "linux-x64": {
+          "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz",
+          "sha256": "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.aarch64.tar.xz",
+          "sha256": "12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588"
+        },
+        "darwin-x64": {
+          "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.x86_64.tar.xz",
+          "sha256": "3c89db4edcab7cf1c27bff178882e0f6f27f7afdf54e859fa041fca10febe4c6"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.darwin.aarch64.tar.xz",
+          "sha256": "56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79"
+        }
+      }
+    }
+  },
+  "ports": {
+    "comment": "Code that was written by porting or following another project. Not fetched; recorded so a later change upstream can be compared. The commit is the upstream revision that was read.",
+    "src/flash/tyt.ts": {
+      "from": "https://github.com/v0l/radio_tool",
+      "commit": "e0a01ce44ab9",
+      "files": "src/tyt_radio.cpp, src/tyt_dfu.cpp, src/dfu.cpp, src/tyt_fw.cpp",
+      "license": "GPL-3.0-or-later",
+      "note": "The last revision with the C++ sources; upstream dropped them on 2026-11-02."
+    },
+    "src/flash/gd77.ts": {
+      "from": "https://github.com/OpenRTX/OpenRTX",
+      "commit": "20b4088d2",
+      "files": "scripts/gd-77_firmware_loader.py",
+      "license": "GPL-2.0-or-later",
+      "note": "Copyright Roger VK3KYY. Used under GPL version 3 or later. radio_tool was a cross-reference."
+    },
+    "src/sim/gd77.ts": {
+      "from": "https://github.com/OpenRTX/OpenRTX",
+      "commit": "20b4088d2",
+      "files": "scripts/gd-77_firmware_loader.py, scripts/bin2sgl.py",
+      "license": "GPL-2.0-or-later, BSD-3-Clause",
+      "note": "Byte arrays copied from the loader; .sgl fixtures built the way bin2sgl.py (Copyright 2019 Kai Ludwig DG4KLU) does, with a stand-in cipher table."
+    },
+    "src/flash/rt4d.ts": {
+      "from": "https://github.com/fagci/RT-4D-python-flasher",
+      "commit": "32bf152",
+      "files": "rt_4d_flasher.py",
+      "license": "GPL-3.0"
+    },
+    "src/flash/rt950.ts": {
+      "from": "https://github.com/Marko13-dev/OpenRTX",
+      "commit": "7c8ac095b3ae",
+      "files": "scripts/rt950_flash.py, scripts/rt950_btf.py, platform/targets/rt950pro/README.md",
+      "license": "GPL-3.0-or-later",
+      "note": "Branch rt950pro. rt950_flash.py has no licence line of its own; the other two files and the project are GPL-3.0-or-later. The protocol was followed, not the code."
+    },
+    "src/flash/dfu.ts": {
+      "from": "https://github.com/devanlai/webdfu",
+      "commit": "56d5d1d96158",
+      "files": "dfu.js, dfuse.js",
+      "license": "ISC",
+      "note": "Two ideas only: reading the configuration descriptor by hand, and the grammar of the DfuSe memory-layout string. No code taken."
+    },
+    "src/backup/tyt-stock.ts": {
+      "from": "https://github.com/RadioFoundry/RadioFoundry",
+      "commit": "e51c5e81cdfc",
+      "files": "site/static/js/flasher/origbackup.js, origversion.js, fake.js; docs/spec/hardware-md9600.md",
+      "license": "MIT",
+      "note": "Codeplug ranges of the other models from dmrconfig f9bc00c4abc5 (BSD-3-Clause) and qdmr fb9c96af53f6 (GPL-3.0-or-later)."
+    },
+    "src/backup/gd77-stock.ts": {
+      "from": "https://github.com/sergev/dmrconfig",
+      "commit": "f9bc00c4abc5",
+      "files": "gd77.c, dm1801.c, hid.c, hid-libusb.c",
+      "license": "BSD-3-Clause",
+      "note": "Also follows qdmr fb9c96af53f6 (GPL-3.0-or-later): lib/radioddity_interface.cc. Facts only from OpenGD77CPS, which has no licence."
+    },
+    "src/backup/rt4d-stock.ts": {
+      "from": "https://github.com/DualTachyon/rt-4d-spiflash-cli",
+      "commit": "0cfeddda9dc3",
+      "files": "RT-4D-UART.cs, Program.cs",
+      "license": "Apache-2.0",
+      "note": "Reply header check from radtel-rt-890-oefw ec8e053e8e3e (Apache-2.0), app/uart.c."
+    }
+  }
+}

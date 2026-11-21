@@ -2,7 +2,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { flashCsk, readCsk, readCskChipId, type CskOptions } from './csk.ts';
+import { backupCsk, flashCsk, readCsk, readCskChipId, type CskOptions } from './csk.ts';
 import { quietContext, type Progress } from './types.ts';
 import { SimCsk6 } from '../sim/csk6.ts';
 
@@ -39,9 +39,12 @@ describe('cskburn (C62) over a simulated serial port', () => {
     );
     expect(Buffer.compare(dev.flash.subarray(0, app.length), app)).toBe(0);
     expect(Buffer.compare(dev.flash.subarray(0x100000, 0x100000 + dsp.length), dsp)).toBe(0);
-    // The RAM stub cskburn uploaded is its bundled CSK6 burner, unchanged.
-    const burner = readFileSync(new URL('../../tools/cskburn-wasm/burner_venus.sha256', import.meta.url), 'utf8');
-    expect(createHash('sha256').update(Uint8Array.from(dev.ram)).digest('hex')).toBe(burner.trim());
+    // The RAM stub cskburn uploaded is the CSK6 burner of the pinned cskburn, unchanged: the
+    // vendor step records that file's checksum next to the build.
+    const build = JSON.parse(
+      readFileSync(new URL('../../public/cskburn/build.json', import.meta.url), 'utf8'),
+    ) as { burnerVenusSha256: string };
+    expect(createHash('sha256').update(Uint8Array.from(dev.ram)).digest('hex')).toBe(build.burnerVenusSha256);
     expect(dev.trace.join(', ')).toMatch(
       /^SYNC x1, MEM_BEGIN x1, MEM_DATA x\d+, MEM_END x1, SYNC x1, CHANGE_BAUD x1, SYNC x1, FLASH_ID x1, FLASH_BEGIN x1, FLASH_DATA x76, FLASH_END x1, MD5 x1, FLASH_BEGIN x1, FLASH_DATA x45, FLASH_END x1, MD5 x1$/,
     );
@@ -64,11 +67,11 @@ describe('cskburn (C62) over a simulated serial port', () => {
     await expect(flashCsk(port, [{ address: 0, data: app }], quietContext(), options)).rejects.toThrow();
   });
 
-  it('fails when the radio is not in burn mode', async () => {
+  it('fails when the radio is not in flashing mode', async () => {
     const { port } = sim({ silent: true });
     const lines: string[] = [];
     await expect(readCskChipId(port, quietContext({ log: (l) => lines.push(l) }), options)).rejects.toThrow(
-      /burn mode/,
+      /flashing mode/,
     );
   }, 30000);
 
@@ -78,5 +81,63 @@ describe('cskburn (C62) over a simulated serial port', () => {
     const got = await readCsk(port, 0x2000, 0x100, quietContext(), options);
     expect(Array.from(got.subarray(0, 8))).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
     expect(got.length).toBe(0x100);
+  });
+
+  it('backs up a whole flash, checked against the chip, with progress', async () => {
+    const { dev, port } = sim({ flashSize: 96 * 1024 });
+    dev.flash.set(randomBytes(dev.flash.length));
+    const seen: Progress[] = [];
+    const got = await readCsk(
+      port,
+      0,
+      dev.flash.length,
+      quietContext({ progress: (p) => seen.push(p) }),
+      options,
+    );
+    expect(Buffer.compare(got, dev.flash)).toBe(0);
+    expect(dev.trace.join(', ')).toContain('MD5 x1');
+    expect(seen[seen.length - 1]).toEqual({ phase: 'read', done: dev.flash.length, total: dev.flash.length });
+    expect(seen.filter((p) => p.phase === 'read').length).toBeGreaterThan(5);
+  });
+
+  it('fails the backup when what was read does not match the chip', async () => {
+    const { dev, port } = sim({ flashSize: 16 * 1024, corruptReads: true });
+    dev.flash.set(randomBytes(dev.flash.length));
+    await expect(readCsk(port, 0, dev.flash.length, quietContext(), options)).rejects.toThrow();
+  });
+
+  it('stops a backup as soon as the chip turns out to be one that is already backed up', async () => {
+    const { dev, port } = sim({ flashSize: 96 * 1024 });
+    dev.flash.set(randomBytes(dev.flash.length));
+    const lines: string[] = [];
+    const asked: string[] = [];
+    const result = await backupCsk(
+      port,
+      dev.flash.length,
+      quietContext({ log: (l) => lines.push(l) }),
+      options,
+      (id) => {
+        asked.push(id);
+        return true;
+      },
+    );
+    expect(result).toEqual({ known: 'C620240900065701' });
+    expect(asked).toEqual(['C620240900065701']);
+    // The chip was identified and nothing of its flash was read.
+    expect(dev.trace.join(', ')).not.toContain('READ_FLASH');
+    expect(lines.join('\n')).toContain('already has a backup');
+    // Cut off from the radio, cskburn reports errors; none of them reaches the log.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(lines.at(-1)).toContain('already has a backup');
+    expect(lines.join('\n')).not.toContain('ERROR');
+  });
+
+  it('reads the whole flash and reports the chip ID when the chip is not a known one', async () => {
+    const { dev, port } = sim({ flashSize: 96 * 1024 });
+    dev.flash.set(randomBytes(dev.flash.length));
+    const result = await backupCsk(port, dev.flash.length, quietContext(), options, () => false);
+    if ('known' in result) throw new Error('the read stopped although the chip is not known');
+    expect(result.chipId).toBe('C620240900065701');
+    expect(Buffer.compare(result.data, dev.flash)).toBe(0);
   });
 });

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * @file serial_web.c
  * libserial backend for the browser: forwards every call to Module.cskSerial

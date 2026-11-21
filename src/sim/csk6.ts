@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * Simulated LISTENAI CSK6 (Retevis C62) in burn mode, as a Web Serial port.
+ * Simulated LISTENAI CSK6 (Retevis C62) in flashing mode, as a Web Serial port.
  *
  * Speaks the SLIP-framed protocol cskburn uses with the boot ROM and its RAM burner,
  * keeps a flash image, and records the commands it saw. It answers only well-formed
@@ -46,10 +46,14 @@ export interface SimCsk6Options {
   flashSize?: number;
   /** MD5 over a byte range; injected because Node and browsers differ. */
   md5: (bytes: Uint8Array) => Uint8Array | Promise<Uint8Array>;
-  /** When true the chip never answers, like a radio that is not in burn mode. */
+  /** When true the chip never answers, like a radio that is not in flashing mode. */
   silent?: boolean;
   /** Corrupt this flash offset after writing, so verification must fail. */
   corruptAt?: number;
+  /** Hand back wrong bytes when flash is read, so a backup must fail its check. */
+  corruptReads?: boolean;
+  /** How long the chip takes to answer each command; 0 when left out. */
+  replyDelayMs?: number;
 }
 
 /** Simulated C62 behind a USB serial adapter. */
@@ -149,7 +153,7 @@ export class SimCsk6 {
     setTimeout(() => {
       this.rx.push(...slipEncode(body));
       this.notify?.();
-    }, 0);
+    }, this.options.replyDelayMs ?? 0);
   }
 
   /** Records `name` in the run-length encoded trace. */
@@ -187,8 +191,11 @@ export class SimCsk6 {
         const at = this.flashBase + u32(1) * this.flashBlock;
         if (at + chunk.length > this.flash.length) return;
         this.flash.set(chunk, at);
-        if (this.options.corruptAt !== undefined && this.options.corruptAt >= at &&
-            this.options.corruptAt < at + chunk.length) {
+        if (
+          this.options.corruptAt !== undefined &&
+          this.options.corruptAt >= at &&
+          this.options.corruptAt < at + chunk.length
+        ) {
           this.flash[this.options.corruptAt] ^= 0xff;
         }
         return this.reply(op);
@@ -202,8 +209,12 @@ export class SimCsk6 {
         return this.reply(op, 0, Uint8Array.from([0xc6, 0x20, 0x24, 0x09, 0x00, 0x06, 0x57, 0x01]));
       case 0x13: // MD5: address, size
         return this.reply(op, 0, await this.options.md5(this.flash.subarray(u32(0), u32(0) + u32(1))));
-      case 0x0e: // READ_FLASH: address, size
-        return this.reply(op, 0, this.flash.slice(u32(0), u32(0) + u32(1)));
+      case 0x0e: {
+        // READ_FLASH: address, size
+        const bytes = this.flash.slice(u32(0), u32(0) + u32(1));
+        if (this.options.corruptReads && bytes.length > 0) bytes[0] ^= 0xff;
+        return this.reply(op, 0, bytes);
+      }
       default:
         return this.reply(op);
     }

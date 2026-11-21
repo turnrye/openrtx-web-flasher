@@ -7,7 +7,7 @@
  */
 
 /** What the flasher is doing right now. */
-export type Phase = 'connect' | 'erase' | 'write' | 'verify' | 'done';
+export type Phase = 'connect' | 'read' | 'erase' | 'write' | 'verify' | 'done';
 
 /** Progress report: `done` of `total` bytes (or steps) in `phase`. */
 export interface Progress {
