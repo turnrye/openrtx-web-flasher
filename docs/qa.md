@@ -96,6 +96,19 @@ and radio). Not built yet.
   the report. Nothing marks a radio as checked automatically. From then on the page
   stops asking for successes on that radio.
 
+## The command line
+
+`cli/` runs the same flashers and readers from Node, so layer 1 covers their protocols.
+Its own tests (`cli/*.test.ts`, part of `npm test`) run whole commands against the
+simulators, put its USB, serial and HID layers between the flashers and the simulators,
+and run the bundle that npx runs as a process of its own.
+
+Layer 3 has not been run with it for any radio. It reaches a radio through other
+libraries than Chrome does, and the C62 through LISTENAI's release of cskburn instead of
+the WebAssembly build, so a radio checked with the page is not checked with the command
+line. Until it is, the command line asks for `--experimental`. A bench check made with
+it is recorded in `CHECKED` in `cli/main.ts`, next to the line in `docs/verification.md`.
+
 ## Current state
 
 | Radio                                   | Layers 1–2 | Bench                                                               |

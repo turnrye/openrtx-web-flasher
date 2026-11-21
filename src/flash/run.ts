@@ -22,11 +22,16 @@ const DFU_FILTERS: USBDeviceFilter[] = [
 const GD77_FILTERS: HIDDeviceFilter[] = [{ vendorId: 0x15a2, productId: 0x0073 }];
 
 /** Loads the cskburn WebAssembly module that ships next to the page. */
-const loadCskburn: CskModuleLoader = async () => {
+let loadCskburn: CskModuleLoader = async () => {
   const url = new URL('cskburn/cskburn.mjs', document.baseURI).href;
   const module = (await import(/* @vite-ignore */ url)) as { default: Awaited<ReturnType<CskModuleLoader>> };
   return module.default;
 };
+
+/** Replaces where cskburn comes from. The command line has no page to load it next to, so it brings its own. */
+export function setCskburnLoader(loader: CskModuleLoader): void {
+  loadCskburn = loader;
+}
 
 /** A device the user picked, ready for `flashDevice`. */
 export type PickedDevice =

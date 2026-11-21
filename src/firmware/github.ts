@@ -84,7 +84,7 @@ export function parseQuery(repoText: string, ref: string, defaultRepo: string): 
 }
 
 /** Calls the GitHub API and returns the JSON body, with errors a person can act on. */
-async function api<T>(path: string, fetcher: Fetcher): Promise<T> {
+export async function api<T>(path: string, fetcher: Fetcher): Promise<T> {
   const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
   let response: Response;
   try {

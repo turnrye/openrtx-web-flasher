@@ -60,6 +60,33 @@
           "sha256": "56affdd8de5527894dca6dc3d7e0a99a873b0f004d7aabc30ae407d3f48b0a79"
         }
       }
+    },
+    "cskburn": {
+      "version": "v1.32.0-alpha.5",
+      "license": "Apache-2.0",
+      "use": "LISTENAI's own build of cskburn, which the command line runs for the Retevis C62 (cli/cskburn.ts). The release of the commit pinned above, so it is the same program the page runs as WebAssembly.",
+      "builds": {
+        "linux-x64": {
+          "url": "https://github.com/LISTENAI/cskburn/releases/download/v1.32.0-alpha.5/cskburn-linux-x64.tar.xz",
+          "sha256": "421dac48c310c51868de1138f251ed168b8344896a0c843f0c8eefe115671c18"
+        },
+        "linux-arm64": {
+          "url": "https://github.com/LISTENAI/cskburn/releases/download/v1.32.0-alpha.5/cskburn-linux-arm64.tar.xz",
+          "sha256": "a9dd0e507ba8f87f949236491b4204e14349a8f6c4487bf3024a67f9250efe2f"
+        },
+        "darwin-x64": {
+          "url": "https://github.com/LISTENAI/cskburn/releases/download/v1.32.0-alpha.5/cskburn-darwin-x64.tar.xz",
+          "sha256": "a6ea10a93f1ebafafb009674a21cfcfe7c7316520c4d4228d0a69fd4c34913ea"
+        },
+        "darwin-arm64": {
+          "url": "https://github.com/LISTENAI/cskburn/releases/download/v1.32.0-alpha.5/cskburn-darwin-arm64.tar.xz",
+          "sha256": "a3d0c75944419f02e51f7dc516b8e2cb7ae665ebe58ea3bf377371b87f60406f"
+        },
+        "win32-x64": {
+          "url": "https://github.com/LISTENAI/cskburn/releases/download/v1.32.0-alpha.5/cskburn-win32-x64.zip",
+          "sha256": "c2d29e9dca2c0ed6900ab8b7c5fdea75b2e6cd05e590c12712bbea5eebea877f"
+        }
+      }
     }
   },
   "ports": {

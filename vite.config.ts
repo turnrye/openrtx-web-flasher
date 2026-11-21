@@ -38,5 +38,5 @@ export default defineConfig({
     sourcemap: true,
     rolldownOptions: { input: ['index.html', 'licences.html'] },
   },
-  test: { include: ['src/**/*.test.ts'], environment: 'node' },
+  test: { include: ['src/**/*.test.ts', 'cli/**/*.test.ts'], environment: 'node' },
 });

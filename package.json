@@ -7,12 +7,20 @@
   "engines": {
     "node": ">=22.12"
   },
+  "bin": {
+    "openrtx-flasher": "cli/dist/openrtx-flasher.mjs"
+  },
+  "files": [
+    "cli/dist/"
+  ],
   "scripts": {
+    "prepare": "vite build --config cli/vite.config.ts",
     "vendor": "node scripts/vendor.mjs",
     "mirror": "node scripts/mirror-firmware.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "cli": "node cli/dist/openrtx-flasher.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
@@ -46,5 +54,10 @@
     "typescript-eslint": "^8.73.0",
     "vite": "^8.3.8",
     "vitest": "^5.1.1"
+  },
+  "optionalDependencies": {
+    "node-hid": "^3.4.0",
+    "serialport": "^13.0.0",
+    "usb": "^3.3.1"
   }
 }

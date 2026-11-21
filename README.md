@@ -98,6 +98,49 @@ successes and only offers to report a problem.
 In-browser flashing needs Chrome or Edge on a computer. Firefox and Safari get the
 downloads and instructions.
 
+## From a terminal
+
+The same steps without a browser, run straight from this repository. Nothing is
+published to npm:
+
+    npx github:turnrye/openrtx-web-flasher radios
+    npx github:turnrye/openrtx-web-flasher backup c62 --port /dev/ttyUSB0
+    npx github:turnrye/openrtx-web-flasher flash c62 588 --port /dev/ttyUSB0
+
+npm 12 does not fetch git addresses unless told to: `npx --allow-git=all github:…`.
+The first run takes a little longer, because npm builds the program from the source.
+
+| Command                    | What it does                                         |
+| -------------------------- | ---------------------------------------------------- |
+| `radios [radio]`           | the radios, or what one of them needs                |
+| `firmware`                 | the releases and the development build               |
+| `fetch <radio> <firmware>` | saves a radio's firmware files                       |
+| `backup <radio>`           | reads the radio into a backup zip, the page's format |
+| `flash <radio> <firmware>` | writes firmware, or a backup zip, to the radio       |
+| `ports`                    | the serial ports, for `--port` (RT-4D, RT-950, C62)  |
+
+`<firmware>` is `release`, a past release (`v0.4.5`), `master` (the development build), a
+pull request number, a branch, `owner:branch` for a fork, or a file: firmware, a CI zip,
+or a backup zip to restore. Node is not held to a browser's rules, so all of it is
+downloaded for you. Listing and release files need no login. GitHub gives CI builds to
+logged-in users only: with `GITHUB_TOKEN` set they come from GitHub, without it through
+nightly.link.
+
+- It runs the page's flashers, readers, catalogue and backup format, and keeps its
+  safeguards. It asks before it writes (`--yes` skips that), and a radio in the wrong
+  mode or a file for another radio is refused before anything is sent.
+- **Not checked on any real radio yet.** The radios marked as checked were checked from
+  Chrome; the command line reaches them through other USB, serial and HID libraries. So
+  every radio asks for `--experimental` until someone runs the bench check with it.
+- `backup` stops early when `--out` already holds a backup of the radio that is
+  connected, as the page does; `--again` reads it anyway.
+- `--sim` runs any command against the simulated radios, as `?sim=1` does on the page.
+- The C62 runs LISTENAI's own release of cskburn, the same commit the page compiles to
+  WebAssembly. It is downloaded once and checked against `vendor.json`; `--cskburn`
+  names another one. There are builds for Linux and macOS (x64, arm64) and Windows x64.
+- On Windows a USB radio needs the WinUSB driver (Zadig); on Linux, udev rules that let
+  you open the device.
+
 ## Develop
 
     npm ci
@@ -106,6 +149,7 @@ downloads and instructions.
     npm run dev         # http://localhost:5173, add ?sim=1 for simulated radios
     npm run check       # format, lint, types and unit tests: what CI enforces
     npm run build && npm run e2e    # browser tests against the built site
+    npm run cli -- radios           # the command line, as `npm ci` last built it
 
 `?sim=1` swaps real devices for simulated ones, so the whole flow can be tried without
 a radio. `?sim=fail` simulates radios that do not answer, `?sim=protected` STM32 radios
@@ -129,6 +173,12 @@ match, and builds what needs building into `public/` (not in git):
 - **The OpenRTX logo** and two **screenshots of the OpenRTX UI** for the drawings'
   screens.
 - **shellcheck**, the one checker that is not an npm package.
+- **cskburn as LISTENAI releases it**, for the command line. It is not part of the build:
+  the command line downloads it into the cache the first time a C62 is flashed.
+
+The command line's three device libraries (`usb`, `serialport`, `node-hid`) are optional
+npm packages. The page does not use them, and a computer they cannot be installed on
+still builds and tests everything.
 
 Downloads are kept in a per-user cache, `~/.cache/openrtx-web-flasher` (or `$ORTX_CACHE`),
 shared by every clone and worktree. Once a pin has been fetched, building needs no
@@ -151,6 +201,7 @@ change it and run `npm run vendor -- --update`.
     src/feedback.ts      the report a user can send
     src/sim/             simulated radios, used by tests and ?sim=1
     src/ui/              the page
+    cli/                 the command line: devices, firmware and cskburn for Node
     tests/e2e/           browser tests against the simulated radios
     scripts/             vendor step, drawings, firmware mirror, screenshots
     ci/                  build, test and publish scripts shared by both forges

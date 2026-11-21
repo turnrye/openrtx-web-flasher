@@ -5,7 +5,17 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'public/', 'node_modules/', 'playwright-report/', 'test-results/', '.vendor/'] },
+  {
+    ignores: [
+      'dist/',
+      'cli/dist/',
+      'public/',
+      'node_modules/',
+      'playwright-report/',
+      'test-results/',
+      '.vendor/',
+    ],
+  },
   js.configs.recommended,
   {
     // TypeScript: the type-aware rules catch what matters most in a flasher, such as a
