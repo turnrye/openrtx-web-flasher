@@ -27,6 +27,7 @@ import { SimGd77 } from './gd77.ts';
 import { md5 } from './md5.ts';
 import { SimRt4dStock } from './rt4d-stock.ts';
 import { SimRt4d } from './rt4d.ts';
+import { SimRt950Stock } from './rt950-stock.ts';
 import { SimRt950 } from './rt950.ts';
 import { SimStm32Dfu } from './stm32dfu.ts';
 import { SimTytStock } from './tyt-stock.ts';
@@ -256,6 +257,18 @@ export function simulatedEnv(mode: string): DeviceEnv {
           if (!same(sim.flash.subarray(0, fw.length), fw)) problems.push('flash differs from the firmware');
           return problems;
         });
+      }
+      if (radio.method === 'rt950-serial' && purpose === 'backup') {
+        // In flashing mode the bootloader does not know the programming handshake.
+        const sim = new SimRt950Stock({ mode: fail || wrongMode ? 'silent' : 'stock' });
+        window.__ortxSimStock = {
+          radioId: radio.id,
+          id: null,
+          forbidden: () => [...sim.forbidden],
+          region: (_kind, address, size) => sim.flash.slice(address, address + size),
+          reads: () => sim.reads.length,
+        };
+        return sim;
       }
       if (radio.method === 'rt950-serial') {
         const sim = new SimRt950(fail ? { silent: true } : {});

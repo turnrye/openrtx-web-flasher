@@ -200,6 +200,11 @@ export function BackupStep(props: Props) {
         {backup.mode === 'normal' &&
           ' Put the radio in normal mode: switch it on without holding any keys, and connect the programming cable.'}
       </p>
+      {backup.notIncluded && (
+        <p data-testid="backup-not-included">
+          {backup.notIncluded.text} <a href={backup.notIncluded.url}>{backup.notIncluded.label}</a>.
+        </p>
+      )}
 
       {!supported ? (
         <div data-testid="backup-needs-browser">

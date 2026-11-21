@@ -53,12 +53,13 @@ The backup step reads everything the page can read from the radio, or is skipped
 
 - **C62, Module 17, CS7000, CS7000 Plus**: in flashing mode the page reads the whole
   flash. That backup can be flashed back from the page.
-- **MD-380, MD-UV380, MD-9600, DM-1701, GD-77, DM-1801, RT-4D**: their bootloaders
+- **MD-380, MD-UV380, MD-9600, DM-1701, GD-77, DM-1801, RT-4D, RT-950 Pro**: their bootloaders
   cannot be read, so the page reads the radio through its original firmware, in normal
   mode, before you put it in flashing mode: channels, settings and the factory data a
   repair would need. It only reads. The page cannot write this backup back; it is the
   record of what the radio held. The firmware itself comes back with the manufacturer's
-  file.
+  file. For the RT-950 Pro the read is the first 64 KB of the memory chip, which is as
+  far as its programming cable reaches, and the step links Radtel's firmware downloads.
 - **T-TWR Plus**: the drive holds a copy as `CURRENT.UF2`.
 
 The C62 takes two images from a build: the application (`zephyr.bin`) and the DSP image
@@ -77,7 +78,7 @@ The backup step starts by finding out which radio is connected. When this browse
 already holds a complete backup of that radio, the page says so and does not read it
 again; a new one can still be taken on request. The radio is told apart by its chip ID
 (C62), its unique ID (TYT radios), its USB serial number (STM32 radios) or a fingerprint
-of its calibration (RT-4D). The GD-77 and DM-1801 give theirs only at the end of their
+of its calibration (RT-4D, RT-950 Pro). The GD-77 and DM-1801 give theirs only at the end of their
 one-minute read, so they are read each time.
 
 The page calls a radio's two states flashing mode and normal mode, whatever its maker
@@ -246,6 +247,9 @@ Ported from or built on other people's work:
 - GD-77 and DM-1801 backup: the programming protocol as dmrconfig and qdmr speak it.
 - RT-4D backup: the read command of DualTachyon's
   [rt-4d-spiflash-cli](https://github.com/DualTachyon/rt-4d-spiflash-cli) (Apache-2.0).
+- RT-950 Pro backup: ported from the read path of `cps_flash.py` in Hertzz58's
+  [Radtel-RT950-Pro-Firmware](https://github.com/Hertzz58/Radtel-RT950-Pro-Firmware)
+  (GPL-3.0).
 - Radio drawings: [openrtx-device-mockups](https://github.com/ranguli/openrtx-device-mockups)
   by Joshua Murphy (GPL-3.0) for the CS7000 and MD-380; the rest follow his style.
 - Ubuntu font (Ubuntu Font Licence 1.0). OpenRTX logo from the OpenRTX website.

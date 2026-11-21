@@ -169,9 +169,7 @@ test('c62: an application file alone can be flashed, with a warning that the DSP
   expect(problems).toEqual([]);
 });
 
-test('rt950pro: flashes a .BTF the user brings, and says the page cannot back the radio up', async ({
-  page,
-}) => {
+test('rt950pro: flashes a .BTF the user brings', async ({ page }) => {
   // Shaped like the port's build: the model name the bootloader looks for at 0x3E0.
   const btf = Buffer.alloc(40 * 1024);
   for (let i = 0; i < btf.length; i++) btf[i] = (i * 29 + (i >> 9)) & 0xff;
@@ -186,7 +184,11 @@ test('rt950pro: flashes a .BTF the user brings, and says the page cannot back th
     .setInputFiles({ name: 'openrtx_rt950pro.BTF', mimeType: 'application/octet-stream', buffer: btf });
   await expect(step(page, 'step-firmware')).toHaveAttribute('data-mode', 'folded');
 
-  await expect(page.getByTestId('backup-copy')).toContainText('cannot be backed up from here');
+  // The firmware cannot be read, so the backup step says where Radtel publishes it.
+  await expect(page.getByTestId('backup-not-included').locator('a')).toHaveAttribute(
+    'href',
+    'https://www.radtels.com/pages/software-download',
+  );
   await skipToFlash(page);
   await expect(page.getByTestId('flash-notes')).toContainText("Radtel's update tool");
   await flash(page);

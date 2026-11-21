@@ -9,7 +9,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { choose, enter, flash, openStep, skipBackup, step, turnOnExperimental } from './flow.ts';
+import { choose, enter, flash, openStep, pickRadio, skipBackup, step, turnOnExperimental } from './flow.ts';
 
 /** One part as backup.json describes it. */
 interface Part {
@@ -203,6 +203,54 @@ test('rt4d: reads the first 4 MB of the memory chip, and the same radio gets the
   await page.getByTestId('backup-continue').click();
   await enter(page);
   await flash(page);
+});
+
+/** Opens the page on the RT-950 Pro with a made-up .BTF loaded, at the backup step. */
+async function toRt950Backup(page: Page, sim = '1'): Promise<void> {
+  const btf = Buffer.alloc(8 * 1024, 0x3c);
+  btf.write('RT-950      ', 0x3e0, 'latin1');
+  await page.goto(`?sim=${sim}`);
+  await pickRadio(page, 'rt950pro');
+  await page.getByTestId('open-other').click();
+  await page.getByTestId('open-local').click();
+  await page
+    .getByTestId('file-input')
+    .setInputFiles({ name: 'openrtx_rt950pro.BTF', mimeType: 'application/octet-stream', buffer: btf });
+  await expect(step(page, 'step-firmware')).toHaveAttribute('data-mode', 'folded');
+  // The backup is taken in normal mode, so it comes before flashing mode.
+  expect(await openStep(page)).toBe('step-backup');
+  await turnOnExperimental(page, 'step-backup');
+}
+
+test('rt950pro: reads the 64 KB the programming cable reaches, then the radio is flashed', async ({
+  page,
+}) => {
+  await toRt950Backup(page);
+  await expect(page.getByTestId('backup-unchecked')).toBeVisible();
+  const first = await backUp(page);
+  expect(first.manifest.parts).toHaveLength(1);
+  expect(first.manifest.parts[0]).toMatchObject({ kind: 'spi-flash', address: 0, size: 64 * 1024 });
+  expect(first.manifest.source).toBe('original-firmware');
+  expect(first.manifest.notes.join(' ')).toContain('radtels.com/pages/software-download');
+  await expectFaithful(page, first);
+
+  const second = await backUp(page);
+  await expectFaithful(page, second);
+  expect(second.manifest.radioId).toBe(first.manifest.radioId);
+
+  await page.getByTestId('backup-continue').click();
+  await enter(page);
+  await flash(page);
+});
+
+test('an RT-950 Pro in flashing mode gives no backup and sends the user nowhere', async ({ page }) => {
+  await toRt950Backup(page, 'wrongmode');
+  await page.getByTestId('backup').click();
+  await expect(page.getByTestId('backup-error')).toContainText('normal mode, not flashing mode', {
+    timeout: 30_000,
+  });
+  expect(await page.evaluate(() => window.__ortxSimStock!.forbidden())).toEqual([]);
+  await expect(step(page, 'step-enter')).toHaveAttribute('data-mode', 'waiting');
 });
 
 test('an RT-4D in flashing mode is not mistaken for one in normal mode', async ({ page }) => {

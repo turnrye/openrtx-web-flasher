@@ -68,7 +68,7 @@ describe('radio catalogue', () => {
       cs7000: 'flashing, restorable',
       cs7000p: 'flashing, restorable',
       rt4d: 'normal',
-      rt950pro: 'none',
+      rt950pro: 'normal',
       mod17: 'flashing, restorable',
       ttwrplus: 'copy',
       c62: 'flashing, restorable',
@@ -85,8 +85,8 @@ describe('radio catalogue', () => {
       const backup = backupFor(r);
       return backup.how === 'read' && backup.unchecked;
     }).map((r) => r.id);
-    // Only the MD-9600 read was measured on a radio.
-    expect(unchecked).toEqual(['md3x0', 'mduv3x0', 'dm1701']);
+    // Of the TYT radios only the MD-9600 read was measured; the RT-950 Pro's never was.
+    expect(unchecked).toEqual(['md3x0', 'mduv3x0', 'dm1701', 'rt950pro']);
     const c62 = backupFor(radioById('c62')!);
     expect(c62.how === 'read' && c62.endsFlashingMode).toBe(true);
   });

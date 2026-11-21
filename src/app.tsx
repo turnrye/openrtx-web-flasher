@@ -37,14 +37,11 @@ type StepId = 'radio' | 'firmware' | 'backup' | 'enter' | 'flash';
 /** Which steps are done; the flash step never is. */
 type Done = Record<Exclude<StepId, 'flash'>, boolean>;
 
-/**
- * True when the backup step comes before flashing mode: the radio is read in normal
- * mode, or the page cannot read it and the step says what to keep instead.
- */
+/** True when `radio` is backed up in normal mode, before it is put in flashing mode. */
 function backupFirst(radio: Radio | null): boolean {
   if (!radio) return true;
   const backup = backupFor(radio);
-  return backup.how === 'none' || (backup.how === 'read' && backup.mode === 'normal');
+  return backup.how === 'read' && backup.mode === 'normal';
 }
 
 /** The steps in the order they happen for `radio`. */

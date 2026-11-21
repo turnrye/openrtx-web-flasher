@@ -60,6 +60,13 @@ const PORTED: Credit[] = [
     use: 'The RT-950 Pro flasher follows the bootloader protocol in its rt950_flash.py.',
   },
   {
+    name: 'Radtel-RT950-Pro-Firmware',
+    url: 'https://github.com/Hertzz58/Radtel-RT950-Pro-Firmware',
+    by: 'Hertzz58 and contributors',
+    licence: 'GPL-3.0',
+    use: 'The RT-950 Pro backup is a port of the read path of its cps_flash.py.',
+  },
+  {
     name: 'RadioFoundry',
     url: 'https://github.com/RadioFoundry/RadioFoundry',
     by: 'Copyright (c) 2026 The RadioFoundry Authors',

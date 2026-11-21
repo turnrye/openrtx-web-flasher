@@ -160,8 +160,7 @@ function connection(radio: Radio): string {
 /** What a backup of `radio` is, in a few words. */
 function backupSummary(radio: Radio): string {
   const backup = backupFor(radio);
-  if (backup.how === 'copy') return 'copy a file off its drive';
-  if (backup.how === 'none') return 'cannot be read';
+  if (backup.how !== 'read') return 'copy a file off its drive';
   return `read in ${backup.mode} mode, ${backup.time}; ${backup.restorable ? 'can be flashed back' : 'a record, cannot be written back'}`;
 }
 
@@ -219,6 +218,7 @@ function showRadios(id: string | undefined, { io }: Host): number {
     io.say(`Backup: ${backupSummary(radio)}.`);
     io.say(`  It holds ${backup.holds}.`);
     if (backup.caveat) io.say(`  ${backup.caveat}`);
+    if (backup.notIncluded) io.say(`  ${backup.notIncluded.text} ${backup.notIncluded.url}`);
     if (backup.after) io.say(`  ${backup.after}`);
   } else {
     io.say(`Backup: ${backup.text}`);
@@ -521,6 +521,7 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
       : 'The backup cannot be written back, but it is the record of what the radio held, including what a repair would need.',
   );
   if (info.caveat) io.say(info.caveat);
+  if (info.notIncluded) io.say(`${info.notIncluded.text} ${info.notIncluded.url}`);
   io.say();
   if (!(await allowed(radio, options, host))) return 1;
   if (info.mode === 'normal') {

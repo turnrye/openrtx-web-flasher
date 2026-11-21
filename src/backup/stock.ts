@@ -7,6 +7,7 @@ import { FlashError, type FlashContext } from '../flash/types.ts';
 import type { Radio } from '../radios.ts';
 import { readGd77Stock } from './gd77-stock.ts';
 import { readRt4dStock } from './rt4d-stock.ts';
+import { readRt950Stock } from './rt950-stock.ts';
 import { readTytStock, type TytStockModel } from './tyt-stock.ts';
 import type { AlreadyBackedUp, BackupScope, Known, RadioBackup } from './types.ts';
 
@@ -37,6 +38,9 @@ export async function readStock(
       );
     case 'rt4d-serial':
       return readRt4dStock(device as SerialPort, scope, ctx, undefined, known);
+    case 'rt950-serial':
+      // One size: the protocol reaches 64 KiB and that reads in seconds.
+      return readRt950Stock(device as SerialPort, ctx, undefined, known);
     default:
       throw new FlashError(`The ${radio.name} is not backed up through its original firmware.`);
   }

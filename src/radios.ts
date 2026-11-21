@@ -433,15 +433,15 @@ export type Backup =
       unchecked?: boolean;
       /** Something the user should know before relying on it. */
       caveat?: string;
+      /** What the backup cannot hold, and where to get it instead; said before the read. */
+      notIncluded?: { text: string; label: string; url: string };
       /** Whether this page can write the backup back to the radio. */
       restorable: boolean;
       /** The same backup with the usual tool, where there is one. */
       command?: string;
     }
   /** The user copies a file themselves. */
-  | { how: 'copy'; text: string }
-  /** The radio cannot be read; the text says what to keep instead. */
-  | { how: 'none'; text: string };
+  | { how: 'copy'; text: string };
 
 const MIB = 1024 * 1024;
 
@@ -506,8 +506,20 @@ export function backupFor(radio: Radio): Backup {
       };
     case 'rt950-serial':
       return {
-        how: 'none',
-        text: "The RT-950 Pro cannot be backed up from here. Flashing replaces the firmware only: the radio's own bootloader stays, and Radtel's update tool can put the original firmware back. Download the original firmware from Radtel first, and save your channels with the programming software.",
+        how: 'read',
+        mode: 'normal',
+        time: 'under a minute',
+        holds:
+          'your channels and settings and the factory calibration: the first 64 KB of the memory chip, which is as far as the programming cable reaches',
+        unchecked: true,
+        caveat:
+          'This read has not been run on a real RT-950 Pro yet. It follows the programming protocol as others worked it out; if your radio answers differently, the page says so and saves nothing.',
+        notIncluded: {
+          text: "The original firmware is not part of the backup, because the radio's bootloader cannot be read. Download the version your radio runs before you flash:",
+          label: "Radtel's downloads",
+          url: 'https://www.radtels.com/pages/software-download',
+        },
+        restorable: false,
       };
     case 'uf2-copy':
       return {

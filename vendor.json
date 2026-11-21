@@ -152,6 +152,13 @@
       "files": "RT-4D-UART.cs, Program.cs",
       "license": "Apache-2.0",
       "note": "Reply header check from radtel-rt-890-oefw ec8e053e8e3e (Apache-2.0), app/uart.c."
+    },
+    "src/backup/rt950-stock.ts": {
+      "from": "https://github.com/Hertzz58/Radtel-RT950-Pro-Firmware",
+      "commit": "6c4d419b71eb",
+      "files": "tools/cps_flash.py, tools/README.md, docs/cps-uart.md",
+      "license": "GPL-3.0",
+      "note": "The read path only: handshake, key packet, scrambling, block read, address map. docs/cps-uart.md describes a framed variant of the protocol; the tool, which this follows, sends raw bytes."
     }
   }
 }

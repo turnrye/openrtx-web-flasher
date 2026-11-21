@@ -115,8 +115,21 @@ answers is known from other tools, and for the TYT family from one MD-9600.
   times, as in the reference: the radio drops bytes while it writes a flash page.
 - The page checks the model name at 0x3E0 of the `.BTF` before it opens the port. The
   bootloader checks it again.
-- The page has no backup for this radio. The bootloader (first 12 KiB) is never
-  written, so Radtel's update tool and firmware file are the way back.
+- The bootloader (first 12 KiB) is never written. Radtel's firmware file, from
+  https://www.radtels.com/pages/software-download, is the way back; it is a `.BTF`
+  with the same model name at 0x3E0, so this page should flash it too. Not tried.
+- Backup, not run on a radio yet: with Radtel's firmware running, the programming
+  protocol reads the memory chip at a 16-bit address, so 64 KiB in 128-byte blocks:
+  channels, VFOs, settings, DTMF, APRS and the calibration areas at 0xE000, 0xF000 and
+  0xF200 (addresses from Hertzz58's `cps_flash.py`; Ferrite puts factory calibration at
+  0x00F000). The rest of the 4 MiB chip (fonts, start-up picture) is out of reach.
+- To check on the bench: that the handshake is the raw one of `cps_flash.py` and not
+  the framed one in the same repository's `docs/cps-uart.md`; that firmware newer than
+  V0.27 still speaks it; that the model reply starts with `RT-950`; that the lone `06`
+  puts the radio back to normal; how long the read takes; and whether the area from
+  0xF000 really differs between two radios, since its checksum is used as the radio's
+  ID. The 16 bytes of identity from the handshake are kept in the backup's notes for
+  that comparison.
 - The drawing's key positions are a guess from the port's key map, not from a radio.
 
 ## C62 / C2 (Web Serial, cskburn)
