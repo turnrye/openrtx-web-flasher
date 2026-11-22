@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { randomBytes } from 'node:crypto';
+import { EventEmitter } from 'node:events';
 import { describe, expect, it } from 'vitest';
 import { readRt4dStock } from '../src/backup/rt4d-stock.ts';
 import { flashRt4d } from '../src/flash/rt4d.ts';
 import { quietContext } from '../src/flash/types.ts';
 import { SimRt4dStock } from '../src/sim/rt4d-stock.ts';
 import { SimRt4d } from '../src/sim/rt4d.ts';
-import { NodeSerialPort } from './node-serial.ts';
+import { NodeSerialPort, type NativePort, type SerialModule } from './node-serial.ts';
 import { serialOver } from './test-support.ts';
 
 /** A Node serial port whose far end is the simulated radio `device`, typed as the flashers want it. */
@@ -81,5 +82,77 @@ describe('a serial port of this computer as a Web Serial port', () => {
     await reader.cancel();
     reader.releaseLock();
     await port.close();
+  });
+});
+
+/**
+ * A port whose reads wait for its poller to report the port readable, as serialport's do,
+ * and whose poller never does by itself, as kqueue with a CH340 on macOS. Whatever is
+ * written is answered with `answer` at once, but only a read that wakes finds it.
+ */
+function stallingSerial(answer: Uint8Array): SerialModule {
+  const poller = new EventEmitter();
+  let ready: Uint8Array | null = null;
+  let listener: ((data: Uint8Array) => void) | null = null;
+  /** serialport's read: look, and wait for the poller when there is nothing yet. */
+  const read = () =>
+    poller.once('readable', () => {
+      if (ready) listener?.(ready);
+      ready = null;
+      read();
+    });
+
+  /** One port of the stalling package. */
+  class Port implements NativePort {
+    readonly port = { poller };
+    open(done: (error?: Error | null) => void) {
+      read();
+      done(null);
+    }
+    close(done: (error?: Error | null) => void) {
+      done(null);
+    }
+    write(_data: Uint8Array, done: (error?: Error | null) => void) {
+      ready = answer;
+      done(null);
+    }
+    drain(done: (error?: Error | null) => void) {
+      done(null);
+    }
+    set(_signals: object, done: (error?: Error | null) => void) {
+      done(null);
+    }
+    on(event: 'data' | 'error' | 'close', l: (data: never) => void) {
+      if (event === 'data') listener = l as (data: Uint8Array) => void;
+      return this;
+    }
+  }
+  return { SerialPort: Object.assign(Port, { list: async () => [] }) };
+}
+
+/** The first chunk `port` reads within `ms`, or null. */
+async function firstRead(port: NodeSerialPort, ms: number): Promise<number[] | null> {
+  await port.open({ baudRate: 115200 });
+  const reader = port.readable!.getReader();
+  const writer = port.writable!.getWriter();
+  await writer.write(Uint8Array.of(0x42));
+  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), ms));
+  const got = await Promise.race([reader.read().then((r) => Array.from(r.value!)), timeout]);
+  await reader.cancel();
+  reader.releaseLock();
+  writer.releaseLock();
+  await port.close();
+  return got;
+}
+
+describe('reads a poller never wakes (macOS kqueue and a CH340)', () => {
+  it('stall without the wake-up', async () => {
+    const port = new NodeSerialPort(stallingSerial(Uint8Array.of(0xe5)), '/dev/fake', 0);
+    expect(await firstRead(port, 50)).toBeNull();
+  });
+
+  it('arrive with it', async () => {
+    const port = new NodeSerialPort(stallingSerial(Uint8Array.of(0xe5)), '/dev/fake', 2);
+    expect(await firstRead(port, 500)).toEqual([0xe5]);
   });
 });
