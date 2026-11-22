@@ -1,0 +1,168 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The Forgejo twin of .github/workflows/ci.yml: same scripts and checks, different Pages
+# host.
+#
+# Forgejo has no Pages of its own, so the site goes to a git-pages server
+# (https://codeberg.org/git-pages/git-pages). The `pages` branch is laid out like
+# GitHub's gh-pages branch (site at the root, previews under pr-preview/pr-<n>/) and
+# its content is uploaded to git-pages after every change.
+#
+# Set one repository variable on the Forgejo side (Settings -> Actions -> Variables):
+#   PAGES_URL   where git-pages serves this repository, with a trailing slash,
+#               for example https://<owner>.pages.example.org/<repo>/
+# Without it the workflow still builds and tests, and keeps the site as an artifact.
+#
+# Optional:
+#   FEEDBACK_URL  the "new issue" address reports from this copy of the site go to,
+#                 for example https://<forge>/<owner>/<repo>/issues/new
+# Without it reports go to the project's public tracker.
+#
+# Actions are named by full address and commit, so the run does not depend on which
+# mirror the Forgejo instance resolves short names against.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ forgejo.event.pull_request.number || forgejo.ref }}
+  cancel-in-progress: true
+
+env:
+  PAGES_BRANCH: pages
+
+jobs:
+  build:
+    if: ${{ forgejo.event.action != 'closed' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: https://github.com/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: https://github.com/actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Restore npm's download cache
+        uses: https://github.com/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.npm
+          key: npm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: npm-${{ runner.os }}-
+      # Everything the build downloads lives in ~/.cache/openrtx-web-flasher (scripts/cache.mjs).
+      # The caches below keep it between runs, so a run does not depend on those servers being up.
+      - name: Restore pinned downloads and the cskburn build
+        uses: https://github.com/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cache/openrtx-web-flasher/files
+            ~/.cache/openrtx-web-flasher/cskburn
+            ~/.cache/openrtx-web-flasher/cskburn-wasm
+            ~/.cache/openrtx-web-flasher/tools
+          key: vendor-${{ runner.os }}-${{ hashFiles('vendor.json', 'scripts/vendor.mjs', 'tools/cskburn-wasm/**') }}
+          restore-keys: vendor-${{ runner.os }}-
+      - name: Work out the other cache keys
+        id: keys
+        run: ci/cache-keys.sh
+      - name: Restore Emscripten (only when cskburn has to be compiled)
+        if: ${{ steps.keys.outputs.needs_emsdk == 'true' }}
+        uses: https://github.com/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/openrtx-web-flasher/emsdk
+          key: emsdk-${{ runner.os }}-${{ steps.keys.outputs.emsdk }}
+      - name: Restore downloaded firmware
+        uses: https://github.com/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/openrtx-web-flasher/firmware
+          key: firmware-${{ runner.os }}-${{ steps.keys.outputs.week }}
+          restore-keys: firmware-${{ runner.os }}-
+      - name: Restore the test browser
+        uses: https://github.com/actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Vendor, check, mirror firmware, test and build
+        run: ci/build.sh
+        env:
+          # The Forgejo token means nothing to GitHub; the mirror runs unauthenticated.
+          GITHUB_TOKEN: ''
+          BUILD_ID: ${{ forgejo.event.pull_request.head.sha || forgejo.sha }}
+          FEEDBACK_URL: ${{ vars.FEEDBACK_URL }}
+      - name: Browser tests against simulated radios
+        run: ci/e2e.sh
+      # Forgejo stores artifacts the way v3 of these two actions expects; later versions
+      # only work against GitHub, so these pins stay behind the others on purpose.
+      - name: Keep the built site
+        uses: https://github.com/actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5 # v3.2.1
+        with:
+          name: site
+          path: dist
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: >-
+      ${{ vars.PAGES_URL != '' && (forgejo.event_name != 'pull_request' ||
+      forgejo.event.pull_request.head.repo.full_name == forgejo.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: https://github.com/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: https://github.com/actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: site
+          path: dist
+      - name: Update the pages branch (site)
+        if: ${{ forgejo.event_name != 'pull_request' }}
+        run: ci/publish-pages-branch.sh site dist
+        env:
+          GITHUB_TOKEN: ${{ forgejo.token }}
+          PAGES_CHECKOUT: ${{ forgejo.workspace }}/_pages
+      - name: Update the pages branch (preview)
+        if: ${{ forgejo.event_name == 'pull_request' }}
+        run: ci/publish-pages-branch.sh preview "$NUMBER" dist
+        env:
+          GITHUB_TOKEN: ${{ forgejo.token }}
+          PAGES_CHECKOUT: ${{ forgejo.workspace }}/_pages
+          NUMBER: ${{ forgejo.event.pull_request.number }}
+      - name: Leave git's own files out of the upload
+        run: rm -rf _pages/.git
+      - name: Upload to git-pages
+        uses: https://codeberg.org/git-pages/action@2b24bbb7ff943d3c8fe1df91326adec66daea6dd # v2.2.0
+        with:
+          site: ${{ vars.PAGES_URL }}
+          token: ${{ forgejo.token }}
+          source: _pages/
+          comment: ${{ forgejo.sha }}
+      - name: Comment with the preview address
+        if: ${{ forgejo.event_name == 'pull_request' }}
+        run: ci/comment-preview.sh "$NUMBER" "${PAGES_URL}pr-preview/pr-${NUMBER}/"
+        env:
+          GITHUB_TOKEN: ${{ forgejo.token }}
+          PAGES_URL: ${{ vars.PAGES_URL }}
+          NUMBER: ${{ forgejo.event.pull_request.number }}
+
+  remove-preview:
+    if: >-
+      ${{ vars.PAGES_URL != '' && forgejo.event_name == 'pull_request' && forgejo.event.action == 'closed' &&
+      forgejo.event.pull_request.head.repo.full_name == forgejo.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: https://github.com/actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: ci/publish-pages-branch.sh remove "$NUMBER"
+        env:
+          GITHUB_TOKEN: ${{ forgejo.token }}
+          PAGES_CHECKOUT: ${{ forgejo.workspace }}/_pages
+          NUMBER: ${{ forgejo.event.pull_request.number }}
+      - run: rm -rf _pages/.git
+      - uses: https://codeberg.org/git-pages/action@2b24bbb7ff943d3c8fe1df91326adec66daea6dd # v2.2.0
+        with:
+          site: ${{ vars.PAGES_URL }}
+          token: ${{ forgejo.token }}
+          source: _pages/
+          comment: ${{ forgejo.sha }}
