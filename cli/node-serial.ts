@@ -12,8 +12,18 @@ export interface PortInfo {
   serialNumber?: string;
 }
 
+/** The part of an open port's binding that the macOS wake-up uses. */
+export interface NativeBinding {
+  poller?: {
+    listenerCount(event: 'readable'): number;
+    emit(event: 'readable', error: null): boolean;
+  };
+}
+
 /** An open or openable port of the `serialport` package. */
 export interface NativePort {
+  /** The binding of the open port, where serialport's reads wait. */
+  readonly port?: NativeBinding;
   open(done: (error?: Error | null) => void): void;
   close(done: (error?: Error | null) => void): void;
   write(data: Uint8Array, done: (error?: Error | null) => void): void;
@@ -40,6 +50,21 @@ export interface SerialModule {
   };
 }
 
+/** How often a waiting read is woken on macOS, in milliseconds (see wakeReads). */
+const MACOS_WAKE_MS = 5;
+
+/**
+ * Wakes the read serialport waits on, if one is waiting. After a read finds nothing,
+ * serialport waits for the system to report the port readable, and on macOS kqueue
+ * never reports some adapters (a CH340 on Apple's own driver held an RT-950 Pro's
+ * answer until the next write). A wake-up with nothing there reads nothing and waits
+ * again.
+ */
+function wakeReads(binding: NativeBinding | undefined): void {
+  const poller = binding?.poller;
+  if (poller && poller.listenerCount('readable') > 0) poller.emit('readable', null);
+}
+
 /** Runs one callback-style call of `serialport` as a promise. */
 function call(run: (done: (error?: Error | null) => void) => void): Promise<void> {
   return new Promise((resolve, reject) => run((error) => (error ? reject(error) : resolve())));
@@ -53,11 +78,17 @@ export class NodeSerialPort {
   private controller: ReadableStreamDefaultController<Uint8Array> | null = null;
   /** What arrived while no stream was there to take it. */
   private pending: Uint8Array[] = [];
+  /** Wakes waiting reads while the port is open, where reads need it. */
+  private waker: ReturnType<typeof setInterval> | null = null;
 
-  /** A closed port; `path` is its name on this computer (/dev/ttyUSB0, COM5). */
+  /**
+   * A closed port; `path` is its name on this computer (/dev/ttyUSB0, COM5). `wakeMs`
+   * wakes waiting reads that often (wakeReads), by default on macOS only; 0 never.
+   */
   constructor(
     private readonly serial: SerialModule,
     readonly path: string,
+    private readonly wakeMs = process.platform === 'darwin' ? MACOS_WAKE_MS : 0,
   ) {}
 
   /** SerialPort.readable; null while closed. Like Chrome, a cancelled stream is replaced by a fresh one. */
@@ -113,10 +144,16 @@ export class NodeSerialPort {
     native.on('close', () => this.ended());
     await call((done) => native.open(done));
     this.native = native;
+    if (this.wakeMs > 0) {
+      this.waker = setInterval(() => wakeReads(native.port), this.wakeMs);
+      this.waker.unref();
+    }
   }
 
   /** Forgets the open port and ends its streams. */
   private ended(): void {
+    if (this.waker) clearInterval(this.waker);
+    this.waker = null;
     try {
       this.controller?.close();
     } catch {
