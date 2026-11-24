@@ -14,6 +14,7 @@ import { parseSgl } from '../src/flash/gd77.ts';
 import { backupDevice } from '../src/flash/run.ts';
 import { RADIOS } from '../src/radios.ts';
 import { buildSgl, SimGd77 } from '../src/sim/gd77.ts';
+import { buildDfuFile } from '../src/sim/stm32dfu.ts';
 import { SimRt4d } from '../src/sim/rt4d.ts';
 import { main, type Host } from './main.ts';
 import type { NodeModules } from './node-env.ts';
@@ -91,6 +92,15 @@ const DSP = random(180 * 1024);
 const C62_ZIP = fileOf('c62-build.zip', zipSync({ 'zephyr.bin': APP, 'dsp_firmware.bin': DSP }));
 const MOD17_BIN = fileOf('openrtx_mod17_test.bin', random(150 * 1024));
 const RT4D_BIN = fileOf('openrtx_rt4d_test.bin', random(100 * 1024));
+/** An image with the vectors of a CS7000-M17 Plus build whose code starts at `base`. */
+function cs7000pImage(base: number): Uint8Array {
+  const image = random(50 * 1024 + 3);
+  new DataView(image.buffer).setUint32(0, 0x24000200, true);
+  new DataView(image.buffer).setUint32(4, base + 0x1301d, true);
+  return image;
+}
+const CS7000P_DFU = fileOf('openrtx_cs7000p_test.dfu', buildDfuFile(0x08100000, cs7000pImage(0x08100000)));
+const CS7000P_LOW_DFU = fileOf('openrtx_cs7000p_low.dfu', buildDfuFile(0x08000000, cs7000pImage(0x08000000)));
 const GD77_SGL = fileOf('openrtx_gd77_test.sgl', buildSgl(random(40 * 1024), 'GD-77'));
 const WRITTEN = 'Simulator: the simulated radio holds exactly what was written.';
 const READ = 'Simulator: the backup holds exactly what the simulated radio held';
@@ -116,6 +126,17 @@ describe('looking around', () => {
     expect(text).toContain('this tool has not been checked on a real one; the web page was (2026-11-21)');
     expect(text).not.toContain('{file}');
     expect((await run(['radios', 'rt4d'])).text).toContain('a best guess');
+  });
+
+  it('gives the CS7000-M17 Plus the flashing mode the command line can reach, and no backup', async () => {
+    const { text } = await run(['radios', 'cs7000p']);
+    expect(text).toContain('2. Hold PTT and the orange button on top, then turn the radio on.');
+    expect(text).not.toContain('SK1');
+    expect(text).toContain('Backup: A radio with its Connect Systems firmware cannot be backed up');
+    expect((await run(['radios'])).text).toContain('USB; backup: not possible');
+    const backup = await run(['backup', 'cs7000p', '--sim']);
+    expect(backup.code).toBe(1);
+    expect(backup.text).toContain('cannot be backed up');
   });
 
   it('answers a mistake with what to do, and an exit code that says which kind', async () => {
@@ -225,6 +246,27 @@ describe('simulated radios (--sim)', () => {
     expect(text).toContain('without it the radio starts with a black screen');
     expect(text).toContain(WRITTEN);
   }, 30_000);
+
+  it('flashes a CS7000-M17 Plus in robot mode from the .dfu file of a build', async () => {
+    const flash = await run(['flash', 'cs7000p', CS7000P_DFU, '--sim', '--yes']);
+    expect(flash.code).toBe(0);
+    expect(flash.text).toContain('Hold PTT and the orange button on top');
+    expect(flash.text).toContain('Writing 51203 bytes to the second firmware slot in 26 blocks.');
+    expect(flash.text).toContain('The radio took all 26 blocks.');
+    expect(flash.text).toContain('Hold SK3 while turning it on to start OpenRTX');
+    expect(flash.text).toContain(WRITTEN);
+
+    const low = await run(['flash', 'cs7000p', CS7000P_LOW_DFU, '--sim', '--yes']);
+    expect(low.code).toBe(1);
+    expect(low.text).toContain(
+      'This firmware is not built for the radio’s second firmware slot'.replace('’', "'"),
+    );
+    expect(low.text).toContain('Nothing was sent to the radio.');
+
+    const dead = await run(['flash', 'cs7000p', CS7000P_DFU, '--sim=fail', '--yes']);
+    expect(dead.code).toBe(1);
+    expect(dead.text).toContain('Failed: Could not open the USB device: The simulated radio did not answer.');
+  });
 
   it('flashes a HID radio and reads one', async () => {
     const flash = await run(['flash', 'gd77', GD77_SGL, '--sim', '--yes']);

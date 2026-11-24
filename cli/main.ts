@@ -26,6 +26,7 @@ import {
   apiFor,
   backupFor,
   filesFor,
+  forCommandLine,
   radioById,
   RADIOS,
   type Radio,
@@ -143,7 +144,23 @@ async function pick(radio: Radio, devices: Devices, purpose: Purpose, io: Io): P
 function radioNamed(id: string): Radio {
   const radio = radioById(id.toLowerCase());
   if (!radio) throw new Error(`There is no radio "${id}". "openrtx-flasher radios" lists them.`);
-  return radio;
+  return forCommandLine(radio);
+}
+
+/** What this computer needs before it can reach `radio`, when that is something. */
+function platformNote(radio: Radio): string | null {
+  if (radio.method === 'cs7000-robot') {
+    if (process.platform === 'win32') {
+      return 'Windows keeps this kind of USB device to itself. Use the Connect Systems Factory Tool with the .bin file instead.';
+    }
+    if (process.platform === 'darwin' && process.getuid?.() !== 0) {
+      return 'macOS keeps USB drives to itself, and only an administrator can take one over. Run this command with "sudo" in front.';
+    }
+    return null;
+  }
+  return process.platform === 'win32' && apiFor(radio.method) === 'usb'
+    ? 'On Windows the radio needs the WinUSB driver. Install it once with Zadig while the radio is in flashing mode.'
+    : null;
 }
 
 /** The command of the radio's usual tool for `file`; undefined when the tool has none. */
@@ -160,6 +177,7 @@ function connection(radio: Radio): string {
 /** What a backup of `radio` is, in a few words. */
 function backupSummary(radio: Radio): string {
   const backup = backupFor(radio);
+  if (backup.how === 'none') return 'not possible';
   if (backup.how !== 'read') return 'copy a file off its drive';
   return `read in ${backup.mode} mode, ${backup.time}; ${backup.restorable ? 'can be flashed back' : 'a record, cannot be written back'}`;
 }
@@ -181,7 +199,7 @@ function showRadios(id: string | undefined, { io }: Host): number {
   if (id === undefined) {
     io.say('Radios, by the name to use for <radio>:');
     io.say();
-    for (const radio of RADIOS) {
+    for (const radio of RADIOS.map(forCommandLine)) {
       io.say(`  ${radio.id.padEnd(9)} ${radio.name}${radio.aka ? ` (${radio.aka})` : ''}`);
       io.say(`  ${''.padEnd(9)} ${connection(radio)}; backup: ${backupSummary(radio)}`);
     }
@@ -432,11 +450,8 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   });
   if (build.backup) io.say('This is a backup. Only restore it onto the radio it came from.');
   for (const note of radio.flashNotes ?? []) io.say(`  - ${note}`);
-  if (process.platform === 'win32' && apiFor(radio.method) === 'usb' && options.sim === undefined) {
-    io.say(
-      'On Windows the radio needs the WinUSB driver. Install it once with Zadig while the radio is in flashing mode.',
-    );
-  }
+  const needs = options.sim === undefined ? platformNote(radio) : null;
+  if (needs) io.say(needs);
   io.say();
   if (!(await allowed(radio, options, host))) return 1;
 
@@ -510,7 +525,7 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   const info = backupFor(radio);
   if (info.how !== 'read') {
     io.say(info.text);
-    return 0;
+    return info.how === 'copy' ? 0 : 1;
   }
   // Before anything else: a read is long, and its result must have somewhere to go.
   checkWritable(options.out);

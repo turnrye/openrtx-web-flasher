@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { randomBytes } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { flashCs7000Robot, SECOND_SLOT } from '../src/flash/cs7000-robot.ts';
 import { pickDevice } from '../src/flash/run.ts';
 import { flashDfuSe, rawSegment } from '../src/flash/stm32dfu.ts';
-import { quietContext } from '../src/flash/types.ts';
-import { radioById } from '../src/radios.ts';
+import { FlashError, quietContext } from '../src/flash/types.ts';
+import { forCommandLine, radioById } from '../src/radios.ts';
+import { SimCs7000Robot } from '../src/sim/cs7000-robot.ts';
 import { SimGd77 } from '../src/sim/gd77.ts';
 import { SimRt4d } from '../src/sim/rt4d.ts';
 import { SimStm32Dfu } from '../src/sim/stm32dfu.ts';
-import { load, nodeEnv, type NodeModules, type UsbModule } from './node-env.ts';
+import { driveRefusal, load, nodeEnv, type NodeModules, type UsbModule } from './node-env.ts';
 import { type NodeSerialPort } from './node-serial.ts';
 import { fakeIo, hidOver, serialOver } from './test-support.ts';
 
@@ -49,6 +51,7 @@ const mod17 = radioById('mod17')!;
 const md9600 = radioById('md9600')!;
 const gd77 = radioById('gd77')!;
 const rt4d = radioById('rt4d')!;
+const cs7000p = forCommandLine(radioById('cs7000p')!);
 
 describe('devices of this computer for the page’s flashers', () => {
   it('finds the one USB radio in flashing mode by the page’s own filters', async () => {
@@ -112,6 +115,70 @@ describe('devices of this computer for the page’s flashers', () => {
     expect(native.timeouts).toEqual([30_000, 30_000, -1]);
     expect(Object.keys(native)).toEqual(['vendorId', 'productId']);
     expect(device.vendorId).toBe(0x0483);
+  });
+
+  it('reaches a radio that is a USB drive through the package that can take one over', async () => {
+    const radio = new SimCs7000Robot();
+    const usb = usbWith([radio as unknown as USBDevice]);
+    const asked: (string | undefined)[] = [];
+    const env = nodeEnv(
+      modules({
+        usb: (kind) => {
+          asked.push(kind);
+          return Promise.resolve(usb);
+        },
+      }),
+      fakeIo(),
+    );
+    const picked = await pickDevice(cs7000p, env);
+    expect(asked).toEqual(['storage']);
+    expect(usb.filters[0]).toEqual([{ vendorId: 0x0483, productId: 0x5720 }]);
+    const firmware = new Uint8Array(randomBytes(5000));
+    new DataView(firmware.buffer).setUint32(0, 0x24000200, true);
+    new DataView(firmware.buffer).setUint32(4, SECOND_SLOT + 0x201, true);
+    await flashCs7000Robot(picked.device as USBDevice, firmware, quietContext());
+    expect(radio.violations).toEqual([]);
+    expect(Buffer.compare(radio.image, firmware)).toBe(0);
+    // The other radios stay with the package they were checked with.
+    await pickDevice(
+      mod17,
+      nodeEnv(
+        modules({ usb: (kind) => (asked.push(kind), Promise.resolve(usbWith([new SimStm32Dfu()]))) }),
+        fakeIo(),
+      ),
+    );
+    expect(asked).toEqual(['storage', undefined]);
+  });
+
+  it('limits how long a USB drive may take, and puts a refusal to hand it over into words', async () => {
+    const endpoints = [{ timeout: 0 }, { timeout: 0 }];
+    let refuse: string | null = null;
+    /** A device like the libusb package's: its own device inside, with the endpoints' time limits. */
+    const native = {
+      vendorId: 0x0483,
+      productId: 0x5720,
+      device: { interfaces: [{ endpoints }] },
+      claimInterface: () => (refuse ? Promise.reject(new Error(refuse)) : Promise.resolve()),
+    };
+    const usb = usbWith([native as unknown as USBDevice]);
+    const env = nodeEnv(modules({ usb: () => Promise.resolve(usb) }), fakeIo());
+    const device = (await pickDevice(cs7000p, env)).device as USBDevice;
+    await device.claimInterface(0);
+    expect(endpoints.map((e) => e.timeout)).toEqual([2000, 2000]);
+
+    refuse = 'claimInterface error: Error: LIBUSB_ERROR_ACCESS';
+    const refused = await device.claimInterface(0).catch((e: unknown) => e);
+    expect(refused).toBeInstanceOf(FlashError);
+    expect((refused as Error).message).toBe(driveRefusal(refuse));
+
+    expect(driveRefusal(refuse, 'darwin')).toContain('Run the command again with "sudo" in front');
+    expect(driveRefusal(refuse, 'linux')).toContain('udev rule');
+    expect(driveRefusal('claimInterface error: Error: LIBUSB_ERROR_NOT_SUPPORTED', 'win32')).toContain(
+      'Factory Tool',
+    );
+    expect(driveRefusal('LIBUSB_ERROR_NO_DEVICE', 'darwin')).toBe(
+      "Could not take over the radio's USB drive: LIBUSB_ERROR_NO_DEVICE",
+    );
   });
 
   it('says which mode the radio must be in when none is found', async () => {

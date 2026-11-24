@@ -77,10 +77,31 @@ answers is known from other tools, and for the TYT family from one MD-9600.
 - A read-protected chip fails at verify, after the write.
 - Module 17 boards with a GD32 (28e9:0189) are assumed to behave like ST's ROM.
 - CS7000-M17 Plus: the `.dfu` puts OpenRTX at 0x08100000 beside the Connect Systems
-  bootloader. Open question: does that bootloader start OpenRTX (SK3 at power-on) after
-  a DFU write, or only after its own Factory Tool wrote it? Check the DMR firmware still
-  starts too.
+  bootloader. Measured 2026-11-24 on a radio just put back to its Connect Systems
+  bootloader (B7.06) and DMR firmware: in DFU mode the ROM refuses the first set-address
+  with errVENDOR, for the flash and for the option bytes, and `dfu-util` gets the same
+  answer. Nothing is erased or written. The same radio took DFU reads and writes before
+  that firmware had started once, so the reading is that it read-protects the chip. A
+  radio in that state can only be flashed in robot mode (below).
 - Windows: ST's DfuSe driver blocks WebUSB until Zadig installs WinUSB.
+
+## CS7000-M17 Plus in robot mode (command line only)
+
+- PTT + the orange button on top at power-on. The radio is then a USB drive without a
+  disk, 0483:5720 "Mass Storage in FS Mode", one Bulk-Only interface, 64-byte endpoints.
+  A browser does not hand that kind of device to a page, so only the command line has
+  this mode (`commandLine` in src/radios.ts).
+- macOS keeps the drive for its own driver: without `sudo` the claim fails with
+  LIBUSB_ERROR_ACCESS and the tool says so. With `sudo`, libusb takes the device over
+  for the run. Not yet run on a radio: whether robot mode survives that takeover (the
+  device is enumerated again), and what the radio does when asked for an answer it does
+  not have (the simulator covers zeroes, a status in place of the data, and a stall).
+- The log should say "Connected to the radio's bootloader (it answered 24)", then the
+  block count. Answers other than 21 to a block or the commit are logged, not fatal: the
+  Factory Tool goes by the answer's command alone.
+- Nothing can be read back in this mode. The check is the radio itself: SK3 at power-on
+  starts OpenRTX, no key starts the DMR firmware, which a failed write leaves alone.
+- Windows keeps the device too, and libusb cannot take it there: the Factory Tool.
 
 ## GD-77, DM-1801 (WebHID)
 

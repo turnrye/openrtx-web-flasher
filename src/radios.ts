@@ -8,7 +8,14 @@
 
 /** How the bytes get into the radio. */
 export type Method =
-  'tyt-dfu' | 'stm32-dfu' | 'gd77-hid' | 'rt4d-serial' | 'rt950-serial' | 'csk-serial' | 'uf2-copy';
+  | 'tyt-dfu'
+  | 'stm32-dfu'
+  | 'cs7000-robot'
+  | 'gd77-hid'
+  | 'rt4d-serial'
+  | 'rt950-serial'
+  | 'csk-serial'
+  | 'uf2-copy';
 
 /** A flash that was checked on a real radio. Empty until someone does it. */
 export interface Verification {
@@ -77,8 +84,19 @@ export interface Radio {
   /** Things to know at the moment of flashing, shown next to the Flash button. */
   flashNotes?: string[];
   manual: ManualTool;
+  /**
+   * Another way into the radio that only the command line has: a kind of USB device that
+   * browsers keep from web pages. The command line uses these in place of the radio's own.
+   */
+  commandLine?: Pick<Radio, 'method' | 'enter' | 'after' | 'flashNotes' | 'manual'>;
   /** Null until a flash through this page was checked on real hardware. */
   verified: Verification | null;
+}
+
+/** `radio` as the command line flashes it. */
+export function forCommandLine(radio: Radio): Radio {
+  const { commandLine, ...rest } = radio;
+  return commandLine ? { ...rest, ...commandLine } : radio;
 }
 
 const RADIO_TOOL: ManualTool = {
@@ -236,7 +254,7 @@ export const RADIOS: Radio[] = [
     flashNotes: [
       'OpenRTX goes in the second firmware slot; the Connect Systems bootloader and DMR firmware stay.',
       'Writing takes a while and the radio shows nothing while it happens.',
-      'Not yet confirmed: whether the bootloader starts OpenRTX after a DFU write without the Factory Tool.',
+      'A radio that still has its Connect Systems firmware refuses this: that firmware read-protects the chip. Flash such a radio from the command line or with the Factory Tool.',
     ],
     manual: {
       tool: 'Connect Systems Factory Tool',
@@ -245,6 +263,25 @@ export const RADIOS: Radio[] = [
         'The .dfu file works with dfu-util or DfuSe Demo in DFU mode.',
       command: 'dfu-util -d 0483:df11 -a 0 -D {file}',
       url: 'https://www.connectsystems.com/amateur-software/CS7000_m17_plus_software.html',
+    },
+    commandLine: {
+      method: 'cs7000-robot',
+      enter: [
+        'Turn the radio off and connect the USB cable.',
+        'Hold PTT and the orange button on top, then turn the radio on.',
+        'The LED changes colour in a loop: the radio is in flashing mode (Connect Systems calls it robot mode).',
+      ],
+      after:
+        'Turn the radio off. Hold SK3 while turning it on to start OpenRTX; without a key it starts the DMR firmware.',
+      flashNotes: [
+        'OpenRTX goes in the second firmware slot; the Connect Systems bootloader and DMR firmware stay.',
+        'The radio cannot be read in this mode, so what was written is not compared afterwards.',
+      ],
+      manual: {
+        tool: 'Connect Systems Factory Tool',
+        windows: 'Use the .bin file with the Factory Tool, with the radio in the same flashing mode.',
+        url: 'https://www.connectsystems.com/amateur-software/CS7000_m17_plus_software.html',
+      },
     },
     verified: null,
   },
@@ -400,6 +437,7 @@ export function apiFor(method: Method): 'usb' | 'serial' | 'hid' | null {
   switch (method) {
     case 'tyt-dfu':
     case 'stm32-dfu':
+    case 'cs7000-robot':
       return 'usb';
     case 'gd77-hid':
       return 'hid';
@@ -441,7 +479,9 @@ export type Backup =
       command?: string;
     }
   /** The user copies a file themselves. */
-  | { how: 'copy'; text: string };
+  | { how: 'copy'; text: string }
+  /** The radio gives nothing up in the mode it is flashed in. */
+  | { how: 'none'; text: string };
 
 const MIB = 1024 * 1024;
 
@@ -520,6 +560,11 @@ export function backupFor(radio: Radio): Backup {
           url: 'https://www.radtels.com/pages/software-download',
         },
         restorable: false,
+      };
+    case 'cs7000-robot':
+      return {
+        how: 'none',
+        text: 'A radio with its Connect Systems firmware cannot be backed up: that firmware read-protects the chip, and the flashing mode has no way to read. Flashing OpenRTX leaves the bootloader and the DMR firmware in place, and Connect Systems publishes both.',
       };
     case 'uf2-copy':
       return {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { backupFor, filesFor, pickFile, radioById, radioForFile, RADIOS } from './radios.ts';
+import { backupFor, filesFor, forCommandLine, pickFile, radioById, radioForFile, RADIOS } from './radios.ts';
 
 const RELEASE = [
   'openrtx_cs7000p_v0.4.5.bin',
@@ -89,6 +89,19 @@ describe('radio catalogue', () => {
     expect(unchecked).toEqual(['md3x0', 'mduv3x0', 'dm1701', 'rt950pro']);
     const c62 = backupFor(radioById('c62')!);
     expect(c62.how === 'read' && c62.endsFlashingMode).toBe(true);
+  });
+
+  it('gives the command line its own way into a radio where a browser has none', () => {
+    const page = radioById('cs7000p')!;
+    const cli = forCommandLine(page);
+    expect(page.method).toBe('stm32-dfu');
+    expect(cli.method).toBe('cs7000-robot');
+    expect(cli.commandLine).toBeUndefined();
+    expect(cli.enter).not.toEqual(page.enter);
+    expect(cli.ext).toBe('dfu');
+    expect(backupFor(cli).how).toBe('none');
+    expect(forCommandLine(radioById('mod17')!)).toBe(radioById('mod17'));
+    expect(RADIOS.filter((r) => r.commandLine).map((r) => r.id)).toEqual(['cs7000p']);
   });
 
   it('keeps warnings where they apply, not in a block before flashing', () => {
