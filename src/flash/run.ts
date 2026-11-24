@@ -4,6 +4,7 @@ import type { DeviceEnv } from '../devices.ts';
 import { readStock } from '../backup/stock.ts';
 import type { AlreadyBackedUp, Known, RadioBackup } from '../backup/types.ts';
 import { backupFor, type Radio } from '../radios.ts';
+import { flashCs7000Robot, SECOND_SLOT } from './cs7000-robot.ts';
 import { backupCsk, flashCsk, type CskModuleLoader } from './csk.ts';
 import { flashGd77 } from './gd77.ts';
 import { flashRt4d } from './rt4d.ts';
@@ -17,6 +18,9 @@ const DFU_FILTERS: USBDeviceFilter[] = [
   { vendorId: 0x0483, productId: 0xdf11 },
   { vendorId: 0x28e9, productId: 0x0189 },
 ];
+
+/** The Connect Systems bootloader of the CS7000-M17 Plus in robot mode: a USB drive. */
+const CS7000_ROBOT_FILTERS: USBDeviceFilter[] = [{ vendorId: 0x0483, productId: 0x5720 }];
 
 /** NXP MK22 bootloader of the GD-77 family. */
 const GD77_FILTERS: HIDDeviceFilter[] = [{ vendorId: 0x15a2, productId: 0x0073 }];
@@ -59,6 +63,8 @@ export async function pickDevice(
     case 'tyt-dfu':
     case 'stm32-dfu':
       return { api: 'usb', device: await env.usb(DFU_FILTERS, radio, purpose) };
+    case 'cs7000-robot':
+      return { api: 'usb', device: await env.usb(CS7000_ROBOT_FILTERS, radio, purpose) };
     case 'gd77-hid':
       return { api: 'hid', device: await env.hid(GD77_FILTERS, radio, purpose) };
     case 'rt4d-serial':
@@ -176,6 +182,17 @@ export async function flashDevice(
           ? parseDfuFile(firmware)
           : [rawSegment(radio.address ?? STM32_FLASH_BASE, firmware)];
       return flashDfuSe(picked.device as USBDevice, segments, ctx, { chip: radio.chip });
+    }
+    case 'cs7000-robot': {
+      if (restore) throw new FlashError('A backup cannot be written in this flashing mode.');
+      const segments = parseDfuFile(firmware);
+      if (segments.length !== 1 || segments[0].address !== SECOND_SLOT) {
+        throw new FlashError(
+          "This firmware is not built for the radio's second firmware slot, where OpenRTX goes. " +
+            'Nothing was sent to the radio.',
+        );
+      }
+      return flashCs7000Robot(picked.device as USBDevice, segments[0].data, ctx);
     }
     case 'gd77-hid':
       return flashGd77(picked.device as HIDDevice, firmware, radio.hidModel ?? 'GD-77', ctx);
