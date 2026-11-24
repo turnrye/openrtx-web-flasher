@@ -93,9 +93,12 @@ answers is known from other tools, and for the TYT family from one MD-9600.
   this mode (`commandLine` in src/radios.ts).
 - macOS keeps the drive for its own driver: without `sudo` the claim fails with
   LIBUSB_ERROR_ACCESS and the tool says so. With `sudo`, libusb takes the device over
-  for the run. Not yet run on a radio: whether robot mode survives that takeover (the
-  device is enumerated again), and what the radio does when asked for an answer it does
-  not have (the simulator covers zeroes, a status in place of the data, and a stall).
+  for the run, and robot mode survives that (the device is enumerated again).
+- First run on a radio, 2026-11-24 (bootloader B7.06, macOS on Apple silicon, Node 26.9,
+  `sudo`): the connect was answered with 24 and all 107 blocks of a 218,296-byte build
+  were taken, with no answer other than 21. Not learned from it: what the radio does
+  when asked for an answer it does not have (the simulator covers zeroes, a status in
+  place of the data, a stall and a fetch that runs out of time), and Linux.
 - The log should say "Connected to the radio's bootloader (it answered 24)", then the
   block count. Answers other than 21 to a block or the commit are logged, not fatal: the
   Factory Tool goes by the answer's command alone.
