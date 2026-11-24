@@ -58,6 +58,7 @@
   "optionalDependencies": {
     "node-hid": "^3.4.0",
     "serialport": "^13.0.0",
-    "usb": "^3.3.1"
+    "usb": "^3.3.1",
+    "usb-libusb": "npm:usb@^2.19.2"
   }
 }

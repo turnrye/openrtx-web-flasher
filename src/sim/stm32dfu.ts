@@ -329,3 +329,33 @@ export class SimStm32Dfu extends SimUsbDevice {
     this.state = IDLE;
   }
 }
+
+/**
+ * Builds a DfuSe v1 .dfu file with `data` as its one element at `address`, the way
+ * OpenRTX's scripts/dfu-convert.py does, for tests that need a build's file.
+ */
+export function buildDfuFile(address: number, data: Uint8Array): Uint8Array {
+  const targetSize = 8 + data.length;
+  const imageSize = 11 + 274 + targetSize;
+  const file = new Uint8Array(imageSize + 16);
+  const view = new DataView(file.buffer);
+  file.set(new TextEncoder().encode('DfuSe'), 0);
+  file[5] = 1;
+  view.setUint32(6, imageSize, true);
+  file[10] = 1; // one target
+  file.set(new TextEncoder().encode('Target'), 11);
+  view.setUint32(11 + 266, targetSize, true);
+  view.setUint32(11 + 270, 1, true); // one element
+  view.setUint32(285, address, true);
+  view.setUint32(289, data.length, true);
+  file.set(data, 293);
+  // Suffix: device and product 0xDF11, vendor 0x0483, DFU 1.1a, "UFD", its own length.
+  file.set([0x00, 0x00, 0x11, 0xdf, 0x83, 0x04, 0x1a, 0x01, 0x55, 0x46, 0x44, 16], imageSize);
+  let crc = 0xffffffff;
+  for (const byte of file.subarray(0, file.length - 4)) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  view.setUint32(file.length - 4, crc >>> 0, true);
+  return file;
+}

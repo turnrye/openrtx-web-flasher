@@ -13,7 +13,7 @@ import type { Io } from './io.ts';
 import { NodeHidDevice, type HidInfo, type HidModule } from './node-hid.ts';
 import { NodeSerialPort, type PortInfo, type SerialModule } from './node-serial.ts';
 
-/** The part of the `usb` package this file uses: its WebUSB implementation. */
+/** The part of a `usb` package this file uses: its WebUSB implementation. */
 export interface UsbModule {
   WebUSB: new (options: { devicesFound: (devices: USBDevice[]) => Promise<USBDevice | undefined> }) => {
     requestDevice(options: USBDeviceRequestOptions): Promise<USBDevice>;
@@ -22,7 +22,11 @@ export interface UsbModule {
 
 /** Where the three native packages come from; each is loaded when a radio first needs it. */
 export interface NodeModules {
-  usb(): Promise<UsbModule>;
+  /**
+   * The USB package. For 'storage' it is the one built on libusb, which can take a USB
+   * drive over from the operating system's own driver; the other one cannot on a Mac.
+   */
+  usb(kind?: 'storage'): Promise<UsbModule>;
   serial(): Promise<SerialModule>;
   hid(): Promise<HidModule>;
 }
@@ -47,7 +51,7 @@ export async function load<T>(name: string, what: string): Promise<T> {
 
 /** The packages as npm installed them. */
 export const installedModules: NodeModules = {
-  usb: () => load<UsbModule>('usb', 'USB'),
+  usb: (kind) => load<UsbModule>(kind === 'storage' ? 'usb-libusb' : 'usb', 'USB'),
   serial: () => load<SerialModule>('serialport', 'serial'),
   hid: () => load<HidModule>('node-hid', 'USB HID'),
 };
@@ -77,13 +81,62 @@ function patient(device: USBDevice): USBDevice {
     controlTransferIn: (setup, length) => limited.controlTransferIn(setup, length, CONTROL_TIMEOUT_MS),
     controlTransferOut: (setup, data) => limited.controlTransferOut(setup, data, CONTROL_TIMEOUT_MS),
   };
-  // The device is a native object: it is left as it is, and everything else is asked of
-  // it directly, with itself as `this`.
+  return replacing(device, transfers);
+}
+
+/**
+ * `device` with some of its members replaced. The device is a native object: it is left
+ * as it is, and everything else is asked of it directly, with itself as `this`.
+ */
+function replacing(device: USBDevice, members: Partial<USBDevice>): USBDevice {
   return new Proxy(device, {
     get(target, name) {
-      if (name in transfers) return transfers[name as keyof USBDevice];
+      if (name in members) return members[name as keyof USBDevice];
       const value: unknown = Reflect.get(target, name, target);
       return typeof value === 'function' ? (value.bind(target) as unknown) : value;
+    },
+  });
+}
+
+/** How long a bulk transfer to a USB drive may take before it is called off. */
+const BULK_TIMEOUT_MS = 2_000;
+
+/** What to do when this computer will not hand a radio's USB drive over; `why` is the library's word for it. */
+export function driveRefusal(why: string, platform: string = process.platform): string {
+  if (!/ACCESS|NOT_SUPPORTED|BUSY/.test(why)) return `Could not take over the radio's USB drive: ${why}`;
+  switch (platform) {
+    case 'darwin':
+      return 'macOS keeps USB drives to itself. Run the command again with "sudo" in front: that lets it take the radio over for as long as the flash lasts.';
+    case 'win32':
+      return 'Windows keeps this kind of USB device to itself. Use the Connect Systems Factory Tool with the .bin file instead.';
+    default:
+      return 'This user may not use the radio\'s USB device. Run the command again with "sudo" in front, or add a udev rule for it.';
+  }
+}
+
+/** The part of the libusb package's own device that sets how long bulk transfers may take. */
+interface LibusbDevice {
+  interfaces?: { endpoints: { timeout: number }[] }[];
+}
+
+/**
+ * Makes a device of the libusb `usb` package fit for a USB drive. Claiming the interface
+ * is where the operating system's driver is pushed aside, so that is where a refusal is
+ * put into words; and the package lets a bulk transfer wait for ever, so each endpoint
+ * gets a time limit once the interface is claimed.
+ */
+function takingOver(device: USBDevice): USBDevice {
+  return replacing(device, {
+    claimInterface: async (interfaceNumber) => {
+      try {
+        await device.claimInterface(interfaceNumber);
+      } catch (e) {
+        throw new FlashError(driveRefusal(e instanceof Error ? e.message : String(e)));
+      }
+      const inner = (device as unknown as { device?: LibusbDevice }).device;
+      for (const iface of inner?.interfaces ?? []) {
+        for (const endpoint of iface.endpoints) endpoint.timeout = BULK_TIMEOUT_MS;
+      }
     },
   });
 }
@@ -140,10 +193,12 @@ export function nodeEnv(modules: NodeModules, io: Io, port?: string): DeviceEnv 
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 
     usb: async (filters, radio, purpose) => {
-      const { WebUSB } = await modules.usb();
+      const drive = radio.method === 'cs7000-robot';
+      const { WebUSB } = await modules.usb(drive ? 'storage' : undefined);
       const usb = new WebUSB({ devicesFound: (devices) => pickOne(devices, usbLabel, 'USB device', io) });
       try {
-        return patient(await usb.requestDevice({ filters }));
+        const device = await usb.requestDevice({ filters });
+        return drive ? takingOver(device) : patient(device);
       } catch (e) {
         if (e instanceof Error && e.name === 'NotFoundError') {
           throw new FlashError(

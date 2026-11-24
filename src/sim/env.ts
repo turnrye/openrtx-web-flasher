@@ -21,6 +21,7 @@ import { parseDfuFile, rawSegment } from '../flash/stm32dfu.ts';
 import { parseTytFirmware } from '../flash/tyt.ts';
 import type { Segment } from '../flash/types.ts';
 import type { Radio } from '../radios.ts';
+import { SimCs7000Robot } from './cs7000-robot.ts';
 import { SimCsk6 } from './csk6.ts';
 import { SimGd77Stock } from './gd77-stock.ts';
 import { SimGd77 } from './gd77.ts';
@@ -179,6 +180,17 @@ export function simulatedEnv(mode: string): DeviceEnv {
           reads: () => sim.commands.filter((command) => command.startsWith('91 01')).length,
         };
         return fail ? broken(sim as unknown as USBDevice) : sim;
+      }
+      if (radio.method === 'cs7000-robot') {
+        simSleep = null;
+        const sim = new SimCs7000Robot({ silent: fail });
+        return expose(radio, sim as unknown as USBDevice, (fw) => {
+          const problems = [...sim.violations];
+          if (!sim.committed) problems.push('the image was not committed');
+          if (!same(sim.image, parseDfuFile(fw)[0].data))
+            problems.push('received image differs from the firmware');
+          return problems;
+        });
       }
       if (radio.method === 'tyt-dfu') {
         const sim = slowed(new SimTytRadio(wrongMode ? { alternateNames: TYT_ORIGINAL_NAMES } : {}), delay);
