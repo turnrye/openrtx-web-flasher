@@ -81,6 +81,13 @@ const PORTED: Credit[] = [
     use: 'Codeplug ranges, and the GD-77 and DM-1801 programming protocol.',
   },
   {
+    name: 'cs7000plus_flasher',
+    url: 'https://github.com/imostlylurk/cs7000plus_flasher',
+    by: 'imostlylurk',
+    licence: 'Apache-2.0',
+    use: 'The CS7000-M17 Plus robot-mode protocol and its table, for the command line.',
+  },
+  {
     name: 'qdmr',
     url: 'https://github.com/hmatuschek/qdmr',
     by: 'Hannes Matuschek DM3MAT',
@@ -159,7 +166,7 @@ const SHIPPED: Credit[] = [
 /** The licence texts, in the order the lists above name them. */
 const TEXTS: { title: string; text: string }[] = [
   { title: 'GNU General Public License, version 3', text: gpl },
-  { title: 'Apache License 2.0 (cskburn, rt-4d-spiflash-cli)', text: apache },
+  { title: 'Apache License 2.0 (cskburn, rt-4d-spiflash-cli, cs7000plus_flasher)', text: apache },
   { title: 'MIT License (RadioFoundry)', text: radioFoundry },
   { title: 'MIT License (Preact)', text: preact },
   { title: 'MIT License (fflate)', text: fflate },

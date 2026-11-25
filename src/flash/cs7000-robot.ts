@@ -14,9 +14,9 @@
  * in 2048-byte blocks, and one commit.
  *
  * The frame layout, the command numbers and the table are facts about the radio's
- * bootloader. They come from cs7000_flasher.py, a Linux flasher for this radio whose
- * author worked them out from the Factory Tool's USB traffic; its file states no
- * licence, and no code is taken from it.
+ * bootloader, worked out from the Factory Tool's USB traffic by imostlylurk for
+ * cs7000plus_flasher.py, https://github.com/imostlylurk/cs7000plus_flasher (Apache-2.0).
+ * The table is copied from it; the code is written here.
  */
 import { FlashError, type FlashContext } from './types.ts';
 import { UsbStorage } from './usb-storage.ts';
