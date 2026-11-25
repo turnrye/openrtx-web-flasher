@@ -57,6 +57,12 @@ describe('feedback reports', () => {
     expect(reportBody(worked)).toContain('**Result:** the radio started OpenRTX');
   });
 
+  it('names a file given by hand once', () => {
+    const file = 'openrtx_md9600_chip-modem-242dcee0_wrap.bin';
+    const report: Report = { ...failed([]), firmware: { label: file, file, sha256: 'cd'.repeat(32) } };
+    expect(reportBody(report)).toContain(`**Firmware:** ${file}, SHA-256 ${'cd'.repeat(32)}\n`);
+  });
+
   it('keeps anything that identifies one radio out of the log', () => {
     const log = scrubLog([
       'chip-id: C620240900065701',
