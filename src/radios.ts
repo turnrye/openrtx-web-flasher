@@ -169,7 +169,7 @@ export const RADIOS: Radio[] = [
     enter: [
       'Remove power and connect the programming cable.',
       'Hold the orange button and P1 (the two keys at the lower left of the front panel), then apply power.',
-      'The screen stays dark: the radio is in flashing mode (TYT calls it firmware upgrade mode).',
+      'The screen blinks on and off with nothing on it: the radio is in flashing mode (TYT calls it firmware upgrade mode).',
     ],
     after: 'Remove power and apply it again.',
     manual: RADIO_TOOL,
