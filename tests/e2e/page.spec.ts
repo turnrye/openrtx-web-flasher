@@ -94,8 +94,17 @@ test('warnings sit where they apply', async ({ page }) => {
 
   await page.getByTestId('radio-cs7000p').click();
   await pickBuild(page);
+  // Before the page asks for the radio, it says what flashes one with its maker's firmware.
+  const instead = step(page, 'step-enter').getByTestId('use-instead');
+  await expect(instead).toContainText('cannot be flashed from a browser');
+  await expect(instead.getByRole('link', { name: 'cs7000plus_flasher by imostlylurk' })).toHaveAttribute(
+    'href',
+    'https://github.com/imostlylurk/cs7000plus_flasher',
+  );
   await skipToFlash(page);
   await expect(page.getByTestId('flash-notes')).toContainText('second firmware slot');
+  await expect(page.getByTestId('other-tool')).toHaveAttribute('open', '');
+  await expect(page.getByTestId('other-tool').getByTestId('other-tools')).toContainText('Factory Tool');
   await expect(page.locator('body')).not.toContainText('Before you start');
 });
 

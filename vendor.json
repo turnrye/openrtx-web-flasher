@@ -159,6 +159,13 @@
       "files": "tools/cps_flash.py, tools/README.md, docs/cps-uart.md",
       "license": "GPL-3.0",
       "note": "The read path only: handshake, key packet, scrambling, block read, address map. docs/cps-uart.md describes a framed variant of the protocol; the tool, which this follows, sends raw bytes."
+    },
+    "src/flash/cs7000-robot.ts": {
+      "from": "https://github.com/imostlylurk/cs7000plus_flasher",
+      "commit": "1ef050406ce8",
+      "files": "cs7000plus_flasher.py",
+      "license": "Apache-2.0",
+      "note": "The OpenRTX-slot session only: frame layout, commands, SCSI vendor commands and the TORX table, which is copied. The code is not."
     }
   }
 }

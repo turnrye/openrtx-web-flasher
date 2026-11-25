@@ -233,6 +233,9 @@ Ported from or built on other people's work:
 - RT-4D flasher: ported from
   [RT-4D-python-flasher](https://github.com/fagci/RT-4D-python-flasher) by Mikhail Yudin
   (GPL-3.0).
+- CS7000-M17 Plus robot mode (command line): the bootloader protocol and its table from
+  imostlylurk's [cs7000plus_flasher](https://github.com/imostlylurk/cs7000plus_flasher)
+  (Apache-2.0).
 - RT-950 Pro flasher: follows the bootloader protocol in `scripts/rt950_flash.py` of
   Marko13's [RT-950 Pro port of OpenRTX](https://github.com/Marko13-dev/OpenRTX/tree/rt950pro)
   (GPL-3.0-or-later).

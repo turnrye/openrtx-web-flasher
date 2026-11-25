@@ -22,6 +22,7 @@ import { formatSize } from './common.tsx';
 import { ExperimentalGate } from './Experimental.tsx';
 import { RadioArt } from './RadioArt.tsx';
 import { CopyReport, ReportLink, ReportNote, type ReportDraft } from './Report.tsx';
+import { OtherTools } from './UseInstead.tsx';
 
 /** Where a flash attempt stands. */
 type Status = 'idle' | 'running' | 'done' | 'error';
@@ -366,14 +367,23 @@ export function FlashStep(props: Props) {
         )}
 
         {radio.method !== 'uf2-copy' && (
-          // Folded while the page can do the flashing; open when it cannot.
-          <details class="more" data-testid="other-tool" open={!supported}>
+          // Folded while the page can do the flashing; open when it cannot, or usually cannot.
+          <details class="more" data-testid="other-tool" open={!supported || !!radio.useInstead}>
             <summary>Use another tool instead</summary>
-            <p>
-              Download the file and write it with <a href={radio.manual.url}>{radio.manual.tool}</a>.
-            </p>
-            {command && <pre class="command">{command}</pre>}
-            {radio.manual.windows && <p class="muted small">{radio.manual.windows}</p>}
+            {radio.useInstead ? (
+              <>
+                <p>Download the .bin file and write it with one of these:</p>
+                <OtherTools tools={radio.useInstead.tools} />
+              </>
+            ) : (
+              <>
+                <p>
+                  Download the file and write it with <a href={radio.manual.url}>{radio.manual.tool}</a>.
+                </p>
+                {command && <pre class="command">{command}</pre>}
+                {radio.manual.windows && <p class="muted small">{radio.manual.windows}</p>}
+              </>
+            )}
             <div class="actions">
               <Download file={file} />
               {extras.map((f) => (
