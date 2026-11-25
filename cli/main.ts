@@ -76,7 +76,13 @@ export interface Host {
  * does it: `verified` in src/radios.ts is about the page in Chrome, which reaches the
  * radio through another USB and serial layer.
  */
-const CHECKED: Partial<Record<string, Verification>> = {};
+const CHECKED: Partial<Record<string, Verification>> = {
+  cs7000p: {
+    version: 'development build 9951a7d1',
+    platform: 'Node 26.9, macOS on Apple silicon, robot mode',
+    date: '2026-11-24',
+  },
+};
 
 /** The devices of one run: real ones, or the simulators. */
 interface Devices {
