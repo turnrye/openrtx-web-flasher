@@ -130,9 +130,10 @@ nightly.link.
 - It runs the page's flashers, readers, catalogue and backup format, and keeps its
   safeguards. It asks before it writes (`--yes` skips that), and a radio in the wrong
   mode or a file for another radio is refused before anything is sent.
-- **Not checked on any real radio yet.** The radios marked as checked were checked from
-  Chrome; the command line reaches them through other USB, serial and HID libraries. So
-  every radio asks for `--experimental` until someone runs the bench check with it.
+- **Checked on two real radios so far: the CS7000-M17 Plus and the MD-9600.** The radios
+  marked as checked on the page were checked from Chrome; the command line reaches them
+  through other USB, serial and HID libraries. So every other radio asks for
+  `--experimental` until someone runs the bench check with it.
 - `backup` stops early when `--out` already holds a backup of the radio that is
   connected, as the page does; `--again` reads it anyway.
 - `--sim` runs any command against the simulated radios, as `?sim=1` does on the page.

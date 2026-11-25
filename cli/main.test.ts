@@ -112,7 +112,7 @@ describe('looking around', () => {
     const { code, text } = await run(['radios']);
     expect(code).toBe(0);
     for (const radio of RADIOS) expect(text).toContain(`  ${radio.id.padEnd(9)} ${radio.name}`);
-    expect(text).toContain('Read or flashed with this tool on real hardware so far: cs7000p.');
+    expect(text).toContain('Read or flashed with this tool on real hardware so far: md9600, cs7000p.');
   });
 
   it('says what one radio needs: its second image, its flashing mode, its backup', async () => {
@@ -140,10 +140,12 @@ describe('looking around', () => {
     expect(backup.text).toContain('cannot be backed up');
   });
 
-  it('tells MD-9600 users the screen blinks in flashing mode', async () => {
+  it('describes the MD-9600: a blinking screen in flashing mode, checked with this tool', async () => {
     const { text } = await run(['radios', 'md9600']);
     expect(text).toContain('3. The screen blinks on and off with nothing on it');
     expect(text).not.toContain('stays dark');
+    expect(text).toContain('this tool was checked on a real one (2026-11-25); nor has the web page');
+    expect((await run(['radios', 'mduv3x0'])).text).toContain('this tool has not been checked on a real one');
   });
 
   it('answers a mistake with what to do, and an exit code that says which kind', async () => {
