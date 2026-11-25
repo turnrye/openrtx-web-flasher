@@ -77,6 +77,11 @@ export interface Host {
  * radio through another USB and serial layer.
  */
 const CHECKED: Partial<Record<string, Verification>> = {
+  md9600: {
+    version: 'development build 242dcee0',
+    platform: 'Node 26.9, macOS on Apple silicon',
+    date: '2026-11-25',
+  },
   cs7000p: {
     version: 'development build 9951a7d1',
     platform: 'Node 26.9, macOS on Apple silicon, robot mode',
