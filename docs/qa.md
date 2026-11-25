@@ -115,6 +115,7 @@ it is recorded in `CHECKED` in `cli/main.ts`, next to the line in `docs/verifica
 | --------------------------------------- | ---------- | ------------------------------------------------------------------- |
 | Retevis C62                             | passing    | backup and flash checked, 2026-11-21; no restore                    |
 | Connect Systems CS7000-M17              | passing    | flash reported working, 2026-11-21; no backup; browser not recorded |
+| Connect Systems CS7000-M17 Plus         | passing    | command line, robot mode: flash checked, 2026-11-24; page not run   |
 | all TYT, GD-77 family, STM32 DFU, RT-4D | passing    | not yet run                                                         |
 | Radtel RT-950 Pro                       | passing    | not yet run                                                         |
 

@@ -112,7 +112,7 @@ describe('looking around', () => {
     const { code, text } = await run(['radios']);
     expect(code).toBe(0);
     for (const radio of RADIOS) expect(text).toContain(`  ${radio.id.padEnd(9)} ${radio.name}`);
-    expect(text).toContain('None of them has been read or flashed with this tool on real hardware yet.');
+    expect(text).toContain('Read or flashed with this tool on real hardware so far: cs7000p.');
   });
 
   it('says what one radio needs: its second image, its flashing mode, its backup', async () => {
@@ -133,6 +133,7 @@ describe('looking around', () => {
     expect(text).toContain('2. Hold PTT and the orange button on top, then turn the radio on.');
     expect(text).not.toContain('SK1');
     expect(text).toContain('Backup: A radio with its Connect Systems firmware cannot be backed up');
+    expect(text).toContain('this tool was checked on a real one (2026-11-24); nor has the web page');
     expect((await run(['radios'])).text).toContain('USB; backup: not possible');
     const backup = await run(['backup', 'cs7000p', '--sim']);
     expect(backup.code).toBe(1);
