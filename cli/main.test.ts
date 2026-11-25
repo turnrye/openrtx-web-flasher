@@ -140,6 +140,12 @@ describe('looking around', () => {
     expect(backup.text).toContain('cannot be backed up');
   });
 
+  it('tells MD-9600 users the screen blinks in flashing mode', async () => {
+    const { text } = await run(['radios', 'md9600']);
+    expect(text).toContain('3. The screen blinks on and off with nothing on it');
+    expect(text).not.toContain('stays dark');
+  });
+
   it('answers a mistake with what to do, and an exit code that says which kind', async () => {
     expect(await run(['flsh'])).toMatchObject({ code: 2 });
     const unknown = await run(['backup', 'md380']);
