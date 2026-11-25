@@ -39,6 +39,14 @@ export interface ManualTool {
   url: string;
 }
 
+/** A tool other than this page that flashes a radio. */
+export interface OtherTool {
+  tool: string;
+  url: string;
+  /** What it runs on and what to give it, for the user. */
+  text: string;
+}
+
 /** A second image a radio needs next to its firmware file. */
 export interface Companion {
   /** File name in the build. */
@@ -84,6 +92,11 @@ export interface Radio {
   /** Things to know at the moment of flashing, shown next to the Flash button. */
   flashNotes?: string[];
   manual: ManualTool;
+  /**
+   * For a radio the page cannot flash in the state it usually comes in: why, and the
+   * tools to use instead. The page says so before it asks for the radio.
+   */
+  useInstead?: { why: string; tools: OtherTool[] };
   /**
    * Another way into the radio that only the command line has: a kind of USB device that
    * browsers keep from web pages. The command line uses these in place of the radio's own.
@@ -254,7 +267,7 @@ export const RADIOS: Radio[] = [
     flashNotes: [
       'OpenRTX goes in the second firmware slot; the Connect Systems bootloader and DMR firmware stay.',
       'Writing takes a while and the radio shows nothing while it happens.',
-      'A radio that still has its Connect Systems firmware refuses this: that firmware read-protects the chip. Flash such a radio from the command line or with the Factory Tool.',
+      'A radio that still has its Connect Systems firmware refuses this flashing mode. Use one of the other tools below.',
     ],
     manual: {
       tool: 'Connect Systems Factory Tool',
@@ -263,6 +276,26 @@ export const RADIOS: Radio[] = [
         'The .dfu file works with dfu-util or DfuSe Demo in DFU mode.',
       command: 'dfu-util -d 0483:df11 -a 0 -D {file}',
       url: 'https://www.connectsystems.com/amateur-software/CS7000_m17_plus_software.html',
+    },
+    useInstead: {
+      why:
+        'A radio with its Connect Systems firmware on it, as it comes from the factory, cannot be flashed from ' +
+        'a browser: that firmware locks the flashing mode a browser can use. Flash it with one of these tools ' +
+        'and the .bin file of the build instead. They write OpenRTX into the second firmware slot and leave ' +
+        'the Connect Systems bootloader and DMR firmware in place. The steps on this page are for a radio ' +
+        'without that firmware.',
+      tools: [
+        {
+          tool: 'Connect Systems Factory Tool',
+          url: 'https://www.connectsystems.com/amateur-software/CS7000_m17_plus_software.html',
+          text: 'Windows. Hold PTT and the orange button on top while turning the radio on, then load the .bin file.',
+        },
+        {
+          tool: 'cs7000plus_flasher by imostlylurk',
+          url: 'https://github.com/imostlylurk/cs7000plus_flasher',
+          text: 'Linux. The same flashing mode; give it the .bin file.',
+        },
+      ],
     },
     commandLine: {
       method: 'cs7000-robot',

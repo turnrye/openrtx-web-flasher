@@ -2,6 +2,7 @@
 /** The step that puts the radio in flashing mode: a drawing with the keys to hold, and what to do. */
 import type { Radio } from '../radios.ts';
 import { RadioArt } from './RadioArt.tsx';
+import { UseInstead } from './UseInstead.tsx';
 
 interface Props {
   radio: Radio;
@@ -15,6 +16,7 @@ interface Props {
 export function EnterStep({ radio, again, onDone }: Props) {
   return (
     <div class="block" data-testid="enter-step">
+      <UseInstead radio={radio} />
       {again && (
         <p data-testid="enter-again">Reading the radio ended flashing mode. Put the radio in it again.</p>
       )}

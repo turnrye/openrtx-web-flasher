@@ -102,6 +102,12 @@ describe('radio catalogue', () => {
     expect(backupFor(cli).how).toBe('none');
     expect(forCommandLine(radioById('mod17')!)).toBe(radioById('mod17'));
     expect(RADIOS.filter((r) => r.commandLine).map((r) => r.id)).toEqual(['cs7000p']);
+    // The page sends people to other tools for this radio, the maker's first.
+    expect(page.useInstead!.tools.map((t) => t.url)).toEqual([
+      page.manual.url,
+      'https://github.com/imostlylurk/cs7000plus_flasher',
+    ]);
+    expect(RADIOS.filter((r) => r.useInstead).map((r) => r.id)).toEqual(['cs7000p']);
   });
 
   it('keeps warnings where they apply, not in a block before flashing', () => {
