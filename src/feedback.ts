@@ -81,7 +81,15 @@ export function reportBody(report: Report, logLines?: number): string {
   add('Radio', report.radio && `${report.radio.name} (${report.radio.id})`);
   add(
     'Firmware',
-    report.firmware && `${report.firmware.label}, ${report.firmware.file}, SHA-256 ${report.firmware.sha256}`,
+    report.firmware &&
+      [
+        report.firmware.label,
+        // A file given by hand is labelled with its own name
+        report.firmware.file !== report.firmware.label ? report.firmware.file : undefined,
+        `SHA-256 ${report.firmware.sha256}`,
+      ]
+        .filter((part) => part !== undefined)
+        .join(', '),
   );
   add('Backup', report.backup);
   add('Message', report.error);
