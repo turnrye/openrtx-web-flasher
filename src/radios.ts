@@ -305,7 +305,8 @@ export const RADIOS: Radio[] = [
         'The LED changes colour in a loop: the radio is in flashing mode (Connect Systems calls it robot mode).',
       ],
       after:
-        'Turn the radio off. Hold SK3 while turning it on to start OpenRTX; without a key it starts the DMR firmware.',
+        'Leave the radio on. Its screen stays grey for about a minute while the bootloader loads the new ' +
+        'firmware, then the radio starts it by itself. Do not turn it off while it does.',
       flashNotes: [
         'OpenRTX goes in the second firmware slot; the Connect Systems bootloader and DMR firmware stay.',
         'The radio cannot be read in this mode, so what was written is not compared afterwards.',

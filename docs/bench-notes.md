@@ -102,8 +102,10 @@ answers is known from other tools, and for the TYT family from one MD-9600.
 - The log should say "Connected to the radio's bootloader (it answered 24)", then the
   block count. Answers other than 21 to a block or the commit are logged, not fatal: the
   Factory Tool goes by the answer's command alone.
-- Nothing can be read back in this mode. The check is the radio itself: SK3 at power-on
-  starts OpenRTX, no key starts the DMR firmware, which a failed write leaves alone.
+- Nothing can be read back in this mode. The check is the radio itself: after the commit
+  its screen stays grey for about a minute while the bootloader loads the image, then it
+  starts the new firmware by itself (Linux, 2026-11-26). The tool says to leave it on
+  until then.
 - Windows keeps the device too, and libusb cannot take it there: the Factory Tool.
 
 ## GD-77, DM-1801 (WebHID)
