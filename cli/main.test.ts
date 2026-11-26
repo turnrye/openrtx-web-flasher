@@ -112,7 +112,9 @@ describe('looking around', () => {
     const { code, text } = await run(['radios']);
     expect(code).toBe(0);
     for (const radio of RADIOS) expect(text).toContain(`  ${radio.id.padEnd(9)} ${radio.name}`);
-    expect(text).toContain('Read or flashed with this tool on real hardware so far: md9600, cs7000p.');
+    expect(text).toContain(
+      'Read or flashed with this tool on real hardware so far: mduv3x0, md9600, cs7000p.',
+    );
   });
 
   it('says what one radio needs: its second image, its flashing mode, its backup', async () => {
@@ -145,7 +147,10 @@ describe('looking around', () => {
     expect(text).toContain('3. The screen blinks on and off with nothing on it');
     expect(text).not.toContain('stays dark');
     expect(text).toContain('this tool was checked on a real one (2026-11-25); nor has the web page');
-    expect((await run(['radios', 'mduv3x0'])).text).toContain('this tool has not been checked on a real one');
+    expect((await run(['radios', 'md3x0'])).text).toContain('this tool has not been checked on a real one');
+    expect((await run(['radios', 'mduv3x0'])).text).toContain(
+      'this tool was checked on a real one (2026-11-26)',
+    );
   });
 
   it('answers a mistake with what to do, and an exit code that says which kind', async () => {

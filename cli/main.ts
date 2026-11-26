@@ -82,6 +82,11 @@ const CHECKED: Partial<Record<string, Verification>> = {
     platform: 'Node 26.9, macOS on Apple silicon',
     date: '2026-11-25',
   },
+  mduv3x0: {
+    version: 'development build a787a6d8',
+    platform: 'Node 24.22, Ubuntu 26.04 on x86_64',
+    date: '2026-11-26',
+  },
   cs7000p: {
     version: 'development build 9951a7d1',
     platform: 'Node 26.9, macOS on Apple silicon, robot mode',
