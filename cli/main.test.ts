@@ -267,7 +267,8 @@ describe('simulated radios (--sim)', () => {
     expect(flash.text).toContain('Hold PTT and the orange button on top');
     expect(flash.text).toContain('Writing 51203 bytes to the second firmware slot in 26 blocks.');
     expect(flash.text).toContain('The radio took all 26 blocks.');
-    expect(flash.text).toContain('Hold SK3 while turning it on to start OpenRTX');
+    expect(flash.text).toContain('Leave the radio on. Its screen stays grey for about a minute');
+    expect(flash.text).not.toContain('Hold SK3');
     expect(flash.text).toContain(WRITTEN);
 
     const low = await run(['flash', 'cs7000p', CS7000P_LOW_DFU, '--sim', '--yes']);
