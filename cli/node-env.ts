@@ -6,6 +6,7 @@
  * than one device fits. A serial port is never guessed: it is named with --port or
  * picked from a list.
  */
+import { accessSync, constants } from 'node:fs';
 import type { DeviceEnv } from '../src/devices.ts';
 import { FlashError } from '../src/flash/types.ts';
 import { backupFor, type Radio } from '../src/radios.ts';
@@ -13,11 +14,82 @@ import type { Io } from './io.ts';
 import { NodeHidDevice, type HidInfo, type HidModule } from './node-hid.ts';
 import { NodeSerialPort, type PortInfo, type SerialModule } from './node-serial.ts';
 
-/** The part of a `usb` package this file uses: its WebUSB implementation. */
+/** A device as the libusb `usb` package lists it, before WebUSB has opened it. */
+export interface ListedUsbDevice {
+  deviceDescriptor: { idVendor: number; idProduct: number };
+  open(): void;
+  close(): void;
+}
+
+/**
+ * The part of a `usb` package this file uses: its WebUSB implementation and, in the
+ * libusb one, the plain device list.
+ */
 export interface UsbModule {
   WebUSB: new (options: { devicesFound: (devices: USBDevice[]) => Promise<USBDevice | undefined> }) => {
     requestDevice(options: USBDeviceRequestOptions): Promise<USBDevice>;
   };
+  getDeviceList?(): ListedUsbDevice[];
+}
+
+/**
+ * The radio is there, but this user may not open it. On Linux that is the device's
+ * permissions, which "openrtx-flasher setup" fixes; main offers it when this is thrown.
+ */
+export class NoAccessError extends FlashError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NoAccessError';
+  }
+}
+
+/** True when a USB or HID library's error means "permission denied". */
+export function isRefusal(why: string): boolean {
+  return /LIBUSB_ERROR_ACCESS|permission denied|errno 13|EACCES/i.test(why);
+}
+
+/** The text of a thrown value. */
+function textOf(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** What to say when the radio is there but this user may not open it. */
+export function noAccess(radio: Radio, why: string): string {
+  return `The ${radio.name} is connected, but this user may not open it (${why}).`;
+}
+
+/**
+ * Why a device that fits `filters` is connected but was not offered: the libusb package
+ * leaves out, without a word, every device it cannot open. Null when none fits, or the
+ * package cannot list devices itself.
+ */
+function whyLeftOut(usb: UsbModule, filters: USBDeviceFilter[]): string | null {
+  const listed = (usb.getDeviceList?.() ?? []).filter(({ deviceDescriptor: d }) =>
+    filters.some((f) => f.vendorId === d.idVendor && f.productId === d.idProduct),
+  );
+  for (const device of listed) {
+    try {
+      device.open();
+      device.close();
+    } catch (e) {
+      return textOf(e);
+    }
+  }
+  return null;
+}
+
+/**
+ * Opens and closes `device` once, so a refusal is found before anything is sent to the
+ * radio and not halfway through a flash. Opening sends nothing to the device.
+ */
+async function tryOpening(device: USBDevice, radio: Radio): Promise<void> {
+  try {
+    await device.open();
+  } catch (e) {
+    if (isRefusal(textOf(e))) throw new NoAccessError(noAccess(radio, textOf(e)));
+    throw e;
+  }
+  await device.close();
 }
 
 /** Where the three native packages come from; each is loaded when a radio first needs it. */
@@ -110,7 +182,7 @@ export function driveRefusal(why: string, platform: string = process.platform): 
     case 'win32':
       return 'Windows keeps this kind of USB device to itself. Use the Connect Systems Factory Tool with the .bin file instead.';
     default:
-      return 'This user may not use the radio\'s USB device. Run the command again with "sudo" in front, or add a udev rule for it.';
+      return 'This user may not use the radio\'s USB device. "openrtx-flasher setup" lets the person logged in at this computer use it.';
   }
 }
 
@@ -183,9 +255,11 @@ function fits(device: HidInfo, filters: HIDDeviceFilter[]): boolean {
 
 /**
  * Devices of this computer. `port` is the serial port named on the command line, if one
- * was.
+ * was. `platform` is process.platform's name for the system, which main passes: on
+ * 'linux' a radio this user may not open is a NoAccessError, not "not found". Left out,
+ * no system's checks are made, so a test behaves the same on every computer.
  */
-export function nodeEnv(modules: NodeModules, io: Io, port?: string): DeviceEnv {
+export function nodeEnv(modules: NodeModules, io: Io, port?: string, platform = ''): DeviceEnv {
   return {
     simulated: false,
     // Whether a package is there is only known once it is loaded; a missing one says so then.
@@ -194,13 +268,19 @@ export function nodeEnv(modules: NodeModules, io: Io, port?: string): DeviceEnv 
 
     usb: async (filters, radio, purpose) => {
       const drive = radio.method === 'cs7000-robot';
-      const { WebUSB } = await modules.usb(drive ? 'storage' : undefined);
-      const usb = new WebUSB({ devicesFound: (devices) => pickOne(devices, usbLabel, 'USB device', io) });
+      const usbModule = await modules.usb(drive ? 'storage' : undefined);
+      const usb = new usbModule.WebUSB({
+        devicesFound: (devices) => pickOne(devices, usbLabel, 'USB device', io),
+      });
       try {
         const device = await usb.requestDevice({ filters });
+        if (platform === 'linux' && !drive) await tryOpening(device, radio);
         return drive ? takingOver(device) : patient(device);
       } catch (e) {
         if (e instanceof Error && e.name === 'NotFoundError') {
+          const why = platform === 'linux' ? whyLeftOut(usbModule, filters) : null;
+          if (why && isRefusal(why)) throw new NoAccessError(noAccess(radio, why));
+          if (why) throw new FlashError(`The ${radio.name} is connected, but could not be opened: ${why}`);
           throw new FlashError(
             `No ${radio.name} was found on USB. Connect it and put it in ${modeFor(radio, purpose)}.`,
           );
@@ -220,6 +300,13 @@ export function nodeEnv(modules: NodeModules, io: Io, port?: string): DeviceEnv 
         );
       }
       const picked = await pickOne(found, (d) => d.product ?? d.path, 'USB device', io);
+      if (platform === 'linux' && picked.path.startsWith('/')) {
+        try {
+          accessSync(picked.path, constants.R_OK | constants.W_OK);
+        } catch (e) {
+          if (isRefusal(textOf(e))) throw new NoAccessError(noAccess(radio, textOf(e)));
+        }
+      }
       return new NodeHidDevice(hid, picked) as unknown as HIDDevice;
     },
 

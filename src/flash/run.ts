@@ -14,16 +14,16 @@ import { flashTyt } from './tyt.ts';
 import { FlashError, type FlashContext, type Segment } from './types.ts';
 
 /** STM32 and GD32 ROM bootloaders, and the TYT bootloader that borrows ST's IDs. */
-const DFU_FILTERS: USBDeviceFilter[] = [
+export const DFU_FILTERS: USBDeviceFilter[] = [
   { vendorId: 0x0483, productId: 0xdf11 },
   { vendorId: 0x28e9, productId: 0x0189 },
 ];
 
 /** The Connect Systems bootloader of the CS7000-M17 Plus in robot mode: a USB drive. */
-const CS7000_ROBOT_FILTERS: USBDeviceFilter[] = [{ vendorId: 0x0483, productId: 0x5720 }];
+export const CS7000_ROBOT_FILTERS: USBDeviceFilter[] = [{ vendorId: 0x0483, productId: 0x5720 }];
 
 /** NXP MK22 bootloader of the GD-77 family. */
-const GD77_FILTERS: HIDDeviceFilter[] = [{ vendorId: 0x15a2, productId: 0x0073 }];
+export const GD77_FILTERS: HIDDeviceFilter[] = [{ vendorId: 0x15a2, productId: 0x0073 }];
 
 /** Loads the cskburn WebAssembly module that ships next to the page. */
 let loadCskburn: CskModuleLoader = async () => {

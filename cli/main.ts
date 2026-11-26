@@ -5,7 +5,8 @@
  * safeguards: it asks before it writes, it does not talk to a radio nobody has checked
  * it on without being told to, and the flashers refuse a radio in the wrong state.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makeBundle } from '../src/backup/bundle.ts';
 import type { RadioBackup } from '../src/backup/types.ts';
@@ -37,9 +38,10 @@ import { checkWritable, knownBackups, saveBackup } from './backups.ts';
 import { nativeCskburn, platformName, wasmCskburn } from './cskburn.ts';
 import { DEFAULT_REPO, developmentRun, fileData, releases, resolveBuild, type Source } from './firmware.ts';
 import { formatSize, type Io } from './io.ts';
-import { nodeEnv, portLabel, type NodeModules } from './node-env.ts';
+import { NoAccessError, nodeEnv, portLabel, type NodeModules } from './node-env.ts';
 import type { NodeSerialPort } from './node-serial.ts';
 import { backupProblems, flashProblems, simDevices, type SimProbes } from './sim.ts';
+import { installSteps, rulesState, shown, udevRules } from './udev.ts';
 
 /**
  * The shape of `backupDevice`: told which radios are already backed up, it says so
@@ -69,6 +71,14 @@ export interface Host {
   readBackup: ReadBackup;
   /** The time, for a backup's name. */
   now(): Date;
+  /** The operating system, as process.platform names it. */
+  platform: string;
+  /** Runs a command with the terminal attached, so sudo can ask for a password; resolves to its exit code. */
+  run(command: string, args: string[]): Promise<number>;
+  /** Where "setup" installs the udev rule file. */
+  rulesPath: string;
+  /** This same command line under sudo, with the paths of this Node and this program, ready to print. */
+  asRoot: string;
 }
 
 /**
@@ -119,7 +129,7 @@ function devicesFor(options: Options, host: Host): Devices {
     return { ...simDevices(options.sim), cskburn: () => Promise.resolve(wasmCskburn()) };
   }
   return {
-    env: nodeEnv(host.modules, host.io, options.port),
+    env: nodeEnv(host.modules, host.io, options.port, host.platform),
     cskburn: async (port) => {
       const binary = options.cskburn ?? (await host.cskburn());
       if (!binary) {
@@ -134,20 +144,87 @@ function devicesFor(options: Options, host: Host): Devices {
 }
 
 /**
+ * Shows the udev rule file and offers to install it: on Linux, the way to reach a radio
+ * without sudo. True once it is installed. Without a terminal to ask in, or when the
+ * person says no, it prints the commands instead and changes nothing.
+ */
+async function offerSetup(host: Host): Promise<boolean> {
+  const { io } = host;
+  if (rulesState(host.rulesPath) === 'outdated') {
+    io.say(`${host.rulesPath} is from another version of this tool; this one replaces it.`);
+  }
+  io.say(
+    'Linux gives a new USB device to root. A udev rule hands radios in flashing mode to whoever is ' +
+      `logged in at this computer, so this tool can reach them as you. It is one file, ${host.rulesPath}:`,
+  );
+  io.say();
+  udevRules()
+    .trimEnd()
+    .split('\n')
+    .forEach((line) => io.say(`  ${line}`));
+  io.say();
+  const source = join(mkdtempSync(join(tmpdir(), 'openrtx-flasher-')), '70-openrtx-flasher.rules');
+  writeFileSync(source, udevRules());
+  const steps = installSteps(source, host.rulesPath);
+  io.say('Installing it takes three commands: copy the file into place, reload the rules, apply them to');
+  io.say('devices already connected.');
+  steps.forEach((step) => io.say(`  ${shown(step)}`));
+  if (!io.interactive || !(await io.confirm('Run them now? sudo asks for your password.'))) {
+    io.say(`Nothing was changed. Run the commands above yourself, then try again. ${source} holds the file.`);
+    return false;
+  }
+  for (const step of steps) {
+    io.say(`$ ${shown(step)}`);
+    const code = await host.run(step.command, step.args);
+    if (code !== 0) {
+      io.say(`That failed (exit code ${code}), and the rest was not run.`);
+      return false;
+    }
+  }
+  io.say(`Installed ${host.rulesPath}. Delete it to undo this.`);
+  return true;
+}
+
+/** What to say when the rule file is there and the radio is still refused. */
+function stillRefused(host: Host): string {
+  return (
+    `${host.rulesPath} is installed, and the radio is still refused. The rule gives devices to someone ` +
+    'logged in at this computer: not over SSH, and not where systemd-logind does not run. Unplug the ' +
+    `radio, put it in flashing mode again and try once more. If it is still refused, run this once as root:\n  ${host.asRoot}`
+  );
+}
+
+/**
  * Finds the radio's device, and for a C62 points the flasher at the cskburn that goes
  * with it. When there is no device to use it says why and returns null: nothing has
- * been sent to a radio then, so it is not a failed flash or backup.
+ * been sent to a radio then, so it is not a failed flash or backup. A radio this user
+ * may not open, on Linux, is offered the udev rule and looked for once more.
  */
-async function pick(radio: Radio, devices: Devices, purpose: Purpose, io: Io): Promise<PickedDevice | null> {
-  try {
-    const picked = await pickDevice(radio, devices.env, purpose);
-    if (picked.api === 'serial' && radio.method === 'csk-serial') {
-      setCskburnLoader(await devices.cskburn(picked.device));
+async function pick(
+  radio: Radio,
+  devices: Devices,
+  purpose: Purpose,
+  host: Host,
+  options: Options,
+): Promise<PickedDevice | null> {
+  const { io } = host;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const picked = await pickDevice(radio, devices.env, purpose);
+      if (picked.api === 'serial' && radio.method === 'csk-serial') {
+        setCskburnLoader(await devices.cskburn(picked.device));
+      }
+      return picked;
+    } catch (e) {
+      io.say(messageOf(e));
+      if (!(e instanceof NoAccessError) || options.sim !== undefined) return null;
+      if (attempt > 0 || rulesState(host.rulesPath) === 'current') {
+        io.say(stillRefused(host));
+        return null;
+      }
+      if (!(await offerSetup(host))) return null;
+      io.say(`Looking for the ${radio.name} again.`);
     }
-    return picked;
-  } catch (e) {
-    io.say(messageOf(e));
-    return null;
   }
 }
 
@@ -489,7 +566,7 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
       sha256: hash,
     },
   };
-  const picked = await pick(radio, devices, 'flash', io);
+  const picked = await pick(radio, devices, 'flash', host, options);
   if (!picked) return 1;
   const other = otherRadio(build, picked);
   if (other) {
@@ -562,7 +639,7 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   const devices = devicesFor(options, host);
   const known = options.again ? new Map<string, string>() : knownBackups(options.out, radio.id);
   const log: string[] = [];
-  const picked = await pick(radio, devices, 'backup', io);
+  const picked = await pick(radio, devices, 'backup', host, options);
   if (!picked) return 1;
   try {
     io.say('Do not unplug or switch off the radio.');
@@ -626,6 +703,48 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   return 0;
 }
 
+/** `setup`: what this computer needs before the tool can reach radios, and on Linux, doing it. */
+async function setup(options: Options, host: Host): Promise<number> {
+  const { io } = host;
+  if (options.print) {
+    io.say(udevRules().trimEnd());
+    return 0;
+  }
+  switch (host.platform) {
+    case 'linux':
+      break;
+    case 'darwin':
+      io.say(
+        'macOS needs no setup. The one exception is the CS7000-M17 Plus in robot mode: it is a USB drive, ' +
+          'which macOS keeps to itself, so flash it with "sudo" in front of the command.',
+      );
+      return 0;
+    case 'win32':
+      io.say(
+        'On Windows a USB radio needs the WinUSB driver: install it once with Zadig (https://zadig.akeo.ie) ' +
+          'while the radio is in flashing mode. The CS7000-M17 Plus in robot mode cannot be reached from ' +
+          'Windows; use the Connect Systems Factory Tool.',
+      );
+      return 0;
+    default:
+      io.say('There is nothing to set up here: "setup" is for Linux.');
+      return 0;
+  }
+  if (rulesState(host.rulesPath) === 'current') {
+    io.say(`Already set up: ${host.rulesPath} is current. Delete it to undo this.`);
+  } else if (!(await offerSetup(host))) {
+    return 1;
+  }
+  const serial = RADIOS.filter((r) => apiFor(forCommandLine(r).method) === 'serial').map((r) => r.name);
+  io.say();
+  io.say(
+    `Radios on a serial cable (${serial.join(', ')}) need none of this: they use a serial port, which ` +
+      'Linux gives to the dialout group. If "ports" lists the port but opening it is refused, add yourself ' +
+      'to that group with "sudo usermod -aG dialout $USER", then log out and back in.',
+  );
+  return 0;
+}
+
 /**
  * Runs one command line (`argv` without node and the script) and returns the exit code:
  * 0 done, 1 not done, 2 not understood.
@@ -656,6 +775,8 @@ export async function main(argv: string[], host: Host): Promise<number> {
         return await showFirmware(options, host);
       case 'ports':
         return await showPorts(options, host);
+      case 'setup':
+        return await setup(options, host);
       case 'fetch':
         return await fetchFiles(radioNamed(command.radio), command.firmware, options, host);
       case 'backup':

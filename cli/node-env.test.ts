@@ -10,9 +10,19 @@ import { SimCs7000Robot } from '../src/sim/cs7000-robot.ts';
 import { SimGd77 } from '../src/sim/gd77.ts';
 import { SimRt4d } from '../src/sim/rt4d.ts';
 import { SimStm32Dfu } from '../src/sim/stm32dfu.ts';
-import { driveRefusal, load, nodeEnv, type NodeModules, type UsbModule } from './node-env.ts';
+import { chmodSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  driveRefusal,
+  load,
+  NoAccessError,
+  nodeEnv,
+  type ListedUsbDevice,
+  type NodeModules,
+  type UsbModule,
+} from './node-env.ts';
 import { type NodeSerialPort } from './node-serial.ts';
-import { fakeIo, hidOver, serialOver } from './test-support.ts';
+import { fakeIo, folder, hidOver, serialOver } from './test-support.ts';
 
 /** A package that must not be asked for in this test. */
 function unused(): Promise<never> {
@@ -172,7 +182,7 @@ describe('devices of this computer for the page’s flashers', () => {
     expect((refused as Error).message).toBe(driveRefusal(refuse));
 
     expect(driveRefusal(refuse, 'darwin')).toContain('Run the command again with "sudo" in front');
-    expect(driveRefusal(refuse, 'linux')).toContain('udev rule');
+    expect(driveRefusal(refuse, 'linux')).toContain('"openrtx-flasher setup"');
     expect(driveRefusal('claimInterface error: Error: LIBUSB_ERROR_NOT_SUPPORTED', 'win32')).toContain(
       'Factory Tool',
     );
@@ -258,5 +268,72 @@ describe('devices of this computer for the page’s flashers', () => {
     await expect(load('openrtx-flasher-no-such-package', 'USB')).rejects.toThrow(
       'This computer cannot reach USB radios from the command line: the "openrtx-flasher-no-such-package" package is not installed here.',
     );
+  });
+
+  describe('on Linux, a radio this user may not open', () => {
+    /** A device in libusb's own list that cannot be opened, for the reason given. */
+    const listed = (why: string | null): ListedUsbDevice => ({
+      deviceDescriptor: { idVendor: 0x0483, idProduct: 0x5720 },
+      open: () => {
+        if (why) throw new Error(why);
+      },
+      close: () => {},
+    });
+
+    it('is called refused, not missing, when the libusb package leaves it out', async () => {
+      const usb = { ...usbWith([]), getDeviceList: () => [listed('LIBUSB_ERROR_ACCESS')] };
+      const env = nodeEnv(modules({ usb: () => Promise.resolve(usb) }), fakeIo(), undefined, 'linux');
+      const refused = pickDevice(cs7000p, env, 'flash');
+      await expect(refused).rejects.toBeInstanceOf(NoAccessError);
+      await expect(refused).rejects.toThrow(
+        'The Connect Systems CS7000-M17 Plus is connected, but this user may not open it (LIBUSB_ERROR_ACCESS).',
+      );
+    });
+
+    it('is only looked for on Linux, and another reason is said as it is', async () => {
+      const usb = { ...usbWith([]), getDeviceList: () => [listed('LIBUSB_ERROR_ACCESS')] };
+      const elsewhere = nodeEnv(modules({ usb: () => Promise.resolve(usb) }), fakeIo(), undefined, 'darwin');
+      await expect(pickDevice(cs7000p, elsewhere, 'flash')).rejects.toThrow('was found on USB');
+
+      const busy = { ...usbWith([]), getDeviceList: () => [listed('LIBUSB_ERROR_BUSY')] };
+      const env = nodeEnv(modules({ usb: () => Promise.resolve(busy) }), fakeIo(), undefined, 'linux');
+      await expect(pickDevice(cs7000p, env, 'flash')).rejects.toThrow(
+        'The Connect Systems CS7000-M17 Plus is connected, but could not be opened: LIBUSB_ERROR_BUSY',
+      );
+
+      const absent = { ...usbWith([]), getDeviceList: () => [] };
+      const none = nodeEnv(modules({ usb: () => Promise.resolve(absent) }), fakeIo(), undefined, 'linux');
+      await expect(pickDevice(cs7000p, none, 'flash')).rejects.toThrow(
+        'No Connect Systems CS7000-M17 Plus was found',
+      );
+    });
+
+    it('is found out before anything is sent when the package offers it and opening fails', async () => {
+      const radio = new SimStm32Dfu();
+      radio.open = () => Promise.reject(new Error('open error: permission denied (errno 13)'));
+      const env = nodeEnv(
+        modules({ usb: () => Promise.resolve(usbWith([radio])) }),
+        fakeIo(),
+        undefined,
+        'linux',
+      );
+      await expect(pickDevice(mod17, env, 'flash')).rejects.toBeInstanceOf(NoAccessError);
+    });
+
+    it.skipIf(process.getuid?.() === 0)('is found out from a HID device node it may not read', async () => {
+      const node = join(folder(), 'hidraw3');
+      writeFileSync(node, '');
+      chmodSync(node, 0o000);
+      const hid = {
+        ...hidOver(new SimGd77({ model: 'GD-77' })),
+        devicesAsync: () => Promise.resolve([{ vendorId: 0x15a2, productId: 0x0073, path: node }]),
+      };
+      const env = nodeEnv(modules({ hid: () => Promise.resolve(hid) }), fakeIo(), undefined, 'linux');
+      await expect(pickDevice(gd77, env, 'flash')).rejects.toThrow(
+        /The Radioddity GD-77 is connected, but this user may not open it \(EACCES/,
+      );
+      chmodSync(node, 0o600);
+      await expect(pickDevice(gd77, env, 'flash')).resolves.toMatchObject({ api: 'hid' });
+    });
   });
 });
