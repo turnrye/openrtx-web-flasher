@@ -5,7 +5,7 @@
  * native packages, which is the path a real radio takes. No real device is touched.
  */
 import { createHash, randomBytes } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { zipSync } from 'fflate';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -17,6 +17,7 @@ import { buildSgl, SimGd77 } from '../src/sim/gd77.ts';
 import { buildDfuFile } from '../src/sim/stm32dfu.ts';
 import { SimRt4d } from '../src/sim/rt4d.ts';
 import { main, type Host } from './main.ts';
+import { udevRules } from './udev.ts';
 import type { NodeModules } from './node-env.ts';
 import {
   fakeIo,
@@ -66,6 +67,10 @@ function host(
     cskburn: () => Promise.resolve(null),
     readBackup: backupDevice,
     now: () => new Date('2026-11-21T06:05:00'),
+    platform: 'linux',
+    run: () => Promise.reject(new Error('a test ran a command')),
+    rulesPath: join(folder(), '70-openrtx-flasher.rules'),
+    asRoot: 'sudo /usr/bin/node /opt/openrtx-flasher.mjs flash cs7000p release',
     ...given,
   };
 }
@@ -598,5 +603,123 @@ describe('a radio that is already backed up', () => {
     expect(forced.text).toContain('Simulator: the backup differs from what the simulated radio held.');
     // A second file beside the first: nothing is replaced.
     expect(readdirSync(out).sort()).toEqual([first.name.replace('.zip', '-2.zip'), first.name].sort());
+  });
+});
+
+describe('setup: reaching radios without sudo', () => {
+  /** A stand-in for running commands: it records them, and its "sudo install" copies the file. */
+  function commands(after?: () => void) {
+    const ran: string[][] = [];
+    const run = (command: string, args: string[]) => {
+      ran.push([command, ...args]);
+      if (args[0] === 'install') {
+        copyFileSync(args.at(-2)!, args.at(-1)!);
+        after?.();
+      }
+      return Promise.resolve(0);
+    };
+    return { ran, run };
+  }
+
+  it('prints the rule file alone with --print, for a pipe into sudo tee', async () => {
+    const { code, text } = await run(['setup', '--print']);
+    expect(code).toBe(0);
+    expect(`${text}\n`).toBe(udevRules());
+  });
+
+  it('says what each other system needs instead', async () => {
+    expect((await run(['setup'], { platform: 'darwin' })).text).toContain('with "sudo" in front');
+    expect((await run(['setup'], { platform: 'win32' })).text).toContain('Zadig');
+  });
+
+  it('shows the file and the commands, and changes nothing without a yes', async () => {
+    const { ran, run: stand } = commands();
+    const quiet = await run(['setup'], { run: stand });
+    expect(quiet.code).toBe(1);
+    expect(quiet.text).toContain('TAG+="uaccess"');
+    expect(quiet.text).toContain('sudo udevadm control --reload');
+    expect(quiet.text).toContain('Nothing was changed.');
+
+    const declined = await run(['setup'], { run: stand }, [false]);
+    expect(declined.code).toBe(1);
+    expect(declined.io.asked).toEqual(['Run them now? sudo asks for your password.']);
+    expect(ran).toEqual([]);
+  });
+
+  it('installs the file on a yes, and then knows it is there', async () => {
+    const { ran, run: stand } = commands();
+    const rulesPath = join(folder(), '70-openrtx-flasher.rules');
+    const { code, text } = await run(['setup'], { run: stand, rulesPath }, [true]);
+    expect(code).toBe(0);
+    expect(ran.map((c) => c.slice(0, 3))).toEqual([
+      ['sudo', 'install', '-m'],
+      ['sudo', 'udevadm', 'control'],
+      ['sudo', 'udevadm', 'trigger'],
+    ]);
+    expect(readFileSync(rulesPath, 'utf8')).toBe(udevRules());
+    expect(text).toContain(`Installed ${rulesPath}. Delete it to undo this.`);
+    expect(text).toContain('dialout');
+
+    const again = await run(['setup'], { run: stand, rulesPath });
+    expect(again.text).toContain(`Already set up: ${rulesPath} is current.`);
+    expect(ran).toHaveLength(3);
+  });
+
+  it.skipIf(process.getuid?.() === 0)(
+    'offers it when a flash finds the radio refused, then flashes once it is installed',
+    async () => {
+      const sim = new SimGd77({ model: 'GD-77' });
+      const node = join(folder(), 'hidraw0');
+      writeFileSync(node, '');
+      chmodSync(node, 0o000);
+      const base = hidOver(sim);
+      const hid = {
+        devicesAsync: () =>
+          Promise.resolve([{ vendorId: 0x15a2, productId: 0x0073, path: node, product: 'Radio' }]),
+        HIDAsync: { open: () => base.HIDAsync.open('radio') },
+      };
+      const modules: NodeModules = { usb: untouchable, serial: untouchable, hid: () => Promise.resolve(hid) };
+      const { ran, run: stand } = commands(() => chmodSync(node, 0o600));
+      const { code, text, io } = await run(
+        ['flash', 'gd77', GD77_SGL, '--yes', '--experimental'],
+        { modules, run: stand },
+        [true],
+      );
+      expect(text).toContain('The Radioddity GD-77 is connected, but this user may not open it');
+      expect(io.asked).toEqual(['Run them now? sudo asks for your password.']);
+      expect(ran).toHaveLength(3);
+      expect(text).toContain('Looking for the Radioddity GD-77 again.');
+      expect(code).toBe(0);
+      expect(sim.complete).toBe(true);
+    },
+  );
+
+  it.skipIf(process.getuid?.() === 0)(
+    'gives sudo, by full path, as the last resort when the file is there and the radio still refused',
+    async () => {
+      const node = join(folder(), 'hidraw0');
+      writeFileSync(node, '');
+      chmodSync(node, 0o000);
+      const hid = {
+        ...hidOver(new SimGd77({ model: 'GD-77' })),
+        devicesAsync: () => Promise.resolve([{ vendorId: 0x15a2, productId: 0x0073, path: node }]),
+      };
+      const rulesPath = join(folder(), '70-openrtx-flasher.rules');
+      writeFileSync(rulesPath, udevRules());
+      const modules: NodeModules = { usb: untouchable, serial: untouchable, hid: () => Promise.resolve(hid) };
+      const { code, text, io } = await run(['flash', 'gd77', GD77_SGL, '--yes', '--experimental'], {
+        modules,
+        rulesPath,
+      });
+      expect(code).toBe(1);
+      expect(io.asked).toEqual([]);
+      expect(text).toContain('is installed, and the radio is still refused');
+      expect(text).toContain('sudo /usr/bin/node /opt/openrtx-flasher.mjs flash cs7000p release');
+    },
+  );
+
+  it('leaves a simulated radio alone', async () => {
+    const { code } = await run(['flash', 'mod17', MOD17_BIN, '--sim', '--yes']);
+    expect(code).toBe(0);
   });
 });
