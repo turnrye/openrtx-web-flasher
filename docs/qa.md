@@ -117,6 +117,7 @@ it is recorded in `CHECKED` in `cli/main.ts`, next to the line in `docs/verifica
 | Connect Systems CS7000-M17                | passing    | flash reported working, 2026-11-21; no backup; browser not recorded |
 | Connect Systems CS7000-M17 Plus           | passing    | command line, robot mode: flash checked, 2026-11-24; page not run   |
 | Tytera MD-9600                            | passing    | command line: flash checked, 2026-11-25; no backup; page not run    |
+| Tytera MD-UV380 / MD-UV390                | passing    | command line: flash checked, 2026-11-26; no backup; page not run    |
 | other TYT, GD-77 family, STM32 DFU, RT-4D | passing    | not yet run                                                         |
 | Radtel RT-950 Pro                         | passing    | not yet run                                                         |
 
