@@ -124,7 +124,10 @@ interface ApiArtifact {
 /**
  * Finds the newest finished run for the query that uploaded firmware. Runs of pull
  * requests from forks live in the repository the request targets, so they are looked up
- * by commit rather than by branch.
+ * by commit rather than by branch. A branch's builds are the runs its pushes started:
+ * GitHub also files every workflow_run run (such as OpenRTX's "PR build comment", one
+ * for each pull request build) under the default branch, and on a busy day those fill
+ * the newest runs and hide the build.
  */
 export async function findRun(query: BuildQuery, fetcher: Fetcher = fetch): Promise<CiRun> {
   const repo = query.repo;
@@ -137,7 +140,7 @@ export async function findRun(query: BuildQuery, fetcher: Fetcher = fetch): Prom
   } else {
     const branch =
       query.branch ?? (await api<{ default_branch: string }>(`/repos/${repo}`, fetcher)).default_branch;
-    filter = `branch=${encodeURIComponent(branch)}`;
+    filter = `branch=${encodeURIComponent(branch)}&event=push`;
     label = branch;
   }
   const { workflow_runs: runs } = await api<{ workflow_runs: ApiRun[] }>(

@@ -203,7 +203,7 @@ describe('firmware for the command line', () => {
       'No finished builds found for feat/x.',
     );
     expect(fork.calls[0].url).toBe(
-      `${API}/repos/someone/OpenRTX/actions/runs?branch=feat%2Fx&status=completed&per_page=30`,
+      `${API}/repos/someone/OpenRTX/actions/runs?branch=feat%2Fx&event=push&status=completed&per_page=30`,
     );
     expect((await developmentRun(undefined, source)).sha).toBe(RUN.head_sha);
   });
