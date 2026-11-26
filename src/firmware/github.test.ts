@@ -90,6 +90,20 @@ describe('findRun', () => {
     expect(calls[0]).toBe('/repos/OpenRTX/OpenRTX/pulls/588');
   });
 
+  it('looks only at the runs pushes started, so workflow_run runs filed under the branch cannot hide its build', async () => {
+    const { fetcher, calls } = fakeApi({
+      '/repos/OpenRTX/OpenRTX/actions/runs?branch=master&event=push&': { workflow_runs: [run(9)] },
+      '/repos/OpenRTX/OpenRTX/actions/runs/9/artifacts': {
+        artifacts: [{ id: 1, name: 'openrtx-cs7000p', size_in_bytes: 5, expired: false }],
+      },
+    });
+    const found = await findRun({ repo: REPO, branch: 'master' }, fetcher);
+    expect(found.runId).toBe(9);
+    expect(calls[0]).toBe(
+      '/repos/OpenRTX/OpenRTX/actions/runs?branch=master&event=push&status=completed&per_page=30',
+    );
+  });
+
   it('uses the default branch of a fork when no branch is given', async () => {
     const { fetcher } = fakeApi({
       '/repos/turnrye/OpenRTX/actions/runs?branch=main': { workflow_runs: [run(7)] },
