@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/** Picks the device and the flasher for a radio. The only place that knows every method. */
-import { siteUrl } from '../base.ts';
+/**
+ * Picks the device for a radio and runs its backup read or its flasher. What differs
+ * between flashing methods is in the method's driver (src/drivers/).
+ */
 import { isSimulated, type DeviceEnv } from '../devices.ts';
+import { driverFor, forDevice } from '../drivers/index.ts';
+import { usbSerial } from '../drivers/shared.ts';
 import { readStock } from '../backup/stock.ts';
 import {
   isAlready,
@@ -11,38 +15,9 @@ import {
   type RadioBackup,
 } from '../backup/types.ts';
 import { backupFor, idIsPerUnit, type Radio } from '../radios.ts';
-import { flashCs7000Robot, SECOND_SLOT } from './cs7000-robot.ts';
-import { backupCsk, flashCsk, type CskModuleLoader } from './csk.ts';
-import { flashGd77 } from './gd77.ts';
-import { flashRt4d } from './rt4d.ts';
-import { flashRt950 } from './rt950.ts';
-import { flashDfuSe, parseDfuFile, rawSegment, readDfuSe } from './stm32dfu.ts';
-import { flashTyt } from './tyt.ts';
 import { FlashError, WrongRadioError, type FlashContext, type Segment } from './types.ts';
 
-/** STM32 and GD32 ROM bootloaders, and the TYT bootloader that borrows ST's IDs. */
-const DFU_FILTERS: USBDeviceFilter[] = [
-  { vendorId: 0x0483, productId: 0xdf11 },
-  { vendorId: 0x28e9, productId: 0x0189 },
-];
-
-/** The Connect Systems bootloader of the CS7000-M17 Plus in robot mode: a USB drive. */
-const CS7000_ROBOT_FILTERS: USBDeviceFilter[] = [{ vendorId: 0x0483, productId: 0x5720 }];
-
-/** NXP MK22 bootloader of the GD-77 family. */
-const GD77_FILTERS: HIDDeviceFilter[] = [{ vendorId: 0x15a2, productId: 0x0073 }];
-
-/** Loads the cskburn WebAssembly module that ships next to the page. */
-let loadCskburn: CskModuleLoader = async () => {
-  const url = siteUrl('cskburn/cskburn.mjs');
-  const module = (await import(/* @vite-ignore */ url)) as { default: Awaited<ReturnType<CskModuleLoader>> };
-  return module.default;
-};
-
-/** Replaces where cskburn comes from. The command line has no page to load it next to, so it brings its own. */
-export function setCskburnLoader(loader: CskModuleLoader): void {
-  loadCskburn = loader;
-}
+export { setCskburnLoader } from '../drivers/csk-serial.ts';
 
 /** A device the user picked, ready for `flashDevice`. */
 export type PickedDevice =
@@ -66,34 +41,18 @@ export async function pickDevice(
   env: DeviceEnv,
   purpose: Purpose = 'flash',
 ): Promise<PickedDevice> {
-  switch (radio.method) {
-    case 'tyt-dfu':
-    case 'stm32-dfu':
-      return { api: 'usb', device: await env.usb(DFU_FILTERS, radio, purpose) };
-    case 'cs7000-robot':
-      return { api: 'usb', device: await env.usb(CS7000_ROBOT_FILTERS, radio, purpose) };
-    case 'gd77-hid':
-      return { api: 'hid', device: await env.hid(GD77_FILTERS, radio, purpose) };
-    case 'rt4d-serial':
-    case 'rt950-serial':
-    case 'csk-serial':
+  const driver = driverFor(radio);
+  switch (driver.api) {
+    case 'usb':
+      return { api: 'usb', device: await env.usb(driver.filters, radio, purpose) };
+    case 'hid':
+      return { api: 'hid', device: await env.hid(driver.filters, radio, purpose) };
+    case 'serial':
       return { api: 'serial', device: await env.serial(radio, purpose) };
-    case 'uf2-copy':
-      throw new FlashError('This radio is flashed by copying the file onto its USB drive.');
+    case null:
+      throw new FlashError(driver.byHand);
   }
 }
-
-/** Where the internal flash of the STM32 radios starts; a backup is an image of it from here. */
-const STM32_FLASH_BASE = 0x08000000;
-
-/** A USB device's serial number, or null when it reports none. */
-function usbSerial(dev: USBDevice): string | null {
-  const serial = dev.serialNumber?.trim();
-  return serial === undefined || serial === '' ? null : serial;
-}
-
-/** The CSK6's flash size on the C62 and C2. */
-const C62_FLASH_SIZE = 4 * 1024 * 1024;
 
 /**
  * Reads the radio for a backup, the way `backupFor(radio)` describes: everything the
@@ -127,58 +86,10 @@ async function readDevice(
   const backup = backupFor(radio);
   if (backup.how !== 'read') throw new FlashError('This radio cannot be read out.');
   if (backup.mode === 'normal') return readStock(radio, picked.device, 'all', ctx, known);
-  switch (radio.method) {
-    case 'stm32-dfu': {
-      const dev = picked.device as USBDevice;
-      const serial = usbSerial(dev);
-      if (serial !== null && known?.(serial)) return { known: serial };
-      const image = await readDfuSe(dev, ctx, { chip: radio.chip });
-      return {
-        radioId: usbSerial(dev),
-        idKind: usbSerial(dev) ? 'usb-serial' : null,
-        notes: [],
-        parts: [
-          {
-            file: 'internal-flash.bin',
-            kind: 'internal-flash',
-            address: image.address,
-            data: image.data,
-            complete: true,
-          },
-        ],
-      };
-    }
-    case 'csk-serial': {
-      const read = await backupCsk(
-        picked.device as SerialPort,
-        size ?? C62_FLASH_SIZE,
-        ctx,
-        { loadModule: loadCskburn },
-        known,
-      );
-      if ('known' in read) return read;
-      const { data, chipId } = read;
-      const whole = data.length === C62_FLASH_SIZE;
-      return {
-        radioId: chipId,
-        idKind: chipId ? 'chip-id' : null,
-        notes: ['cskburn checked what it read against a checksum the chip computed.'],
-        parts: [
-          {
-            file: 'flash.bin',
-            kind: 'internal-flash',
-            address: 0,
-            data,
-            // A shorter read (only ever asked for by the simulator) can still be written back.
-            complete: true,
-            note: whole ? undefined : `The first ${data.length} bytes of the flash only.`,
-          },
-        ],
-      };
-    }
-    default:
-      throw new FlashError('This radio cannot be read out.');
-  }
+  const driver = driverFor(radio);
+  const reader = driver.api === null ? null : forDevice(driver);
+  if (!reader?.read) throw new FlashError('This radio cannot be read out.');
+  return reader.read(picked.device, { radio, scope: 'all', ctx, size, known });
 }
 
 /**
@@ -237,44 +148,7 @@ export async function flashDevice(
 ): Promise<void> {
   const refusal = restore && restoreRefusal(restore, picked);
   if (refusal) throw new WrongRadioError(refusal);
-  switch (radio.method) {
-    case 'tyt-dfu':
-      return flashTyt(picked.device as USBDevice, firmware, ctx);
-    case 'stm32-dfu': {
-      const segments = restore
-        ? [rawSegment(STM32_FLASH_BASE, firmware)]
-        : radio.ext === 'dfu'
-          ? parseDfuFile(firmware)
-          : [rawSegment(radio.address ?? STM32_FLASH_BASE, firmware)];
-      return flashDfuSe(picked.device as USBDevice, segments, ctx, { chip: radio.chip });
-    }
-    case 'cs7000-robot': {
-      if (restore) throw new FlashError('A backup cannot be written in this flashing mode.');
-      const segments = parseDfuFile(firmware);
-      if (segments.length !== 1 || segments[0].address !== SECOND_SLOT) {
-        throw new FlashError(
-          "This firmware is not built for the radio's second firmware slot, where OpenRTX goes. " +
-            'Nothing was sent to the radio.',
-        );
-      }
-      return flashCs7000Robot(picked.device as USBDevice, segments[0].data, ctx);
-    }
-    case 'gd77-hid':
-      return flashGd77(picked.device as HIDDevice, firmware, radio.hidModel ?? 'GD-77', ctx);
-    case 'rt4d-serial':
-      return flashRt4d(picked.device as SerialPort, firmware, ctx);
-    case 'rt950-serial':
-      return flashRt950(picked.device as SerialPort, firmware, ctx);
-    case 'csk-serial':
-      return flashCsk(
-        picked.device as SerialPort,
-        [...also, { address: 0, data: firmware }],
-        ctx,
-        { loadModule: loadCskburn },
-        // The chip's ID is the radio ID of a C62 backup.
-        restore?.idKind === 'chip-id' && restore.radioId ? restore.radioId : undefined,
-      );
-    case 'uf2-copy':
-      throw new FlashError('This radio is flashed by copying the file onto its USB drive.');
-  }
+  const driver = driverFor(radio);
+  if (driver.api === null) throw new FlashError(driver.byHand);
+  return forDevice(driver).flash(picked.device, { radio, firmware, ctx, restore, also });
 }

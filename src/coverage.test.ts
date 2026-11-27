@@ -154,6 +154,10 @@ describe('backup coverage', () => {
     expect(memory('cs7000p', 'internal-flash')).toMatchObject({ bytes: 2 * MIB, saved: 'part' });
     expect(memory('cs7000', 'spi-flash')).toMatchObject({ bytes: 16 * MIB, saved: 'none' });
     expect(memory('cs7000p', 'spi-flash')).toMatchObject({ bytes: 32 * MIB, saved: 'none' });
+    // The memory chip the catalogue names, for the page to say what is left out, is this one.
+    for (const radio of RADIOS.filter((r) => r.memoryChipMb !== undefined)) {
+      expect(memory(radio.id, 'spi-flash').bytes, radio.id).toBe(radio.memoryChipMb! * MIB);
+    }
     expect(memory('c62', 'internal-flash')).toMatchObject({ bytes: 4 * MIB, saved: 'all', check: 'checked' });
   });
 

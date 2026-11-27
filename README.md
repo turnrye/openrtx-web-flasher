@@ -241,7 +241,8 @@ change it and run `npm run vendor -- --update`.
 
 ## Layout
 
-    src/radios.ts        the radios: files, flashing mode, backup, fallback tool
+    src/radios.ts        the radios: files, flashing mode, fallback tool, and which flashing method
+    src/drivers/         one driver per flashing method: device, backup, flasher, reader, simulated radio
     src/coverage.ts      what a backup holds of each radio, memory by memory, and the gaps
     src/firmware/        builds: bundled manifest, GitHub lookup, zips
     src/flash/           one flasher per bootloader protocol

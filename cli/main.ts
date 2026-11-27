@@ -11,6 +11,7 @@ import { makeBundle } from '../src/backup/bundle.ts';
 import type { RadioBackup } from '../src/backup/types.ts';
 import { COVERAGE_DOC_URL, gapLine, gapsFor, openRtxLimit } from '../src/coverage.ts';
 import type { DeviceEnv } from '../src/devices.ts';
+import { driverFor } from '../src/drivers/index.ts';
 import { asksForSuccess, reportUrl, type Report } from '../src/feedback.ts';
 import { companionsFor, fileForRadio, sha256Hex, type Build } from '../src/firmware/builds.ts';
 import type { Fetcher } from '../src/firmware/github.ts';
@@ -157,7 +158,8 @@ function devicesFor(options: Options, host: Host): Devices {
 async function pick(radio: Radio, devices: Devices, purpose: Purpose, io: Io): Promise<PickedDevice | null> {
   try {
     const picked = await pickDevice(radio, devices.env, purpose);
-    if (picked.api === 'serial' && radio.method === 'csk-serial') {
+    const driver = driverFor(radio);
+    if (picked.api === 'serial' && driver.api === 'serial' && driver.cskburn) {
       setCskburnLoader(await devices.cskburn(picked.device));
     }
     return picked;
@@ -176,7 +178,8 @@ function radioNamed(id: string): Radio {
 
 /** What this computer needs before it can reach `radio`, when that is something. */
 function platformNote(radio: Radio): string | null {
-  if (radio.method === 'cs7000-robot') {
+  const driver = driverFor(radio);
+  if (driver.api === 'usb' && driver.massStorage) {
     if (process.platform === 'win32') {
       return 'Windows keeps this kind of USB device to itself. Use the Connect Systems Factory Tool with the .bin file instead.';
     }
@@ -185,7 +188,7 @@ function platformNote(radio: Radio): string | null {
     }
     return null;
   }
-  return process.platform === 'win32' && apiFor(radio.method) === 'usb'
+  return process.platform === 'win32' && driver.api === 'usb'
     ? 'On Windows the radio needs the WinUSB driver. Install it once with Zadig while the radio is in flashing mode.'
     : null;
 }
@@ -456,7 +459,7 @@ function simVerdict(io: Io, problems: string[], good: string): number {
 /** `flash`: writes a build, or a backup, to the radio. */
 async function flash(radio: Radio, what: string, options: Options, host: Host): Promise<number> {
   const { io } = host;
-  if (radio.method === 'uf2-copy') {
+  if (apiFor(radio.method) === null) {
     io.say(`The ${radio.name} is flashed by copying a file onto its USB drive:`);
     radio.enter.forEach((step, i) => io.say(`  ${i + 1}. ${step}`));
     io.say(`Get the file with "openrtx-flasher fetch ${radio.id} ${what}" and copy it onto the drive.`);

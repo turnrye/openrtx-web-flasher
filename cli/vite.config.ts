@@ -18,6 +18,7 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'node22',
     minify: false,
-    rollupOptions: { output: { entryFileNames: 'openrtx-flasher.mjs' } },
+    // One file: the simulators, which the page loads only when asked for, are part of it.
+    rollupOptions: { output: { entryFileNames: 'openrtx-flasher.mjs', codeSplitting: false } },
   },
 });

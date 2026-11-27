@@ -8,6 +8,7 @@
  * lets a page read them. So the page hands the user the nightly.link address and takes
  * the zip back by drag and drop.
  */
+import { radioById, RADIOS } from '../radios.ts';
 import { filesFromZip, sha256Hex, type Build } from './builds.ts';
 
 const API = 'https://api.github.com';
@@ -159,6 +160,18 @@ function sha256Of(digest: string | null | undefined): string | undefined {
   return match ? match[1].toLowerCase() : undefined;
 }
 
+/** The zip with every radio's file, unless a radio names another (`Radio.ciArtifact`). */
+const ALL_RADIOS_ARTIFACT = 'release-bins';
+
+/** True when a CI artifact of this name holds firmware: one radio's own zip, or an all-radios one. */
+function holdsFirmware(name: string): boolean {
+  return (
+    name.startsWith('openrtx-') ||
+    name === ALL_RADIOS_ARTIFACT ||
+    RADIOS.some((radio) => radio.ciArtifact === name)
+  );
+}
+
 /**
  * Finds the newest finished run for the query that uploaded firmware. Runs of pull
  * requests from forks live in the repository the request targets, so they are looked up
@@ -200,7 +213,7 @@ export async function findRun(query: BuildQuery, fetcher: Fetcher = fetch): Prom
       `/repos/${repo}/actions/runs/${run.id}/artifacts?per_page=100`,
       fetcher,
     );
-    const firmware = artifacts.filter((a) => /^(openrtx-|release-bins$|zephyr-release-bins$)/.test(a.name));
+    const firmware = artifacts.filter((a) => holdsFirmware(a.name));
     if (firmware.length === 0) continue;
     return {
       repo,
@@ -260,7 +273,7 @@ async function whyNone(
 export function artifactFor(run: CiRun, radioId: string): Artifact | undefined {
   return (
     run.artifacts.find((a) => a.name === `openrtx-${radioId}`) ??
-    run.artifacts.find((a) => a.name === (radioId === 'ttwrplus' ? 'zephyr-release-bins' : 'release-bins'))
+    run.artifacts.find((a) => a.name === (radioById(radioId)?.ciArtifact ?? ALL_RADIOS_ARTIFACT))
   );
 }
 

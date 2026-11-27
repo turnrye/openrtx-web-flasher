@@ -5,18 +5,10 @@
  * `id` is the OpenRTX target name: CI names its files `openrtx_<id>_<version>.<ext>` and
  * its per-radio artifacts `openrtx-<id>`.
  */
-import { COVERAGE_DOC_URL } from './coverage.ts';
+import { DRIVERS, driverFor } from './drivers/index.ts';
 
-/** How the bytes get into the radio. */
-export type Method =
-  | 'tyt-dfu'
-  | 'stm32-dfu'
-  | 'cs7000-robot'
-  | 'gd77-hid'
-  | 'rt4d-serial'
-  | 'rt950-serial'
-  | 'csk-serial'
-  | 'uf2-copy';
+/** How the bytes get into the radio: the name of a driver (src/drivers/index.ts). */
+export type Method = keyof typeof DRIVERS;
 
 /** A flash that was checked on a real radio. Empty until someone does it. */
 export interface Verification {
@@ -72,6 +64,11 @@ export interface Radio {
   /** Other extensions worth offering for download (for the manual tool). */
   otherExts?: string[];
   /**
+   * The CI artifact with every radio of this radio's build system, for a build that has
+   * no artifact of the radio's own. Left out for the usual one, `release-bins`.
+   */
+  ciArtifact?: string;
+  /**
    * Files of the same build that must be written as well, each at its own address. The
    * firmware does not start without them.
    */
@@ -80,6 +77,11 @@ export interface Radio {
   address?: number;
   /** MCU of radios flashed over STM32 DFU, when it is not the STM32F405: decides the flash size. */
   chip?: 'f405' | 'h743';
+  /**
+   * Megabytes of the memory chip beside the processor, on the STM32 radios that have one.
+   * A backup in flashing mode does not reach it, and says so.
+   */
+  memoryChipMb?: number;
   /** GD-77 family model string for the HID bootloader. */
   hidModel?: 'GD-77' | 'DM-1801';
   /** True when the radio's "enter" drawing (public/art/<id>-enter.svg) shows the keys to hold in gold. */
@@ -228,6 +230,7 @@ export const RADIOS: Radio[] = [
   },
   {
     id: 'cs7000',
+    memoryChipMb: 16,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17',
     method: 'stm32-dfu',
@@ -252,6 +255,7 @@ export const RADIOS: Radio[] = [
   {
     id: 'cs7000p',
     chip: 'h743',
+    memoryChipMb: 32,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17 Plus',
     method: 'stm32-dfu',
@@ -388,6 +392,7 @@ export const RADIOS: Radio[] = [
     name: 'Lilygo T-TWR Plus',
     method: 'uf2-copy',
     ext: 'uf2',
+    ciArtifact: 'zephyr-release-bins',
     enter: [
       'Connect the USB-C cable.',
       'Turn the radio on and press BOOT (Volume −) right after.',
@@ -468,20 +473,7 @@ export function radioForFile(fileName: string): Radio | undefined {
 
 /** Web API a flashing method needs. */
 export function apiFor(method: Method): 'usb' | 'serial' | 'hid' | null {
-  switch (method) {
-    case 'tyt-dfu':
-    case 'stm32-dfu':
-    case 'cs7000-robot':
-      return 'usb';
-    case 'gd77-hid':
-      return 'hid';
-    case 'rt4d-serial':
-    case 'rt950-serial':
-    case 'csk-serial':
-      return 'serial';
-    case 'uf2-copy':
-      return null;
-  }
+  return DRIVERS[method].api;
 }
 
 /** How what a radio holds now can be saved before it is replaced. */
@@ -535,143 +527,13 @@ export type Backup =
  *   radios never share one. GD-77, DM-1801: the fingerprint only comes at the end of the read.
  */
 export function idIsPerUnit(radio: Radio): boolean {
-  switch (radio.method) {
-    case 'csk-serial':
-    case 'tyt-dfu':
-      return true;
-    case 'stm32-dfu':
-      return radio.chip !== 'h743';
-    default:
-      return false;
-  }
+  return driverFor(radio).idIsPerUnit?.(radio) ?? false;
 }
-
-const MIB = 1024 * 1024;
-
-/** Where the page sends people for what a backup does not hold: docs/backup-coverage.md. */
-const COVERAGE_DOC = { label: 'what each backup holds', url: COVERAGE_DOC_URL };
-
-/** Megabytes of the memory chip beside the processor on the STM32 radios that have one. */
-const DFU_MEMORY_CHIP_MB: Partial<Record<string, number>> = { cs7000: 16, cs7000p: 32 };
 
 /**
  * What backing up `radio` involves. The page always reads everything it can, and says
  * what it cannot: src/coverage.ts has the same facts memory by memory.
  */
 export function backupFor(radio: Radio): Backup {
-  switch (radio.method) {
-    case 'csk-serial':
-      return {
-        how: 'read',
-        mode: 'flashing',
-        time: 'about ten minutes',
-        holds: 'the whole flash: firmware, calibration, channels and settings',
-        endsFlashingMode: true,
-        restorable: true,
-        command:
-          'cskburn -C 6 -b 115200 -s <serial port> --chip-id --verify-all --read 0x0:0x400000:backup.bin',
-      };
-    case 'stm32-dfu': {
-      const size = radio.chip === 'h743' ? 2 * MIB : MIB;
-      const chip = DFU_MEMORY_CHIP_MB[radio.id];
-      return {
-        how: 'read',
-        mode: 'flashing',
-        time: 'under a minute',
-        holds:
-          chip === undefined
-            ? 'the whole program memory: firmware, settings and calibration'
-            : 'the whole program memory, bootloader included',
-        unchecked: true,
-        caveat: `This read has not been run on a real ${radio.name} from this page yet. A chip that is read-protected refuses it, and the page says so; nothing is changed by trying.`,
-        notIncluded:
-          chip === undefined
-            ? undefined
-            : {
-                text: `Not in the backup: the ${chip} MB memory chip beside the processor, which holds the factory calibration. This page cannot read it, and OpenRTX erases a part of that chip for its own settings the first time it starts. See`,
-                ...COVERAGE_DOC,
-              },
-        restorable: true,
-        command: `dfu-util -d 0483:df11 -a 0 -s 0x08000000:${size} -U backup.bin`,
-      };
-    }
-    case 'tyt-dfu':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'up to six minutes',
-        holds:
-          'the factory info blocks, the first 64 KB of the program memory (the bootloader; 4 KB on Linux) and the whole 16 MB memory chip with your channels and settings',
-        after: 'The radio restarts by itself when the read is done.',
-        unchecked: true,
-        caveat:
-          radio.id === 'md9600'
-            ? 'What an MD-9600 answers to this read was measured with other tools. The read from this page has not been run on a real radio yet. Keep a codeplug read with the programming software as well.'
-            : 'This read has been measured on the MD-9600 only, and with other tools. This model may give less; whatever it gives is kept, and the backup says what is missing. Keep a codeplug read with the programming software as well.',
-        notIncluded: {
-          text: "Not in the backup: the radio's firmware (the other 960 KB of the program memory) and the factory calibration as it is stored, in the memory chip's security registers. The backup has the firmware's own copy of the calibration. See",
-          ...COVERAGE_DOC,
-        },
-        restorable: false,
-      };
-    case 'gd77-hid':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'about a minute',
-        holds:
-          'your channels and settings (most of the 64 KB EEPROM and about 60 KB of the memory chip) and, where the firmware allows it, the factory calibration',
-        unchecked: true,
-        caveat:
-          'Not every firmware version lets the calibration be read this way. The backup says if it could not. This read has not been run on a real radio from this page yet.',
-        notIncluded: {
-          text: "Not in the backup: the radio's firmware (the program memory is not read at all) and the rest of the 1 MB memory chip. See",
-          ...COVERAGE_DOC,
-        },
-        restorable: false,
-      };
-    case 'rt4d-serial':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'about half an hour',
-        holds:
-          'the whole 16 MB memory chip: calibration, settings, channels, zones, contacts, the logo, fonts, voices and the address book',
-        unchecked: true,
-        caveat:
-          'This read has not been run on a real RT-4D yet. Other tools read the first 4 MB this way; if your radio does not give the rest, the backup keeps what was read and says so.',
-        notIncluded: {
-          text: "Not in the backup: the radio's firmware. The program memory (256 KB) cannot be read. See",
-          ...COVERAGE_DOC,
-        },
-        restorable: false,
-      };
-    case 'rt950-serial':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'under a minute',
-        holds:
-          'your channels and settings and the factory calibration: the first 64 KB of the 4 MB memory chip, which is as far as the programming cable reaches',
-        unchecked: true,
-        caveat:
-          'This read has not been run on a real RT-950 Pro yet. It follows the programming protocol as others worked it out; if your radio answers differently, the page says so and saves nothing.',
-        notIncluded: {
-          text: "Not in the backup: the rest of the memory chip (fonts, the start-up picture) and the original firmware, because the radio's bootloader cannot be read. Download the firmware version your radio runs before you flash:",
-          label: "Radtel's downloads",
-          url: 'https://www.radtels.com/pages/software-download',
-        },
-        restorable: false,
-      };
-    case 'cs7000-robot':
-      return {
-        how: 'none',
-        text: 'A radio with its Connect Systems firmware cannot be backed up: that firmware read-protects the chip, and the flashing mode has no way to read. Flashing OpenRTX leaves the bootloader and the DMR firmware in place, and Connect Systems publishes both. The 32 MB memory chip, which holds the factory calibration, cannot be read either, and OpenRTX erases a part of that chip for its own settings the first time it starts.',
-      };
-    case 'uf2-copy':
-      return {
-        how: 'copy',
-        text: 'The drive holds the firmware the radio runs now as CURRENT.UF2. Copy that file to your computer before you copy the new one over. It is the firmware only: the bootloader, the settings area and the rest of the 16 MB flash are not in it, and neither is the firmware of the radio module (SA868S).',
-      };
-  }
+  return driverFor(radio).backup(radio);
 }

@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
  * Reads a radio through its original firmware, in normal mode: the route for the
- * radios whose bootloader cannot be read. One reader per family; this picks it.
+ * radios whose bootloader cannot be read. One reader per family; the radio's driver
+ * (src/drivers/) knows which.
  */
+import { driverFor, forDevice } from '../drivers/index.ts';
 import { FlashError, type FlashContext } from '../flash/types.ts';
 import type { Radio } from '../radios.ts';
-import { readGd77Stock } from './gd77-stock.ts';
-import { readRt4dStock } from './rt4d-stock.ts';
-import { readRt950Stock } from './rt950-stock.ts';
-import { readTytStock, type TytStockModel } from './tyt-stock.ts';
 import type { AlreadyBackedUp, BackupScope, Known, RadioBackup } from './types.ts';
 
 /** The device objects a reader may be handed. */
@@ -28,22 +26,11 @@ export async function readStock(
   ctx: FlashContext,
   known?: Known,
 ): Promise<RadioBackup | AlreadyBackedUp> {
-  switch (radio.method) {
-    case 'tyt-dfu':
-      return readTytStock(device as USBDevice, radio.id as TytStockModel, scope, ctx, known);
-    case 'gd77-hid':
-      return readGd77Stock(
-        device as HIDDevice,
-        radio.hidModel === 'DM-1801' ? 'DM-1801' : 'GD-77',
-        scope,
-        ctx,
-      );
-    case 'rt4d-serial':
-      return readRt4dStock(device as SerialPort, scope, ctx, undefined, known);
-    case 'rt950-serial':
-      // One size: the protocol reaches 64 KiB and that reads in seconds.
-      return readRt950Stock(device as SerialPort, ctx, undefined, known);
-    default:
-      throw new FlashError(`The ${radio.name} is not backed up through its original firmware.`);
+  const driver = driverFor(radio);
+  const backup = driver.backup(radio);
+  const reader = driver.api === null ? null : forDevice(driver);
+  if (!reader?.read || backup.how !== 'read' || backup.mode !== 'normal') {
+    throw new FlashError(`The ${radio.name} is not backed up through its original firmware.`);
   }
+  return reader.read(device, { radio, scope, ctx, known });
 }

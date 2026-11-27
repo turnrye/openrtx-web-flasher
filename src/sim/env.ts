@@ -10,29 +10,20 @@
  * enough to watch.
  *
  * A device asked for with purpose 'backup' is, for the radios read through their
- * original firmware, a simulated radio in normal mode.
+ * original firmware, a simulated radio in normal mode. Which simulated radio a method
+ * has for which purpose is its driver's to say (src/drivers/<method>.sim.ts).
  *
  * The last simulated radio is reachable as `window.__ortxSim`, so a browser test can ask
  * it whether it really holds the firmware that was flashed.
  */
 import { markSimulated, type DeviceEnv } from '../devices.ts';
-import { parseSgl } from '../flash/gd77.ts';
-import { parseDfuFile, rawSegment } from '../flash/stm32dfu.ts';
-import { parseTytFirmware } from '../flash/tyt.ts';
-import type { Segment } from '../flash/types.ts';
+import { driverFor } from '../drivers/index.ts';
+// Not used by name: imported so that the simulators arrive with this module, as one
+// download, and a driver that asks for its own finds it loaded.
+import '../drivers/sims.ts';
+import type { Purpose } from '../flash/run.ts';
+import { FlashError } from '../flash/types.ts';
 import type { Radio } from '../radios.ts';
-import { SimCs7000Robot } from './cs7000-robot.ts';
-import { SimCsk6 } from './csk6.ts';
-import { SimGd77Stock } from './gd77-stock.ts';
-import { SimGd77 } from './gd77.ts';
-import { md5 } from './md5.ts';
-import { SimRt4dStock } from './rt4d-stock.ts';
-import { SimRt4d } from './rt4d.ts';
-import { SimRt950Stock } from './rt950-stock.ts';
-import { SimRt950 } from './rt950.ts';
-import { SimStm32Dfu } from './stm32dfu.ts';
-import { SimTytStock } from './tyt-stock.ts';
-import { SimTytRadio, TYT_ORIGINAL_NAMES } from './tyt.ts';
 
 /** What a browser test can ask about the simulated radio. */
 export interface SimProbe {
@@ -47,20 +38,6 @@ export interface SimProbe {
   original?: Uint8Array;
   /** What the radio holds at an address of its flash, where the simulator can say. */
   read?(address: number, size: number): Uint8Array;
-}
-
-/** How much of the simulated C62 a backup reads: the real 4 MiB would take minutes. */
-const SIM_CSK_BACKUP = 64 * 1024;
-
-/** Recognisable "firmware the radio came with", so a backup can be checked byte for byte. */
-function oldFirmware(length: number): Uint8Array {
-  const bytes = new Uint8Array(length);
-  let state = 0x1234abcd;
-  for (let i = 0; i < length; i++) {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    bytes[i] = state >>> 24;
-  }
-  return bytes;
 }
 
 /** What a browser test can ask about a simulated radio that was read through its original firmware. */
@@ -85,233 +62,45 @@ declare global {
   }
 }
 
-/** Bytes as lower-case hex. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** True when `a` and `b` hold the same bytes. */
-function same(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && a.every((byte, i) => byte === b[i]);
-}
-
-/** Checks that every segment is in a DFU simulator's flash and it saw no protocol mistakes. */
-function verifyDfu(sim: SimStm32Dfu, segments: Segment[]): string[] {
-  const problems = [...sim.violations];
-  for (const s of segments) {
-    if (!same(sim.read(s.address, s.data.length), s.data)) {
-      problems.push(`flash at 0x${s.address.toString(16)} differs from the firmware`);
-    }
-  }
-  return problems;
-}
-
-/** Makes a simulated USB radio take `ms` over every control transfer; 0 leaves it as it is. */
-function slowed<T extends Pick<USBDevice, 'controlTransferIn' | 'controlTransferOut'>>(
-  device: T,
-  ms: number,
-): T {
-  if (ms <= 0) return device;
-  const wait = () => new Promise((resolve) => setTimeout(resolve, ms));
-  const transferIn = device.controlTransferIn.bind(device);
-  const transferOut = device.controlTransferOut.bind(device);
-  device.controlTransferIn = async (setup, length) => {
-    await wait();
-    return transferIn(setup, length);
-  };
-  device.controlTransferOut = async (setup, data) => {
-    await wait();
-    return transferOut(setup, data);
-  };
-  return device;
-}
-
-/** Makes `device` fail to open, like a radio that is not in flashing mode. */
-function broken<T extends object>(device: T): T {
-  return Object.assign(device, {
-    open: () => Promise.reject(new Error('The simulated radio did not answer.')),
-  });
-}
-
 /** Builds the simulated environment; `mode` is the value of `?sim=`. */
 export function simulatedEnv(mode: string): DeviceEnv {
-  const fail = mode === 'fail';
-  const wrongMode = mode === 'wrongmode';
-  /** Milliseconds a slow simulated radio takes over each request. */
-  const delay = mode === 'slow' ? 4 : 0;
+  const how = {
+    fail: mode === 'fail',
+    wrongMode: mode === 'wrongmode',
+    readProtected: mode === 'protected',
+    delay: mode === 'slow' ? 4 : 0,
+  };
   /** Sleep of the USB simulator in use: it keeps its own clock to check poll timing. */
   let simSleep: ((ms: number) => Promise<void>) | null = null;
 
-  /** Counts one opening of a device chooser, for tests. */
-  const picked = () => {
+  /**
+   * Stands for the device chooser: makes the simulated radio that `radio`'s method has
+   * for `purpose`, and leaves what a test can ask about it on `window`. The radio is of
+   * the kind of device the method uses, which is the kind `pickDevice` asks for.
+   */
+  const pick = async <Device extends object>(radio: Radio, purpose: Purpose): Promise<Device> => {
     window.__ortxSimPicks = (window.__ortxSimPicks ?? 0) + 1;
+    const driver = driverFor(radio);
+    if (driver.api === null) throw new FlashError(driver.byHand);
+    const made = (await driver.simulator()).make({ radio, purpose, ...how });
+    simSleep = made.sleep ?? null;
+    if (made.probe) window.__ortxSim = { radioId: radio.id, ...made.probe };
+    if (made.stockProbe) window.__ortxSimStock = { radioId: radio.id, ...made.stockProbe };
+    // Every device handed out is marked, so that a backup read from one says it came from
+    // a simulated radio and is never written to a real one.
+    return markSimulated(made.device as object as Device);
   };
 
-  /** Remembers the simulated radio for tests and returns the device object. */
-  const expose = <T extends object>(
-    radio: Radio,
-    device: T,
-    verify: SimProbe['verify'],
-    original?: Uint8Array,
-  ): T => {
-    window.__ortxSim = { radioId: radio.id, verify, original };
-    return fail ? broken(device) : device;
-  };
-
-  const env: DeviceEnv = {
+  return {
     simulated: true,
     supports: () => true,
     sleep: (ms) => (simSleep ? simSleep(ms) : new Promise((resolve) => setTimeout(resolve, Math.min(ms, 2)))),
-
-    usb: async (_filters, radio, purpose) => {
-      picked();
-      if (radio.method === 'tyt-dfu' && purpose === 'backup') {
-        simSleep = null;
-        const sim = slowed(new SimTytStock({ mode: wrongMode ? 'bootloader' : 'original' }), delay);
-        window.__ortxSimStock = {
-          radioId: radio.id,
-          id: hex(sim.uid),
-          forbidden: () => [...sim.forbidden],
-          region: (kind, address, size) =>
-            kind === 'spi-flash'
-              ? sim.spi.slice(address, address + size)
-              : sim.flash.slice(address - 0x08000000, address - 0x08000000 + size),
-          // Program mode (91 01) is what the long read needs; a radio that was only identified never gets it.
-          reads: () => sim.commands.filter((command) => command.startsWith('91 01')).length,
-        };
-        return fail ? broken(sim as unknown as USBDevice) : sim;
-      }
-      if (radio.method === 'cs7000-robot') {
-        simSleep = null;
-        const sim = new SimCs7000Robot({ silent: fail });
-        return expose(radio, sim as unknown as USBDevice, (fw) => {
-          const problems = [...sim.violations];
-          if (!sim.committed) problems.push('the image was not committed');
-          if (!same(sim.image, parseDfuFile(fw)[0].data))
-            problems.push('received image differs from the firmware');
-          return problems;
-        });
-      }
-      if (radio.method === 'tyt-dfu') {
-        const sim = slowed(new SimTytRadio(wrongMode ? { alternateNames: TYT_ORIGINAL_NAMES } : {}), delay);
-        simSleep = sim.sleep;
-        return expose(radio, sim as unknown as USBDevice, (fw) =>
-          verifyDfu(sim, parseTytFirmware(fw).segments),
-        );
-      }
-      const sim = slowed(
-        new SimStm32Dfu({ chip: radio.chip ?? 'f405', readProtected: mode === 'protected' }),
-        delay,
-      );
-      sim.load(0x08000000, oldFirmware(300 * 1024));
-      simSleep = sim.sleep;
-      return expose(
-        radio,
-        sim as unknown as USBDevice,
-        (fw, restore = false) =>
-          verifyDfu(
-            sim,
-            restore
-              ? [rawSegment(0x08000000, fw)]
-              : radio.ext === 'dfu'
-                ? parseDfuFile(fw)
-                : [rawSegment(radio.address ?? 0x08000000, fw)],
-          ),
-        sim.flash.slice(),
-      );
+    usb: (_filters, radio, purpose) => pick<USBDevice>(radio, purpose),
+    hid: (_filters, radio, purpose) => pick<HIDDevice>(radio, purpose),
+    serial: (radio, purpose) => pick<SerialPort>(radio, purpose),
+    backupSize: (radio) => {
+      const driver = driverFor(radio);
+      return driver.api === null ? undefined : driver.simBackupSize;
     },
-
-    hid: async (_filters, radio, purpose) => {
-      picked();
-      simSleep = null;
-      if (purpose === 'backup') {
-        const sim = new SimGd77Stock({
-          model: radio.hidModel === 'DM-1801' ? 'DM-1801' : 'GD-77',
-          ...(wrongMode ? { bootloader: 'reply' as const } : {}),
-        });
-        window.__ortxSimStock = {
-          radioId: radio.id,
-          id: null,
-          forbidden: () => [...sim.forbidden],
-          region: (_kind, address, size) => sim.memory(address, address + size),
-        };
-        return fail ? broken(sim as unknown as HIDDevice) : sim;
-      }
-      const sim = new SimGd77({ model: radio.hidModel ?? 'GD-77' });
-      return expose(radio, sim as unknown as HIDDevice, (fw) => {
-        const problems = [...sim.errors];
-        if (!sim.complete) problems.push('the transfer did not finish');
-        if (!same(sim.payload, parseSgl(fw).payload))
-          problems.push('received payload differs from the firmware');
-        return problems;
-      });
-    },
-
-    serial: async (radio, purpose) => {
-      picked();
-      simSleep = null;
-      if (radio.method === 'rt4d-serial' && purpose === 'backup') {
-        const sim = new SimRt4dStock({ mode: fail ? 'silent' : wrongMode ? 'bootloader' : 'stock' });
-        window.__ortxSimStock = {
-          radioId: radio.id,
-          id: null,
-          forbidden: () => [...sim.forbidden],
-          region: (_kind, address, size) => sim.flash.slice(address, address + size),
-          reads: () => sim.reads.length,
-        };
-        return sim;
-      }
-      if (radio.method === 'rt4d-serial') {
-        const sim = new SimRt4d(fail ? { silent: true } : {});
-        return expose(radio, sim as unknown as SerialPort, (fw) => {
-          const problems = [...sim.errors];
-          if (!sim.complete) problems.push('not every block was written');
-          if (!same(sim.flash.subarray(0, fw.length), fw)) problems.push('flash differs from the firmware');
-          return problems;
-        });
-      }
-      if (radio.method === 'rt950-serial' && purpose === 'backup') {
-        // In flashing mode the bootloader does not know the programming handshake.
-        const sim = new SimRt950Stock({ mode: fail || wrongMode ? 'silent' : 'stock' });
-        window.__ortxSimStock = {
-          radioId: radio.id,
-          id: null,
-          forbidden: () => [...sim.forbidden],
-          region: (_kind, address, size) => sim.flash.slice(address, address + size),
-          reads: () => sim.reads.length,
-        };
-        return sim;
-      }
-      if (radio.method === 'rt950-serial') {
-        const sim = new SimRt950(fail ? { silent: true } : {});
-        return expose(radio, sim as unknown as SerialPort, (fw) => {
-          const problems = [...sim.errors];
-          if (!sim.complete) problems.push('the update did not finish');
-          if (!same(sim.received.subarray(0, fw.length), fw))
-            problems.push('received file differs from the firmware');
-          return problems;
-        });
-      }
-      const sim = new SimCsk6({ md5, silent: fail, flashSize: 4 * 1024 * 1024, replyDelayMs: delay });
-      sim.flash.set(oldFirmware(200 * 1024));
-      window.__ortxSim = {
-        radioId: radio.id,
-        verify: (fw) =>
-          same(sim.flash.subarray(0, fw.length), fw) ? [] : ['flash differs from the firmware'],
-        original: sim.flash.slice(0, SIM_CSK_BACKUP),
-        read: (address, size) => sim.flash.slice(address, address + size),
-      };
-      return sim as unknown as SerialPort;
-    },
-
-    backupSize: (radio) => (radio.method === 'csk-serial' ? SIM_CSK_BACKUP : undefined),
-  };
-  // Every device handed out is marked, so that a backup read from one says it came from a
-  // simulated radio and is never written to a real one.
-  return {
-    ...env,
-    usb: async (...args) => markSimulated(await env.usb(...args)),
-    hid: async (...args) => markSimulated(await env.hid(...args)),
-    serial: async (...args) => markSimulated(await env.serial(...args)),
   };
 }

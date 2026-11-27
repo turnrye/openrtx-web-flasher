@@ -7,6 +7,7 @@
  * picked from a list.
  */
 import type { DeviceEnv } from '../src/devices.ts';
+import { driverFor } from '../src/drivers/index.ts';
 import { FlashError } from '../src/flash/types.ts';
 import { backupFor, type Radio } from '../src/radios.ts';
 import type { Io } from './io.ts';
@@ -193,7 +194,9 @@ export function nodeEnv(modules: NodeModules, io: Io, port?: string): DeviceEnv 
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 
     usb: async (filters, radio, purpose) => {
-      const drive = radio.method === 'cs7000-robot';
+      const driver = driverFor(radio);
+      // A USB drive is held by the operating system: it needs the library that can take it over.
+      const drive = driver.api === 'usb' && driver.massStorage === true;
       const { WebUSB } = await modules.usb(drive ? 'storage' : undefined);
       /** Why no device was picked from the ones that fit, when that is why there is none. */
       let unpicked: Error | undefined;
