@@ -57,7 +57,7 @@ const top = import.meta.env.BASE_URL.replace(/\/?$/, '/');
             {gaps.length === 0 ? (
               'Everything'
             ) : (
-              <a href={`${top}flasher/backup-coverage/`}>
+              <a href={`${top}flash/backups/#${radio.id}`}>
                 {gaps.length === 1 ? '1 critical gap' : `${gaps.length} critical gaps`}
               </a>
             )}

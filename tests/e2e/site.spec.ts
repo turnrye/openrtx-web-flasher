@@ -24,14 +24,27 @@ test('the radios page lists every radio from the catalogue, with its checks and 
   await expect(step(page, 'step-radio')).toContainText('Module 17');
 });
 
-test('the backup coverage page is the record the flasher reads, worst gaps first', async ({ page }) => {
-  await page.goto('../flasher/backup-coverage/');
-  await expect(page.getByRole('heading', { name: 'Backup coverage', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Critical gaps, worst first' })).toBeVisible();
-  await expect(page.locator('main')).toContainText('Of the 13 radios, 2 are backed up whole');
-  // Its links to the other notes work on the site as they do on the forge.
-  await page.locator('main').getByRole('link', { name: 'dumper.md' }).first().click();
-  await expect(page).toHaveURL(/\/flasher\/dumper\/$/);
+test('the backups page says, from the record the flasher reads, what each backup leaves out', async ({
+  page,
+}) => {
+  await page.goto('backups/');
+  await expect(page.getByRole('heading', { name: 'What a backup keeps', level: 1 })).toBeVisible();
+  await expect(page.getByTestId('backups-whole')).toContainText('Retevis C62');
+  await expect(page.getByTestId('backups-whole')).toContainText('Module 17');
+  // The worst first, one section for each radio with a gap.
+  const sections = page.locator('section[data-testid^="backups-"]');
+  await expect(sections).toHaveCount(11);
+  await expect(sections.first()).toHaveAttribute('data-testid', 'backups-cs7000');
+  await expect(page.getByTestId('backups-cs7000')).toContainText('factory calibration');
+  // A radio's backup gaps in the radios table lead to its section here.
+  await page.goto('radios/');
+  await page
+    .getByTestId('radio-table')
+    .locator('tbody tr')
+    .filter({ hasText: 'MD-9600' })
+    .getByRole('link', { name: /critical gap/ })
+    .click();
+  await expect(page).toHaveURL(/\/flash\/backups\/#md9600$/);
 });
 
 test('an address of the old docsify site lands on the new page, at the heading it named', async ({
@@ -72,7 +85,7 @@ test('the backup step says before the read what the backup will not hold', async
   await expect(gaps.locator('li')).toHaveCount(2);
   await expect(gaps).toContainText('program memory');
   await expect(gaps).toContainText('needs a dumper');
-  await expect(page.getByTestId('backup-gaps-more')).toHaveAttribute('href', /\/flasher\/backup-coverage\/$/);
+  await expect(page.getByTestId('backup-gaps-more')).toHaveAttribute('href', /\/flash\/backups\/#mduv3x0$/);
 
   // A radio whose backup holds everything has no such note.
   await page.goto('?sim=1#mod17');

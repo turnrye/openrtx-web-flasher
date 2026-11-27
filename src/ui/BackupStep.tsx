@@ -143,8 +143,8 @@ export function BackupStep(props: Props) {
   );
   /** The memories this backup does not hold whole, from the coverage record. */
   const gaps = gapsFor(radio);
-  /** The site's page on what each backup holds. */
-  const coveragePage = siteUrl('flasher/backup-coverage/');
+  /** The site's page on what each backup keeps, at this radio. */
+  const coveragePage = siteUrl(`flash/backups/#${radio.id}`);
   // A browser that cannot read the radio has nothing to gain from the answer.
   const asks = backup.mode === 'normal' && supported;
 

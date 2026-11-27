@@ -55,7 +55,11 @@ export default defineConfig({
         // The flasher and the pages about it, so they never read as OpenRTX's own docs.
         {
           label: 'Flash your radio',
-          items: [{ label: 'Flash your radio', link: '/flash/' }, { slug: 'flash/radios' }],
+          items: [
+            { label: 'Flash your radio', link: '/flash/' },
+            { slug: 'flash/radios' },
+            { slug: 'flash/backups' },
+          ],
         },
         { label: 'Start here', items: [{ slug: 'user_guide' }, { slug: 'dev_status' }] },
         {
