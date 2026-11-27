@@ -135,6 +135,17 @@ describe('radio catalogue', () => {
     expect(RADIOS.filter((r) => r.flashNotes).map((r) => r.id)).toEqual(['cs7000p', 'rt950pro', 'ttwrplus']);
   });
 
+  it('names the maker of every radio, as its name does', () => {
+    for (const radio of RADIOS) {
+      expect(radio.maker, radio.id).toBeTruthy();
+      // Module 17 is named for the protocol, not its maker.
+      if (radio.id !== 'mod17') {
+        expect(radio.name.toLowerCase().startsWith(radio.maker.toLowerCase()), radio.id).toBe(true);
+      }
+    }
+    expect(radioById('mod17')!.maker).toBe('M17 Project');
+  });
+
   it('marks as checked only the radios with a line in the bench record', () => {
     // docs/verification.md has the evidence for each of these.
     expect(RADIOS.filter((r) => r.verified).map((r) => r.id)).toEqual(['mduv3x0', 'dm1701', 'cs7000', 'c62']);

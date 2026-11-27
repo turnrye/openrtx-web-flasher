@@ -22,8 +22,8 @@
   themes: false;
   logs: false;
   include:
-    alert, badge, button, card, collapse, fieldset, input, join, label, link, list, loading, progress, radius,
-    select;
+    alert, badge, button, card, checkbox, collapse, fieldset, input, join, label, link, list, loading,
+    progress, radius, select, steps;
 }
 
 /* Starlight puts data-theme="dark" on <html>; the daisyUI theme takes the same name. */

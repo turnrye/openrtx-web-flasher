@@ -51,10 +51,16 @@ export interface Companion {
   what: string;
 }
 
+/** Who makes a radio, as the picker's maker filter names them. */
+export type Maker =
+  'Tytera' | 'Baofeng' | 'Radioddity' | 'Connect Systems' | 'Retevis' | 'Radtel' | 'LILYGO' | 'M17 Project';
+
 /** One supported radio. */
 export interface Radio {
   id: string;
   name: string;
+  /** Who makes it; the radio picker filters on this. */
+  maker: Maker;
   /** Other names the same hardware is sold under. */
   aka?: string;
   method: Method;
@@ -156,6 +162,7 @@ export const RADIOS: Radio[] = [
     id: 'md3x0',
     heldKeysDrawn: true,
     name: 'Tytera MD-380 / MD-390',
+    maker: 'Tytera',
     aka: 'Retevis RT3 / RT8',
     method: 'tyt-dfu',
     ext: 'bin',
@@ -172,6 +179,7 @@ export const RADIOS: Radio[] = [
     id: 'mduv3x0',
     heldKeysDrawn: true,
     name: 'Tytera MD-UV380 / MD-UV390',
+    maker: 'Tytera',
     aka: 'Retevis RT3S',
     method: 'tyt-dfu',
     ext: 'bin',
@@ -189,6 +197,7 @@ export const RADIOS: Radio[] = [
     id: 'md9600',
     heldKeysDrawn: true,
     name: 'Tytera MD-9600',
+    maker: 'Tytera',
     aka: 'Retevis RT90',
     method: 'tyt-dfu',
     ext: 'bin',
@@ -213,6 +222,7 @@ export const RADIOS: Radio[] = [
     id: 'dm1701',
     heldKeysDrawn: true,
     name: 'Baofeng DM-1701',
+    maker: 'Baofeng',
     aka: 'Retevis RT84',
     method: 'tyt-dfu',
     ext: 'bin',
@@ -232,6 +242,7 @@ export const RADIOS: Radio[] = [
     id: 'gd77',
     heldKeysDrawn: true,
     name: 'Radioddity GD-77',
+    maker: 'Radioddity',
     method: 'gd77-hid',
     ext: 'sgl',
     hidModel: 'GD-77',
@@ -248,6 +259,7 @@ export const RADIOS: Radio[] = [
     id: 'dm1801',
     heldKeysDrawn: true,
     name: 'Baofeng DM-1801',
+    maker: 'Baofeng',
     method: 'gd77-hid',
     ext: 'sgl',
     hidModel: 'DM-1801',
@@ -265,6 +277,7 @@ export const RADIOS: Radio[] = [
     memoryChipMb: 16,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17',
+    maker: 'Connect Systems',
     method: 'stm32-dfu',
     ext: 'dfu',
     otherExts: ['bin'],
@@ -290,6 +303,7 @@ export const RADIOS: Radio[] = [
     memoryChipMb: 32,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17 Plus',
+    maker: 'Connect Systems',
     method: 'stm32-dfu',
     ext: 'dfu',
     otherExts: ['bin'],
@@ -367,6 +381,7 @@ export const RADIOS: Radio[] = [
     id: 'rt4d',
     heldKeysDrawn: true,
     name: 'Radtel RT-4D',
+    maker: 'Radtel',
     method: 'rt4d-serial',
     ext: 'bin',
     enter: [
@@ -387,6 +402,7 @@ export const RADIOS: Radio[] = [
     id: 'rt950pro',
     heldKeysDrawn: true,
     name: 'Radtel RT-950 Pro',
+    maker: 'Radtel',
     method: 'rt950-serial',
     ext: 'btf',
     // The port's build is openrtx_rt950pro.BTF; any .BTF is taken, and the flasher
@@ -411,6 +427,7 @@ export const RADIOS: Radio[] = [
   {
     id: 'mod17',
     name: 'Module 17',
+    maker: 'M17 Project',
     method: 'stm32-dfu',
     ext: 'bin',
     address: 0x08000000,
@@ -430,6 +447,7 @@ export const RADIOS: Radio[] = [
   {
     id: 'ttwrplus',
     name: 'Lilygo T-TWR Plus',
+    maker: 'LILYGO',
     method: 'uf2-copy',
     ext: 'uf2',
     ciArtifact: 'zephyr-release-bins',
@@ -454,6 +472,7 @@ export const RADIOS: Radio[] = [
     id: 'c62',
     heldKeysDrawn: true,
     name: 'Retevis C62 / C2',
+    maker: 'Retevis',
     method: 'csk-serial',
     ext: 'bin',
     alsoMatches: '(^|/)zephyr\\.bin$',
