@@ -12,11 +12,13 @@ import { useEffect, useState } from 'preact/hooks';
 import { makeBundle, type BundleManifest } from '../backup/bundle.ts';
 import type { BackupRecord, BackupStore } from '../backup/store.ts';
 import { isAlready } from '../backup/types.ts';
+import { siteUrl } from '../base.ts';
+import { COVERAGE_DOC_URL, gapLine, gapsFor } from '../coverage.ts';
 import { isChooserCancel, type DeviceEnv } from '../devices.ts';
 import { saveFile } from '../firmware/builds.ts';
 import { backupDevice, type PickedDevice, type Purpose } from '../flash/run.ts';
 import type { Progress } from '../flash/types.ts';
-import { backupFor, type Radio } from '../radios.ts';
+import { backupFor, idIsPerUnit, type Radio } from '../radios.ts';
 import { runsNow, type Runs } from '../settings.ts';
 import { Activity, Console, paintGate } from './Activity.tsx';
 import { ChooserHelp, ChooserHint } from './Chooser.tsx';
@@ -139,6 +141,10 @@ export function BackupStep(props: Props) {
   const stored = props.records.filter(
     (record) => record.manifest.radio === radio.id && record.manifest.parts.every((part) => part.complete),
   );
+  /** The memories this backup does not hold whole, from the coverage record. */
+  const gaps = gapsFor(radio);
+  /** The site's page on what each backup holds. */
+  const coveragePage = siteUrl('flasher/backup-coverage/');
   // A browser that cannot read the radio has nothing to gain from the answer.
   const asks = backup.mode === 'normal' && supported;
 
@@ -313,8 +319,30 @@ export function BackupStep(props: Props) {
       </p>
       {backup.notIncluded && (
         <p data-testid="backup-not-included">
-          {backup.notIncluded.text} <Out href={backup.notIncluded.url}>{backup.notIncluded.label}</Out>.
+          {backup.notIncluded.text}{' '}
+          <Out href={backup.notIncluded.url === COVERAGE_DOC_URL ? coveragePage : backup.notIncluded.url}>
+            {backup.notIncluded.label}
+          </Out>
+          .
         </p>
+      )}
+      {gaps.length > 0 && (
+        // Said before the read, not after: what this backup will not hold of this radio.
+        <Notice tone="warning" testid="backup-gaps">
+          <p class="font-medium">
+            This backup will not hold everything in the {radio.name}. Not saved, or saved only in part:
+          </p>
+          <ul class="mt-1 flex list-disc flex-col gap-1 ps-5 text-sm">
+            {gaps.map((gap) => (
+              <li key={gap.name}>{gapLine(gap)}</li>
+            ))}
+          </ul>
+          <p class="mt-2 text-sm">
+            <Out href={coveragePage} testid="backup-gaps-more">
+              What would be lost, and how each gap can be closed
+            </Out>
+          </p>
+        </Notice>
       )}
 
       {!supported ? (
@@ -479,7 +507,8 @@ export function BackupStep(props: Props) {
       {storedNote && !saved && !already && (
         <p class="text-sm" data-testid="stored-count">
           {storedNote}
-          {radio.method !== 'gd77-hid' &&
+          {/* Only where the radio gives an ID that is surely its own, and gives it before the read. */}
+          {idIsPerUnit(radio) &&
             ' The page first checks which radio this is, and does not read one it already has again.'}
         </p>
       )}

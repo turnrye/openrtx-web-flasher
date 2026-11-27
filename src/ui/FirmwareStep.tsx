@@ -46,7 +46,7 @@ function problemWith(radio: Radio, build: Build): string {
     return `This is a backup of a ${build.backup.model}, not of the ${radio.name}.`;
   }
   return build.backup.source === 'original-firmware'
-    ? 'This backup was read through the radio’s original firmware. It is the record of what the radio held (channels, settings, factory data); this page cannot write it back.'
+    ? 'This backup was read through the radio’s original firmware. It is a record of what the page could read from the radio; this page cannot write it back.'
     : 'This backup is incomplete, so the page will not write it back.';
 }
 

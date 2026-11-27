@@ -16,7 +16,7 @@ import {
   type BuildFile,
 } from '../firmware/builds.ts';
 import { flashDevice, type PickedDevice, type Purpose } from '../flash/run.ts';
-import type { Progress, Segment } from '../flash/types.ts';
+import { WrongRadioError, type Progress, type Segment } from '../flash/types.ts';
 import { apiFor, backupFor, filesFor, type Radio } from '../radios.ts';
 import { lastFlashed, type Flashed } from '../settings.ts';
 import { Activity, paintGate } from './Activity.tsx';
@@ -112,6 +112,8 @@ export function FlashStep(props: Props) {
   const [message, setMessage] = useState('');
   /** Whether the attempt that failed had begun to erase or write. */
   const [wrote, setWrote] = useState(false);
+  /** True when the flash was refused because the backup is another radio's: nothing to report. */
+  const [refused, setRefused] = useState(false);
   /** True after the browser's device list was closed without a pick. */
   const [cancelled, setCancelled] = useState(false);
   const [log, setLog] = useState<string[]>([]);
@@ -239,6 +241,7 @@ export function FlashStep(props: Props) {
       dropDevice();
       say(`Failed: ${text}`);
       setMessage(text);
+      setRefused(e instanceof WrongRadioError);
       setWrote(beganWriting(phases, lines));
       setStatus('error');
     } finally {
@@ -476,7 +479,7 @@ export function FlashStep(props: Props) {
               startedAt={startedAt}
             />
           )}
-          {status === 'error' && (
+          {status === 'error' && !refused && (
             <StillFailing
               radio={radio}
               purpose="flash"
