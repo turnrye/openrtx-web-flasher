@@ -443,6 +443,13 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   const file = fileForRadio(radio, build);
   if (!file) throw new Error(nothingFor(radio, build));
   // Said before anything else: no walk through flashing mode for a write that will not happen.
+  const way = backupFor(radio);
+  if (build.backup && !(way.how === 'read' && way.restorable)) {
+    throw new Error(
+      `This is a backup of the whole flash. The flashing mode this tool uses for the ${radio.name} ` +
+        'cannot write one. Nothing was sent to the radio.',
+    );
+  }
   if (build.backup?.simulated && options.sim === undefined) throw new Error(SIMULATED_BACKUP);
   const data = await fileData(build, file, source);
   const hash = file.sha256 ?? (await sha256Hex(data));

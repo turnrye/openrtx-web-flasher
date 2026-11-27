@@ -356,6 +356,43 @@ describe('simulated radios (--sim)', () => {
     expect(other.text).toBe('This backup is of a Module 17, not a Connect Systems CS7000-M17.');
   });
 
+  it('says at once that a backup cannot be written in the flashing mode it uses', async () => {
+    // A backup of a CS7000-M17 Plus as the page makes it, in DFU mode; here the radio is flashed in robot mode.
+    const made = await makeBundle(
+      { id: 'cs7000p', name: 'Connect Systems CS7000-M17 Plus' },
+      {
+        radioId: '3657345F3233',
+        idKind: 'usb-serial',
+        notes: [],
+        parts: [
+          {
+            file: 'internal-flash.bin',
+            kind: 'internal-flash',
+            address: 0x08000000,
+            data: random(64 * 1024),
+            complete: true,
+          },
+        ],
+      },
+      'flashing-mode',
+      new Date('2026-11-20T10:00:00'),
+    );
+    const path = fileOf(made.name, made.zip);
+    // With a terminal to ask on and with --sim: no instructions, no question, nothing picked.
+    for (const argv of [
+      ['flash', 'cs7000p', path],
+      ['flash', 'cs7000p', path, '--sim', '--yes'],
+    ]) {
+      const refused = await run(argv, {}, [true, true]);
+      expect(refused.code).toBe(1);
+      expect(refused.io.asked).toEqual([]);
+      expect(refused.text).toBe(
+        'This is a backup of the whole flash. The flashing mode this tool uses for the Connect Systems ' +
+          'CS7000-M17 Plus cannot write one. Nothing was sent to the radio.',
+      );
+    }
+  });
+
   it('does not restore a backup onto a radio that says it is another one', async () => {
     const out = folder();
     await run(['backup', 'mod17', '--sim', '--out', out]);
