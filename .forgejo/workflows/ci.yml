@@ -63,6 +63,7 @@ jobs:
             ~/.cache/openrtx-web-flasher/cskburn
             ~/.cache/openrtx-web-flasher/cskburn-wasm
             ~/.cache/openrtx-web-flasher/tools
+            ~/.cache/openrtx-web-flasher/website
           key: vendor-${{ runner.os }}-${{ hashFiles('vendor.json', 'scripts/vendor.mjs', 'tools/cskburn-wasm/**') }}
           restore-keys: vendor-${{ runner.os }}-
       - name: Work out the other cache keys
@@ -85,6 +86,13 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      # Astro writes absolute links, so the build is made for the one place it goes:
+      # the site's top (the path of PAGES_URL), or this pull request's preview folder.
+      - name: Work out where this build will be served
+        run: echo "SITE_BASE=$(ci/site-base.sh)" >> "$GITHUB_ENV"
+        env:
+          PAGES_URL: ${{ vars.PAGES_URL }}
+          PR_NUMBER: ${{ forgejo.event.pull_request.number }}
       - name: Vendor, check, mirror firmware, test and build
         run: ci/build.sh
         env:

@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# The form behind "Tell us what to change" on the site's contribute page: for people who
+# want to fix or add something on the site without editing a file themselves.
+name: Suggest a change to the site
+description: Fix a mistake, add notes about your radio, or send a photo. No editing needed.
+title: 'Site: '
+labels: [docs]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. Write it in your own words; a maintainer makes the change from what you send.
+  - type: input
+    id: page
+    attributes:
+      label: Which page?
+      description: Its address, or its title.
+      placeholder: https://openrtx.org/hardware/md380/
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What should change?
+      description: |
+        What is wrong or missing, and what it should say. To send photos, drag them onto this box.
+    validations:
+      required: true
+  - type: input
+    id: radio
+    attributes:
+      label: Which radio is it about?
+      description: Leave empty if it is not about one radio.
+      placeholder: Tytera MD-UV380, hardware version V2
+  - type: input
+    id: credit
+    attributes:
+      label: How should we credit you?
+      description: A name or callsign, or leave empty.

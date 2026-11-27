@@ -38,7 +38,7 @@ export default defineConfig({
   plugins: [preact()],
   define: buildDefines(),
   test: {
-    include: ['src/**/*.test.ts', 'cli/**/*.test.ts', 'scripts/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'cli/**/*.test.ts', 'scripts/**/*.test.mjs'],
     environment: 'node',
   },
 });

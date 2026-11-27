@@ -6,6 +6,10 @@
 #   ci/build.sh                 vendor, check, mirror firmware, test, build
 #   MIRROR=skip ci/build.sh     the same without contacting GitHub for firmware
 #
+# SITE_BASE is the path the site will be served under (ci/site-base.sh works it out in
+# CI). Without it the build is for /sub/path/, which is what the browser tests serve
+# locally: a sub-path, so that a link that ignores the base fails.
+#
 # GITHUB_TOKEN, when set, is only used to raise GitHub's API rate limit for the mirror.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -43,7 +47,9 @@ fi
 bash ci/test-publish.sh
 
 step "Build"
-npx vite build
+export SITE_BASE="${SITE_BASE:-/sub/path/}"
+echo "for ${SITE_BASE}"
+npx astro build
 # GitHub Pages must not run the files through Jekyll.
 touch dist/.nojekyll
 echo "Built dist/: $(find dist -type f | wc -l | tr -d ' ') files, $(du -sh dist | cut -f1)"
