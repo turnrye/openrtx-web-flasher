@@ -53,7 +53,7 @@ export default defineConfig({
       ],
       sidebar: [
         { label: 'Flash your radio', link: '/flash/' },
-        { label: 'Start here', items: [{ slug: 'user_guide' }, { slug: 'dev_status' }] },
+        { label: 'Start here', items: [{ slug: 'radios' }, { slug: 'user_guide' }, { slug: 'dev_status' }] },
         {
           label: 'The flasher',
           collapsed: true,
