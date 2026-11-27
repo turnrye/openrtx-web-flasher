@@ -32,8 +32,32 @@ body:
       label: Which radio is it about?
       description: Leave empty if it is not about one radio.
       placeholder: Tytera MD-UV380, hardware version V2
+  - type: dropdown
+    id: photo-owner
+    attributes:
+      label: If you sent photos, who took them?
+      description: We can only put up photos their owner agrees to.
+      options:
+        - No photos
+        - I took them
+        - Someone else took them, and they agree to this
+    validations:
+      required: true
+  - type: dropdown
+    id: photo-licence
+    attributes:
+      label: How may your photos be used?
+      description: |
+        CC BY-SA 4.0 lets anyone reuse them with your credit, under the same licence. The site's
+        text is proposed to use it too. Or keep them for the OpenRTX website only.
+      options:
+        - No photos
+        - CC BY-SA 4.0
+        - On the OpenRTX website only, with my credit
+    validations:
+      required: true
   - type: input
     id: credit
     attributes:
       label: How should we credit you?
-      description: A name or callsign, or leave empty.
+      description: A name or callsign, shown under any photo you sent. Or leave empty.
