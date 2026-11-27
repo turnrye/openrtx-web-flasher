@@ -1,9 +1,15 @@
-# OpenRTX web flasher
+# OpenRTX site and web flasher
 
-A web page that puts [OpenRTX](https://openrtx.org) on a radio: pick the radio, pick a
-firmware build, follow the steps. Where the browser can talk to the radio it flashes it
-directly; everywhere else it hands over the right file and the command for the usual
-tool.
+One static site with two parts:
+
+- **The flasher**, a page that puts [OpenRTX](https://openrtx.org) on a radio: pick the
+  radio, pick a firmware build, follow the steps. Where the browser can talk to the radio
+  it backs it up and flashes it directly; everywhere else it hands over the right file
+  and the command for the usual tool. It has a command-line twin.
+- **The OpenRTX pages and docs**: the users' guide, the hardware pages, the developers'
+  docs and the news, with search, a sidebar and an "Edit page" link on every page.
+  [The site, and who writes its pages](#the-site-and-who-writes-its-pages) says where
+  they come from.
 
 This is a community prototype, not an official OpenRTX release. Before the page talks
 to a radio model nobody has checked on real hardware, it asks once to turn experimental
@@ -165,12 +171,19 @@ nightly.link.
 ## Develop
 
     npm ci
-    npm run vendor      # fetch and build the pinned third-party parts (see below)
+    npm run vendor      # fetch and build the pinned third-party parts, and the site's pages (see below)
     npm run mirror      # copy firmware from GitHub into public/firmware (optional)
-    npm run dev         # http://localhost:5173, add ?sim=1 for simulated radios
+    npm run dev         # http://localhost:4321, the flasher is at /flash/; add ?sim=1 for simulated radios
     npm run check       # format, lint, types and unit tests: what CI enforces
-    npm run build && npm run e2e    # browser tests against the built site
+    SITE_BASE=/sub/path/ npm run build && npm run e2e    # browser tests against the built site
     npm run cli -- radios           # the command line, as `npm ci` last built it
+
+The site is built by [Astro](https://astro.build) with
+[Starlight](https://starlight.astro.build) (`astro.config.ts`); the flasher is a Preact
+app on one of its pages. Components come from [daisyUI](https://daisyui.com) on Tailwind
+CSS, themed once in `site/styles/theme.css` with the OpenRTX palette, so the pages and
+the flasher look like one thing. Astro writes absolute links, so a build is made for the
+path it will be served under (`SITE_BASE`; [docs/hosting.md](docs/hosting.md)).
 
 `?sim=1` swaps real devices for simulated ones, so the whole flow can be tried without
 a radio. `?sim=fail` simulates radios that do not answer, `?sim=protected` STM32 radios
@@ -194,6 +207,10 @@ match, and builds what needs building into `public/` (not in git):
 - **The OpenRTX logo** and two **screenshots of the OpenRTX UI** for the drawings'
   screens.
 - **shellcheck**, the one checker that is not an npm package.
+- **The OpenRTX website's pages and pictures**, from
+  [OpenRTX/openrtx.github.io](https://github.com/OpenRTX/openrtx.github.io) at a pinned
+  commit, turned into pages of this site by `scripts/import-docs.mjs`. That repository
+  states no licence yet, which is one reason they are fetched and not committed here.
 - **cskburn as LISTENAI releases it**, for the command line. It is not part of the build:
   the command line downloads it into the cache the first time a C62 is flashed.
 
@@ -222,20 +239,45 @@ change it and run `npm run vendor -- --update`.
     src/backup/          readers through the original firmware, the backup zip, the browser store
     src/feedback.ts      the report a user can send
     src/sim/             simulated radios, used by tests and ?sim=1
-    src/ui/              the page
+    src/ui/              the flasher's page
+    astro.config.ts      the site: its base path, sidebar and theme
+    site/content/docs/   the site's pages; .mdx are written here, .md are copied in at build time
+    site/components/     the flasher's island, the licences tables
+    site/styles/         the one stylesheet: Tailwind, daisyUI and the OpenRTX palette
     cli/                 the command line: devices, firmware and cskburn for Node
     tests/e2e/           browser tests against the simulated radios
-    scripts/             vendor step, drawings, firmware mirror, screenshots
+    scripts/             vendor step, website import, drawings, firmware mirror, screenshots
     ci/                  build, test and publish scripts shared by both forges
     tools/cskburn-wasm/  the serial layer cskburn is compiled with
-    docs/                hosting, QA, bench notes, the bench record
+    docs/                hosting, QA, bench notes, the bench record, backup coverage; also published under /flasher/
     vendor.json          what comes from elsewhere, and at which version
 
 ## Hosting
 
-The build is a folder of static files with relative URLs. See
+The build is a folder of static files, made for the path it is served under. See
 [docs/hosting.md](docs/hosting.md) for GitHub Pages, Forgejo with git-pages, and any
 other static host.
+
+## The site, and who writes its pages
+
+The aim is one project for the OpenRTX website, its docs and the flasher. Until the
+website's own repository is part of it, its pages are copied in at build time:
+
+- `vendor.json` pins a commit of
+  [OpenRTX/openrtx.github.io](https://github.com/OpenRTX/openrtx.github.io);
+  `npm run vendor` checks it out and `scripts/import-docs.mjs` turns its docsify pages
+  into `site/content/docs/*.md`. Those copies are not committed. To take newer pages,
+  move the pin.
+- Every page has an **Edit page** link. On a copied page it opens the file in the
+  website's repository; on a page written here (`.mdx`), the file in this one.
+- Addresses of the old site (`/#/user_guide?id=flashing…`) are sent on to the new page.
+- People who do not want to edit a file use the form linked from the site's
+  ["Help improve this site"](site/content/docs/contribute.mdx) page
+  (`.github/ISSUE_TEMPLATE/docs-suggestion.yml`). Nothing here needs a server: a
+  browser-based editor with its own sign-in would, and is left for the project to decide.
+
+A page written here wins over a copied page with the same address, which is how a page
+moves over: write it as `.mdx`, and the copy stops being made.
 
 ## Credits and licences
 
