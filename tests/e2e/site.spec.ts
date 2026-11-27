@@ -47,6 +47,17 @@ test('the backups page says, from the record the flasher reads, what each backup
   await expect(page).toHaveURL(/\/flash\/backups\/#md9600$/);
 });
 
+test('every page says whose it is and under which licences', async ({ page }) => {
+  for (const address of ['../user_guide/', '../', 'backups/']) {
+    await page.goto(address);
+    const licence = page.getByTestId('site-licence');
+    await expect(licence, address).toContainText('© OpenRTX contributors');
+    await expect(licence.getByRole('link', { name: 'CC BY-SA 4.0' })).toHaveAttribute('rel', 'license');
+  }
+  await page.getByTestId('site-licence').getByRole('link', { name: 'licences and credits' }).click();
+  await expect(page).toHaveURL(/\/flash\/credits\/$/);
+});
+
 test('every page of the old website is in the sidebar', async ({ page }) => {
   await page.goto('../user_guide/');
   const sidebar = page.locator('#starlight__sidebar');

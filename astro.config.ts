@@ -49,6 +49,7 @@ export default defineConfig({
       components: {
         ThemeSelect: './site/components/Empty.astro',
         ThemeProvider: './site/components/DarkOnly.astro',
+        Footer: './site/components/Footer.astro',
       },
       head: [
         {
