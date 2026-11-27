@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated TYT radios, for `?sim=` and the command line's `--sim`. */
+import { hex } from '../bytes.ts';
 import { parseTytFirmware } from '../flash/tyt.ts';
-import { broken, hex, slowed } from '../sim/support.ts';
+import { broken, slowed } from '../sim/support.ts';
 import { SimTytStock } from '../sim/tyt-stock.ts';
 import { SimTytRadio, TYT_ORIGINAL_NAMES } from '../sim/tyt.ts';
 import { verifyDfu } from './stm32-dfu.sim.ts';

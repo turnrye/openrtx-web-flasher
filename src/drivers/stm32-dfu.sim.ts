@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated STM32 radio in DFU mode, for `?sim=` and the command line's `--sim`. */
+import { same } from '../bytes.ts';
 import type { Segment } from '../flash/types.ts';
 import { SimStm32Dfu } from '../sim/stm32dfu.ts';
-import { broken, oldFirmware, same, slowed } from '../sim/support.ts';
+import { broken, oldFirmware, slowed } from '../sim/support.ts';
 import { STM32_FLASH_BASE, stm32Segments } from './stm32-dfu.ts';
 import type { Simulator } from './types.ts';
 

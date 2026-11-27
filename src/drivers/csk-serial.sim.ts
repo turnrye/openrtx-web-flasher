@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated C62, for `?sim=` and the command line's `--sim`. */
+import { same } from '../bytes.ts';
 import { SimCsk6 } from '../sim/csk6.ts';
 import { md5 } from '../sim/md5.ts';
-import { oldFirmware, same } from '../sim/support.ts';
+import { oldFirmware } from '../sim/support.ts';
 import { SIM_CSK_BACKUP } from './csk-serial.ts';
 import type { Simulator } from './types.ts';
 

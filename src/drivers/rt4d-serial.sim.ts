@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated RT-4D, for `?sim=` and the command line's `--sim`. */
+import { same } from '../bytes.ts';
 import { SimRt4dStock } from '../sim/rt4d-stock.ts';
 import { SimRt4d } from '../sim/rt4d.ts';
-import { broken, same } from '../sim/support.ts';
+import { broken } from '../sim/support.ts';
 import type { Simulator } from './types.ts';
 
 /** The bootloader for flashing; for a backup, the radio running its original firmware. */

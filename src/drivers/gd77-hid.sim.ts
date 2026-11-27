@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated GD-77 and DM-1801, for `?sim=` and the command line's `--sim`. */
+import { same } from '../bytes.ts';
 import { parseSgl } from '../flash/gd77.ts';
 import { SimGd77Stock } from '../sim/gd77-stock.ts';
 import { SimGd77 } from '../sim/gd77.ts';
-import { broken, same } from '../sim/support.ts';
+import { broken } from '../sim/support.ts';
 import type { Simulator } from './types.ts';
 
 /** The bootloader for flashing; for a backup, the radio running its original firmware. */

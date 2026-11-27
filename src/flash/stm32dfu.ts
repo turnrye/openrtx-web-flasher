@@ -9,7 +9,7 @@
  * Galea); no code is taken from it.
  */
 import { DfuDevice, fallbackLayout, hex32, sectorsTouched, type FlashSector, type Stm32Chip } from './dfu.ts';
-import { FlashError, type FlashContext, type Segment } from './types.ts';
+import { FlashError, messageOf, type FlashContext, type Segment } from './types.ts';
 
 /** wTransferSize to use when the functional descriptor cannot be read. */
 const DEFAULT_TRANSFER_SIZE = 2048;
@@ -190,7 +190,7 @@ async function verifySegments(
       try {
         got = await dfu.upload(FIRST_DATA_BLOCK + i, want.length);
       } catch (e) {
-        const why = e instanceof Error ? e.message : String(e);
+        const why = messageOf(e);
         throw new FlashError(
           `Could not read the flash back at ${hex32(at)} to verify it (is the chip read-protected?): ${why}`,
         );
@@ -272,7 +272,7 @@ export async function readDfuSe(
         try {
           got = await dfu.upload(FIRST_DATA_BLOCK + offset / transferSize, length);
         } catch (e) {
-          const why = e instanceof Error ? e.message : String(e);
+          const why = messageOf(e);
           throw new FlashError(
             `The radio would not let its flash be read at ${hex32(sector.start + offset)}. ` +
               `Its chip is probably read-protected, so it cannot be backed up this way. (${why})`,

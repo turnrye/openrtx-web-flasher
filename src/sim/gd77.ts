@@ -15,6 +15,7 @@
  * OpenGD77, Copyright (C) 2019 Kai Ludwig DG4KLU, BSD-3-Clause), with a stand-in
  * cipher table so that no fixture is ever valid firmware.
  */
+import { same } from '../bytes.ts';
 import type { Gd77Model } from '../flash/gd77.ts';
 import { byteReport, FakeHidDevice } from './hid.ts';
 
@@ -78,11 +79,6 @@ export interface SimGd77Options {
   corruptResponseAt?: number;
   /** Send no response with this index. */
   dropResponseAt?: number;
-}
-
-/** Compares a received payload with the bytes the script sends. */
-function same(a: Uint8Array, b: readonly number[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
 /** Simulated GD-77 or DM-1801 bootloader. */

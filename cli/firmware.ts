@@ -29,6 +29,7 @@ import {
   type CiRun,
   type Fetcher,
 } from '../src/firmware/github.ts';
+import { messageOf } from '../src/flash/types.ts';
 import { RADIOS, type Radio } from '../src/radios.ts';
 
 /** Where firmware comes from unless --repo says otherwise. */
@@ -119,7 +120,7 @@ async function cached(
       renameSync(`${kept}.part`, kept);
     } catch (e) {
       // The cache only saves a download next time: what arrived and checked out is used.
-      const why = e instanceof Error ? e.message : String(e);
+      const why = messageOf(e);
       source.say(`The download could not be kept in the cache (${why}); it is used all the same.`);
     }
   }

@@ -5,6 +5,7 @@
  * every radio, so a backup can be understood later without knowing how it was made.
  */
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import { sha256Hex } from '../bytes.ts';
 import type { BackupPart, IdKind, PartKind, RadioBackup } from './types.ts';
 
 /** Format name and version written into every manifest. */
@@ -54,12 +55,6 @@ export interface BundleManifest {
 export interface Bundle {
   manifest: BundleManifest;
   parts: BackupPart[];
-}
-
-/** SHA-256 of `bytes` as lower-case hex. */
-async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes as BufferSource);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** "20261121-0605" in local time. */

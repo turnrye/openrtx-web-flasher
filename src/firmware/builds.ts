@@ -10,7 +10,11 @@
 import { unzipSync } from 'fflate';
 import { isBundle, openBundle, restorablePart, type BundleManifest } from '../backup/bundle.ts';
 import { siteUrl } from '../base.ts';
+import { sha256Hex } from '../bytes.ts';
 import { pickFile, type Companion, type Radio } from '../radios.ts';
+
+// The page and the command line take the hash from here, as they did when it was made here.
+export { sha256Hex };
 
 /** One firmware file of a build. */
 export interface BuildFile {
@@ -61,12 +65,6 @@ export async function loadManifest(base: string = siteUrl()): Promise<Manifest |
   } catch {
     return null;
   }
-}
-
-/** SHA-256 of `bytes` as lower-case hex. */
-export async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes as BufferSource);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** Returns the bytes of `file`, downloading and checking a mirrored file when needed. */

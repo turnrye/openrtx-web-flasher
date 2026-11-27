@@ -25,7 +25,7 @@ import {
   type PickedDevice,
   type Purpose,
 } from '../src/flash/run.ts';
-import { WrongRadioError, type FlashContext, type Segment } from '../src/flash/types.ts';
+import { messageOf, WrongRadioError, type FlashContext, type Segment } from '../src/flash/types.ts';
 import {
   apiFor,
   backupFor,
@@ -118,11 +118,6 @@ interface Devices {
 /** An environment variable's value; an empty one counts as not set. */
 function setting(value: string | undefined): string | undefined {
   return value === '' ? undefined : value;
-}
-
-/** Text of a thrown value. */
-function messageOf(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 /** "2026-10-04" from an ISO date; empty for none. */

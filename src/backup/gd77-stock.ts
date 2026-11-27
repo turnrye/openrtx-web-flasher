@@ -31,6 +31,7 @@
  * Only the handshake, bank selects, reads and `ENDR` are sent. The same protocol has
  * `W` and `ENDW` for writing; this file has no code that could build either.
  */
+import { fingerprint, hexSpaced } from '../bytes.ts';
 import {
   decodeGd77Frame,
   encodeGd77Frame,
@@ -40,7 +41,7 @@ import {
   type Gd77Framing,
   type Gd77Model,
 } from '../flash/gd77.ts';
-import { FlashError, type FlashContext } from '../flash/types.ts';
+import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
 import type { BackupPart, BackupScope, PartKind, RadioBackup } from './types.ts';
 
 /** Bytes per read request; the most the radio returns (hid.c, OpenGD77CPS). */
@@ -98,20 +99,9 @@ export function gd77CodeplugRanges(model: Gd77Model): Gd77Range[] {
   ];
 }
 
-/** Hex dump for log and error messages. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
-}
-
 /** True when every byte of `bytes` is `value`. */
 function allBytes(bytes: Uint8Array, value: number): boolean {
   return bytes.every((b) => b === value);
-}
-
-/** First 16 hex digits of the SHA-256 of `bytes`. */
-async function fingerprint(bytes: Uint8Array): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.slice()));
-  return hex(digest.subarray(0, 8)).replaceAll(' ', '');
 }
 
 /** The printable ASCII at the start of `bytes`. */
@@ -186,7 +176,7 @@ class StockLink {
     try {
       await this.dev.sendReport(reportId, data);
     } catch (e) {
-      throw new FlashError(`USB write failed: ${e instanceof Error ? e.message : String(e)}`);
+      throw new FlashError(`USB write failed: ${messageOf(e)}`);
     }
     return this.nextReply();
   }
@@ -209,10 +199,10 @@ function notNormalMode(detail: string): FlashError {
 async function identify(link: StockLink): Promise<Uint8Array> {
   const first = await link.exchange(CMD_PRG);
   if (first === null) throw notNormalMode('no reply');
-  if (first.length !== 1 || first[0] !== CMD_ACK[0]) throw notNormalMode(`it said [${hex(first)}]`);
+  if (first.length !== 1 || first[0] !== CMD_ACK[0]) throw notNormalMode(`it said [${hexSpaced(first)}]`);
   const ident = await link.exchange(CMD_PRG2);
   if (ident?.length !== IDENT_BYTES) {
-    throw notNormalMode(ident ? `its identification is [${hex(ident)}]` : 'no identification');
+    throw notNormalMode(ident ? `its identification is [${hexSpaced(ident)}]` : 'no identification');
   }
   if (!(await link.acknowledged(CMD_ACK))) throw notNormalMode('the identification was not confirmed');
   return ident;
@@ -250,14 +240,14 @@ class StockReader {
       const reply = await this.link.exchange(request);
       if (reply?.length !== 4 + count) {
         throw new FlashError(
-          `Reading the radio failed at 0x${address.toString(16)}: ${reply ? `it answered [${hex(reply)}]` : 'no reply'}.`,
+          `Reading the radio failed at 0x${address.toString(16)}: ${reply ? `it answered [${hexSpaced(reply)}]` : 'no reply'}.`,
         );
       }
       if (!this.headerChecked) {
         // The references skip these 4 bytes without looking; worth knowing on a real radio.
         this.headerChecked = true;
         if (!request.every((b, i) => reply[i] === b)) {
-          this.log(`Note: read replies start [${hex(reply.subarray(0, 4))}], not with the request.`);
+          this.log(`Note: read replies start [${hexSpaced(reply.subarray(0, 4))}], not with the request.`);
         }
       }
       out.set(reply.subarray(4), address - start);

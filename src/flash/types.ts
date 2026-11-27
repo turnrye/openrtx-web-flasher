@@ -40,6 +40,11 @@ export class FlashError extends Error {
   }
 }
 
+/** Text of a thrown value. */
+export function messageOf(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
 /**
  * A backup was not written because the radio that is connected is not the one it was
  * read from. Nothing was written to that radio.

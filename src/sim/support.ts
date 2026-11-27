@@ -1,6 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** What the simulated radios of more than one method are made with (src/drivers/*.sim.ts). */
 
+/** Deterministic, non-repeating filler for a simulated radio's memory. */
+export function fillPattern(out: Uint8Array, seed: number): void {
+  let x = (seed * 2654435761) >>> 0;
+  for (let i = 0; i < out.length; i++) {
+    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
+    out[i] = x >>> 24;
+  }
+}
+
 /** Recognisable "firmware the radio came with", so a backup can be checked byte for byte. */
 export function oldFirmware(length: number): Uint8Array {
   const bytes = new Uint8Array(length);
@@ -10,16 +19,6 @@ export function oldFirmware(length: number): Uint8Array {
     bytes[i] = state >>> 24;
   }
   return bytes;
-}
-
-/** Bytes as lower-case hex. */
-export function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
-
-/** True when `a` and `b` hold the same bytes. */
-export function same(a: Uint8Array, b: Uint8Array): boolean {
-  return a.length === b.length && a.every((byte, i) => byte === b[i]);
 }
 
 /** Makes a simulated USB radio take `ms` over every control transfer; 0 leaves it as it is. */

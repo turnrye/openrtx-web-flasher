@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated RT-950 Pro, for `?sim=` and the command line's `--sim`. */
+import { same } from '../bytes.ts';
 import { SimRt950Stock } from '../sim/rt950-stock.ts';
 import { SimRt950 } from '../sim/rt950.ts';
-import { broken, same } from '../sim/support.ts';
+import { broken } from '../sim/support.ts';
 import type { Simulator } from './types.ts';
 
 /** The bootloader for flashing; for a backup, the radio running Radtel's firmware. */

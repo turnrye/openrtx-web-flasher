@@ -18,6 +18,7 @@
  * cs7000plus_flasher.py, https://github.com/imostlylurk/cs7000plus_flasher (Apache-2.0).
  * The table is copied from it; the code is written here.
  */
+import { hexSpaced } from '../bytes.ts';
 import { FlashError, type FlashContext } from './types.ts';
 import { UsbStorage } from './usb-storage.ts';
 
@@ -116,11 +117,6 @@ function dataFrame(image: Uint8Array, index: number): Uint8Array {
   return robotFrame(RobotCommand.DATA, payload);
 }
 
-/** Bytes as spaced hex, for the log. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
-}
-
 /** A 32-bit little-endian value of `image`. */
 function word(image: Uint8Array, offset: number): number {
   return new DataView(image.buffer, image.byteOffset, image.byteLength).getUint32(offset, true);
@@ -193,7 +189,7 @@ class RobotLink {
       throw new FlashError(
         seen.length === 0
           ? `The radio did not answer ${what}.`
-          : `The radio answered ${what} with something else (${hex(seen.subarray(0, 12))}).`,
+          : `The radio answered ${what} with something else (${hexSpaced(seen.subarray(0, 12))}).`,
       );
     }
     return answer.payload;
@@ -216,7 +212,7 @@ export async function flashCs7000Robot(dev: USBDevice, image: Uint8Array, ctx: F
       robotFrame(RobotCommand.CONNECT, CONNECT_PAYLOAD),
       'the connect request',
     );
-    ctx.log(`Connected to the radio's bootloader (it answered ${hex(state) || 'nothing more'}).`);
+    ctx.log(`Connected to the radio's bootloader (it answered ${hexSpaced(state) || 'nothing more'}).`);
 
     const blocks = Math.ceil(total / ROBOT_BLOCK);
     ctx.log(`Writing ${total} bytes to the second firmware slot in ${blocks} blocks.`);
@@ -227,7 +223,7 @@ export async function flashCs7000Robot(dev: USBDevice, image: Uint8Array, ctx: F
     const note = (what: string, answer: Uint8Array) => {
       if (answer[0] === ACCEPTED) return;
       if (unusual++ === 0)
-        ctx.log(`The radio answered ${what} with ${hex(answer) || 'nothing'}, not the usual 21.`);
+        ctx.log(`The radio answered ${what} with ${hexSpaced(answer) || 'nothing'}, not the usual 21.`);
     };
     for (let index = 0; index < blocks; index++) {
       const at = `block ${index + 1} of ${blocks}`;

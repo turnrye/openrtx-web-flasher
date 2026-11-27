@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The simulated CS7000-M17 Plus in robot mode, for the command line's `--sim`. */
+import { same } from '../bytes.ts';
 import { parseDfuFile } from '../flash/stm32dfu.ts';
 import { SimCs7000Robot } from '../sim/cs7000-robot.ts';
-import { broken, same } from '../sim/support.ts';
+import { broken } from '../sim/support.ts';
 import type { Simulator } from './types.ts';
 
 /** One radio: robot mode only takes an image. */

@@ -19,8 +19,10 @@
  * refused read looks ("N", or silence), and what a radio in bootloader mode says to
  * the handshake ("N", as src/sim/gd77.ts does, or silence).
  */
+import { hexSpaced, same } from '../bytes.ts';
 import type { Gd77Model } from '../flash/gd77.ts';
 import { byteReport, FakeHidDevice } from './hid.ts';
+import { fillPattern } from './support.ts';
 
 /** Bytes after the 4-byte frame header in a report. */
 const TRANSFER_LENGTH = 38;
@@ -78,25 +80,6 @@ export interface SimGd77Read {
   /** Programming-software address: bank * 0x10000 + the 16-bit address in the request. */
   address: number;
   length: number;
-}
-
-/** Deterministic, non-repeating filler. */
-function fillPattern(out: Uint8Array, seed: number): void {
-  let x = (seed * 2654435761) >>> 0;
-  for (let i = 0; i < out.length; i++) {
-    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
-    out[i] = x >>> 24;
-  }
-}
-
-/** Compares a received payload with the bytes a reference sends. */
-function same(a: Uint8Array, b: readonly number[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i]);
-}
-
-/** Hex dump for the records. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
 }
 
 /** Simulated GD-77 or DM-1801 with its original firmware, in normal mode. */
@@ -213,14 +196,14 @@ export class SimGd77Stock extends FakeHidDevice {
     if (same(payload, PRG) || same(payload, PRG2) || same(payload, ACK) || same(payload, ENDR)) return null;
     if (payload.length === 4 && payload[0] === CMD_READ) return null;
     if (payload.length === 8 && same(payload.subarray(0, 5), [...CWB, 0x00]) && payload[5] <= 1) {
-      return payload[6] === 0 && payload[7] === 0 ? null : `unknown command ${hex(payload)}`;
+      return payload[6] === 0 && payload[7] === 0 ? null : `unknown command ${hexSpaced(payload)}`;
     }
     if (same(payload, ENDW)) return 'ENDW';
     if (payload[0] === CMD_WRITE && payload.length > 4) {
       return `write (W) of ${payload[3]} bytes at 0x${((payload[1] << 8) | payload[2]).toString(16)}`;
     }
-    if (same(payload.subarray(0, 4), CWB)) return `bank select ${hex(payload)}`;
-    return `unknown command ${hex(payload)}`;
+    if (same(payload.subarray(0, 4), CWB)) return `bank select ${hexSpaced(payload)}`;
+    return `unknown command ${hexSpaced(payload)}`;
   }
 
   /** The handshake, then bank selects, reads and ENDR. */
@@ -238,7 +221,7 @@ export class SimGd77Stock extends FakeHidDevice {
     if (this.stage < 3) {
       const expected = [PRG, PRG2, ACK][this.stage];
       if (!same(payload, expected)) {
-        this.errors.push(`handshake step ${this.stage + 1}: got ${hex(payload)}`);
+        this.errors.push(`handshake step ${this.stage + 1}: got ${hexSpaced(payload)}`);
         return;
       }
       this.steps.push(['PROGRA', 'M', 'ACK'][this.stage]);
@@ -259,7 +242,7 @@ export class SimGd77Stock extends FakeHidDevice {
       return this.respond(ACK);
     }
     if (payload.length !== 4 || payload[0] !== CMD_READ) {
-      this.errors.push(`in a session: got ${hex(payload)}`);
+      this.errors.push(`in a session: got ${hexSpaced(payload)}`);
       return;
     }
     this.onRead(payload);

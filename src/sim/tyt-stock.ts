@@ -15,6 +15,7 @@
  * dfuERROR. Memory contents are pseudo-random from a seed, so tests compare what a
  * backup read with `flash`, `spi` and `infoBlock()` byte for byte.
  */
+import { hexSpaced } from '../bytes.ts';
 import { SimStall, SimUsbDevice, type SimDfuStatus } from './usb.ts';
 
 const IDLE = 2;
@@ -94,7 +95,7 @@ function pseudoRandom(length: number, seed: number): Uint8Array {
 
 /** Bytes as "91 01". */
 function hexBytes(data: Uint8Array): string {
-  return [...data.subarray(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join(' ');
+  return hexSpaced(data.subarray(0, 16));
 }
 
 /** Simulated TYT radio for the read-only backup, original firmware or bootloader. */

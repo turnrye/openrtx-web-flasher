@@ -21,6 +21,7 @@
  * recorded in `forbidden` and dropped.
  */
 import { FakeSerialPort } from './serial.ts';
+import { fillPattern } from './support.ts';
 
 const CMD_SESSION = 0x34;
 const CMD_READ = 0x52;
@@ -69,15 +70,6 @@ export interface SimRt4dStockOptions {
   wrapBlocks?: number;
   /** Send no reply to this block or any after it, like a firmware that serves only the start of the chip. */
   silentFrom?: number;
-}
-
-/** Deterministic, non-repeating filler for the flash. */
-function fillPattern(out: Uint8Array, seed: number): void {
-  let x = (seed * 2654435761) >>> 0;
-  for (let i = 0; i < out.length; i++) {
-    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
-    out[i] = x >>> 24;
-  }
 }
 
 /** Plain 8-bit sum, the checksum of the original firmware's protocol. */

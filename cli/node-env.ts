@@ -8,7 +8,7 @@
  */
 import type { DeviceEnv } from '../src/devices.ts';
 import { driverFor } from '../src/drivers/index.ts';
-import { FlashError } from '../src/flash/types.ts';
+import { FlashError, messageOf } from '../src/flash/types.ts';
 import { backupFor, type Radio } from '../src/radios.ts';
 import type { Io } from './io.ts';
 import { NodeHidDevice, type HidInfo, type HidModule } from './node-hid.ts';
@@ -132,7 +132,7 @@ function takingOver(device: USBDevice): USBDevice {
       try {
         await device.claimInterface(interfaceNumber);
       } catch (e) {
-        throw new FlashError(driveRefusal(e instanceof Error ? e.message : String(e)));
+        throw new FlashError(driveRefusal(messageOf(e)));
       }
       const inner = (device as unknown as { device?: LibusbDevice }).device;
       for (const iface of inner?.interfaces ?? []) {

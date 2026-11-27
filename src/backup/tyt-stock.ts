@@ -29,8 +29,9 @@
  * request is one snapshot, as large as the host allows. The SPI flash is readable only
  * in program mode, which the original firmware leaves only by restarting (`91 05`).
  */
+import { hexSpaced } from '../bytes.ts';
 import { DfuDevice, DfuState, dfuStateName, hex32, type DfuStatus } from '../flash/dfu.ts';
-import { FlashError, type FlashContext } from '../flash/types.ts';
+import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
 import type { AlreadyBackedUp, BackupPart, BackupScope, Known, RadioBackup } from './types.ts';
 
 /** Radio families this reader knows. */
@@ -249,7 +250,7 @@ function squeeze(text: string): string {
 
 /** Bytes as "a2 07", at most `limit` of them. */
 function hexBytes(data: Uint8Array, limit = data.length): string {
-  return [...data.subarray(0, limit)].map((b) => b.toString(16).padStart(2, '0')).join(' ');
+  return hexSpaced(data.subarray(0, limit));
 }
 
 /** A code or byte as two hex digits. */
@@ -263,8 +264,8 @@ function hex6(value: number): string {
 }
 
 /** Text of a thrown value, without a final full stop so it fits inside a sentence. */
-function messageOf(e: unknown): string {
-  return (e instanceof Error ? e.message : String(e)).replace(/\.$/, '');
+function reasonOf(e: unknown): string {
+  return messageOf(e).replace(/\.$/, '');
 }
 
 /** Rethrows a guard refusal: that is a bug in this file, never a reading error. */
@@ -319,7 +320,7 @@ async function readSnapshot(g: TytStockGuard, max: number, ctx: FlashContext): P
       if (data.length > 0) return data;
     } catch (e) {
       rethrowRefused(e);
-      ctx.log(`A read of ${size} bytes of internal flash did not pass: ${messageOf(e)}.`);
+      ctx.log(`A read of ${size} bytes of internal flash did not pass: ${reasonOf(e)}.`);
       await toIdle(g).catch(() => {});
     }
   }
@@ -350,7 +351,7 @@ async function readSpiRange(
       block = await g.upload(first + i, BLOCK);
     } catch (e) {
       rethrowRefused(e);
-      return { data: out.slice(0, got), stopped: messageOf(e) };
+      return { data: out.slice(0, got), stopped: reasonOf(e) };
     }
     const count = Math.min(block.length, range.length - got);
     out.set(block.subarray(0, count), got);
@@ -485,7 +486,7 @@ async function readOriginal(
       if (data.length > 0) infos.set(code, data);
     } catch (e) {
       rethrowRefused(e);
-      why = messageOf(e);
+      why = reasonOf(e);
       ctx.log(`Info block ${hex2(code)}: ${why}.`);
       await toIdle(g).catch(() => {});
     }
@@ -535,7 +536,7 @@ async function readOriginal(
       await command(g, [CMD_SET_ADDRESS, 0, 0, 0, 0]);
     } catch (e) {
       rethrowRefused(e);
-      stopped = messageOf(e);
+      stopped = reasonOf(e);
     }
     let read = 0;
     for (const range of ranges) {

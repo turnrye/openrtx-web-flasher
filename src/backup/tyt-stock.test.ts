@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
+import { hex } from '../bytes.ts';
 import { DfuDevice, DfuState, type DfuStatus } from '../flash/dfu.ts';
 import { FlashError, quietContext, type Progress } from '../flash/types.ts';
 import { SimTytStock, type SimTytStockOptions } from '../sim/tyt-stock.ts';
@@ -19,11 +20,6 @@ const MODELS = Object.keys(TYT_STOCK_PLANS) as TytStockModel[];
 const INFO_FILES = ['02', '01', '03', '04', '05', '07', '08', '32', '33', '50'].map((c) => `info-${c}.bin`);
 /** A smaller SPI flash where the test is not about its size. */
 const SMALL: SimTytStockOptions = { spiSize: 0x200000 };
-
-/** Bytes as hex without separators. */
-function hex(data: Uint8Array): string {
-  return [...data].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
 
 /** The part with this file name; fails the test when it is missing. */
 function part(backup: RadioBackup, file: string): BackupPart {

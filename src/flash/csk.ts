@@ -7,7 +7,7 @@
  * uploads its RAM burner, writes each partition and checks it with an MD5 the chip
  * computes over its own flash.
  */
-import { FlashError, WrongRadioError, type FlashContext, type Segment } from './types.ts';
+import { FlashError, messageOf, WrongRadioError, type FlashContext, type Segment } from './types.ts';
 
 /** The serial calls tools/cskburn-wasm/serial_web.c makes on `Module.cskSerial`. */
 interface CskSerial {
@@ -92,7 +92,7 @@ class WebSerialAdapter implements CskSerial {
     if (this.dead) return;
     this.dead = true;
     this.wake?.();
-    this.failure = new FlashError(`${what}: ${e instanceof Error ? e.message : String(e)}`);
+    this.failure = new FlashError(`${what}: ${messageOf(e)}`);
     this.onFailure?.();
   }
 
