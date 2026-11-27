@@ -50,8 +50,10 @@ The same tests run against a published copy, to check a deployment or a preview:
 
 The only layer that proves anything about a real radio. For each radio on the bench:
 
-1. Back up the radio with the page's "Back up now", and the codeplug with the usual
-   programming software as well. The first time, check the page's backup against the
+1. Read [backup-coverage.md](backup-coverage.md) for the radio first: on most radios the
+   page's backup leaves a memory out, and what is not saved before the first flash may
+   be gone for good. Back up the radio with the page's "Back up now", and the codeplug
+   with the usual programming software as well. The first time, check the page's backup against the
    usual tool: for the C62, Module 17, CS7000 and CS7000 Plus the image inside the zip
    must be identical to a `cskburn --read` or `dfu-util -U` dump; for the radios read
    through their original firmware, see the comparisons in
@@ -65,7 +67,8 @@ The only layer that proves anything about a real radio. For each radio on the be
    file).
 5. Unplug mid-write once and confirm the radio can be flashed again.
 6. Where the page can restore (C62, Module 17, CS7000, CS7000 Plus), flash the backup
-   from step 1 back and confirm the radio is as it was.
+   from step 1 back and confirm the radio is as it was. On the CS7000 and CS7000 Plus
+   that restores the program memory only: their memory chip is not in the backup.
 7. Record it: add `verified` for the radio in `src/radios.ts` (version, browser and OS,
    date) and a line in `docs/verification.md` with who and how. That turns the
    experimental gate off for that radio and shows "checked on a real radio" in the page.

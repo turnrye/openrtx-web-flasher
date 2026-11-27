@@ -49,18 +49,37 @@ Firmware is one of three choices:
   workflow (the page finds the CI build and links the zip, you download it and drop it
   on the page); or a file from your computer.
 
-The backup step reads everything the page can read from the radio, or is skipped:
+The backup step reads what the page can read from the radio, or is skipped. Only the C62
+and Module 17 are backed up whole. On every other radio at least one memory is not
+saved, or only in part. Each of those is a critical gap, and the step names it before the
+read. [docs/backup-coverage.md](docs/backup-coverage.md) has every radio memory by
+memory, and [docs/dumper.md](docs/dumper.md) the plan for closing the gaps.
 
-- **C62, Module 17, CS7000, CS7000 Plus**: in flashing mode the page reads the whole
-  flash. That backup can be flashed back from the page.
-- **MD-380, MD-UV380, MD-9600, DM-1701, GD-77, DM-1801, RT-4D, RT-950 Pro**: their bootloaders
-  cannot be read, so the page reads the radio through its original firmware, in normal
-  mode, before you put it in flashing mode: channels, settings and the factory data a
-  repair would need. It only reads. The page cannot write this backup back; it is the
-  record of what the radio held. The firmware itself comes back with the manufacturer's
-  file. For the RT-950 Pro the read is the first 64 KB of the memory chip, which is as
-  far as its programming cable reaches, and the step links Radtel's firmware downloads.
-- **T-TWR Plus**: the drive holds a copy as `CURRENT.UF2`.
+- **C62, Module 17**: in flashing mode the page reads the whole flash. That backup can be
+  flashed back from the page.
+- **CS7000, CS7000 Plus**: in flashing mode the page reads the whole program memory, and
+  can flash it back. The memory chip beside the processor is not read. It holds the
+  factory calibration, and OpenRTX erases a part of that chip the first time it starts.
+  A CS7000 Plus with its Connect Systems firmware refuses the read altogether.
+- **MD-380, MD-UV380, MD-9600, DM-1701, GD-77, DM-1801, RT-4D, RT-950 Pro**: their
+  bootloaders cannot be read, so the page reads the radio through its original firmware,
+  in normal mode, before you put it in flashing mode. It only reads, and the page cannot
+  write this backup back. A radio that already runs OpenRTX cannot be read this way at
+  all. What the read gives:
+  - MD-380, MD-UV380, MD-9600, DM-1701: the factory info blocks, the first 64 KB of the
+    program memory (the bootloader; 4 KB on Linux) and the whole 16 MB memory chip. Not
+    the firmware, which is the other 960 KB, and not the chip's security registers,
+    where the calibration is stored; the backup has the firmware's own copy of it.
+  - GD-77, DM-1801: most of the 64 KB EEPROM and about 60 KB of the 1 MB memory chip,
+    which is the codeplug, and the calibration where the firmware gives it. Nothing of
+    the program memory.
+  - RT-4D: the whole 16 MB memory chip, in about half an hour. Nothing of the program
+    memory.
+  - RT-950 Pro: the first 64 KB of the 4 MB memory chip, which is as far as its
+    programming cable reaches. Nothing of the program memory; the step links Radtel's
+    firmware downloads. A full backup is in progress on a branch.
+- **T-TWR Plus**: the drive holds the firmware as `CURRENT.UF2`, for you to copy. That
+  is the firmware only: not the bootloader, the settings area or the rest of the flash.
 
 The C62 takes two images from a build: the application (`zephyr.bin`) and the DSP image
 (`dsp_firmware.bin`, written at 0x100000). The page writes both in one run. A build with
@@ -197,6 +216,7 @@ change it and run `npm run vendor -- --update`.
 ## Layout
 
     src/radios.ts        the radios: files, flashing mode, backup, fallback tool
+    src/coverage.ts      what a backup holds of each radio, memory by memory, and the gaps
     src/firmware/        builds: bundled manifest, GitHub lookup, zips
     src/flash/           one flasher per bootloader protocol
     src/backup/          readers through the original firmware, the backup zip, the browser store

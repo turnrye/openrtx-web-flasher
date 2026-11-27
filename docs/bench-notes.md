@@ -6,6 +6,9 @@ to tell which one it was.
 
 ## Backups
 
+- Most backups do not hold everything on the radio. [backup-coverage.md](backup-coverage.md)
+  lists every memory of every radio, what is saved of it and what is not; only the C62
+  and Module 17 are saved whole.
 - A backup is only as good as its first restore. Until one has been restored on a real
   radio of that kind, treat the page's backup as unproven and keep a dump made with the
   usual tool as well.
@@ -20,18 +23,29 @@ to tell which one it was.
   the backup's name and in the Backups list does not tell them apart.
 - CS7000 Plus: the backup is all 2 MiB, bootloader and both firmware slots. Restoring it
   rewrites the bootloader too.
+- CS7000 and CS7000 Plus: the memory chip beside the processor (16 MiB and 32 MiB) is
+  not in the backup. OpenRTX reads the factory calibration from 0x1000 to 0x10DC of it,
+  and the first time it starts it erases an area for its own settings: 0x8000 to 0xBFFF
+  on the CS7000, 0x1000000 to 0x1003FFF on the Plus. Restoring the backup does not put
+  that back.
 
-### Through the original firmware (TYT, GD-77, DM-1801, RT-4D)
+### Through the original firmware (TYT, GD-77, DM-1801, RT-4D, RT-950 Pro)
 
 None of these reads has been run from the page on a radio. Each reader sends only read
 requests and its simulator fails the test on anything else, but what a real radio
 answers is known from other tools, and for the TYT family from one MD-9600.
 
-- The page cannot write these backups back. They are a record: codeplug, settings and
-  the factory data. Compare the first one of each model with a read made by the usual
-  programming software.
+- The page cannot write these backups back. They are a record of what each read
+  reaches, which is never the whole radio: the program memory is missing from all of
+  them, or all but its first 64 KB. Compare the first one of each model with a read made
+  by the usual programming software.
+- A radio that already runs OpenRTX gives nothing this way: the firmware that answered
+  is gone.
 - TYT: info blocks, one snapshot of the first 64 KB of internal flash (the bootloader),
   then the SPI flash in program mode, then `91 05`, on which the radio restarts.
+  - Not read: the firmware beyond the snapshot (960 KB) and the memory chip's security
+    registers, where the calibration is stored. Info block 05 is the firmware's copy of
+    the calibration as loaded in RAM, not the stored bytes.
   - On an MD-9600 compare with a backup made by a known-good tool: the info blocks must
     be identical except `info-08` (the clock), the snapshot is 65535 bytes on macOS and
     Windows and 4096 on Linux (usbfs caps a control transfer), firmware reads
@@ -47,7 +61,16 @@ answers is known from other tools, and for the TYT family from one MD-9600.
 - RT-4D: only block reads are sent, without the programming software's "open" and
   "close". If block 0 reads but later blocks time out, the open may be needed after
   all. If block 0 fails with "the answer starts with …", the message shows what the
-  radio really sent. Expect about seven minutes for the 4 MB the page reads.
+  radio really sent.
+- RT-4D: the page reads all 16 MiB, blocks 0 to 16383. The tool it follows stops after
+  block 4095, so nobody is known to have asked a real radio for the blocks above, where
+  the address book is. The first thing to watch is block 4096. If the radio stops
+  answering there, the backup keeps the first 4 MiB and is marked incomplete. If it
+  answers with the first 4 MiB over again, the page notices, keeps the first 4 MiB and
+  says so. Either way, write down which.
+- RT-4D: record how long the read takes. The page says about half an hour, which is an
+  estimate: 16,384 blocks of 1,032 bytes at 115200 baud are 24.5 minutes on the wire,
+  before the radio's own time per block.
 - The radio ID of a GD-77, DM-1801 or RT-4D backup is a fingerprint of its calibration
   data, not a serial number. It should be the same on a second read of the same radio.
 - The page skips the read for a radio whose ID matches a complete backup it holds. Two
