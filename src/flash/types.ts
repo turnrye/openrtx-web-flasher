@@ -40,6 +40,17 @@ export class FlashError extends Error {
   }
 }
 
+/**
+ * A backup was not written because the radio that is connected is not the one it was
+ * read from. Nothing was written to that radio.
+ */
+export class WrongRadioError extends FlashError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WrongRadioError';
+  }
+}
+
 /** FlashContext that discards output; handy in tests. */
 export function quietContext(overrides: Partial<FlashContext> = {}): FlashContext {
   return {

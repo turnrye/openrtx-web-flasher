@@ -171,7 +171,7 @@ export function FlashStep(props: Props) {
             if (paint(p)) setProgress(p);
           },
         },
-        !!build.backup,
+        build.backup ?? null,
         also,
       );
       setProgress({ phase: 'done', done: 1, total: 1 });

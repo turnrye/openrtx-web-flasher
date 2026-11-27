@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { backupCsk, flashCsk, readCsk, readCskChipId, type CskOptions } from './csk.ts';
-import { FlashError, quietContext, type Progress } from './types.ts';
+import { FlashError, quietContext, WrongRadioError, type Progress } from './types.ts';
 import { SimCsk6 } from '../sim/csk6.ts';
 
 const options: CskOptions = {
@@ -109,6 +109,38 @@ describe('cskburn (C62) over a simulated serial port', () => {
     );
     expect(Buffer.compare(dev.flash.subarray(0, 0x2000), first)).toBe(0);
     expect(Buffer.compare(dev.flash.subarray(0x2000, 0x3000), second)).toBe(0);
+  });
+
+  it('writes for one chip only when told which, however its ID is spelled', async () => {
+    const { dev, port } = sim();
+    const image = new Uint8Array(randomBytes(20 * 1024));
+    await flashCsk(port, [{ address: 0, data: image }], quietContext(), options, 'c620240900065701');
+    expect(Buffer.compare(dev.flash.subarray(0, image.length), image)).toBe(0);
+    // The ID is asked for before the flash is touched.
+    expect(dev.trace.join(', ')).toMatch(/CHIP_ID x1, FLASH_ID x1, FLASH_BEGIN x1/);
+  });
+
+  it('stops at the chip ID, before anything is erased or written, when it is another chip', async () => {
+    const { dev, port } = sim();
+    const before = dev.flash.slice();
+    const lines: string[] = [];
+    const image = new Uint8Array(randomBytes(20 * 1024));
+    const attempt = flashCsk(
+      port,
+      [{ address: 0, data: image }],
+      quietContext({ log: (l) => lines.push(l) }),
+      options,
+      'C620240900069999',
+    );
+    await expect(attempt).rejects.toBeInstanceOf(WrongRadioError);
+    await expect(attempt).rejects.toThrow(
+      'This backup is of another radio (ID ending 00069999); the one connected ends 00065701. Nothing was written to it.',
+    );
+    // cskburn goes on by itself for a moment; nothing it sends after the ID reaches the radio.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(dev.trace.at(-1)).toBe('CHIP_ID x1');
+    expect(Buffer.compare(dev.flash, before)).toBe(0);
+    expect(lines.at(-1)).toBe('chip-id: C620240900065701');
   });
 
   it('reopens the port for a faster burn baud', async () => {

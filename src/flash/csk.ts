@@ -7,7 +7,7 @@
  * uploads its RAM burner, writes each partition and checks it with an MD5 the chip
  * computes over its own flash.
  */
-import { FlashError, type FlashContext, type Segment } from './types.ts';
+import { FlashError, WrongRadioError, type FlashContext, type Segment } from './types.ts';
 
 /** The serial calls tools/cskburn-wasm/serial_web.c makes on `Module.cskSerial`. */
 interface CskSerial {
@@ -75,10 +75,15 @@ class WebSerialAdapter implements CskSerial {
     return this.reopen(115200);
   }
 
-  /** Cuts cskburn off from the radio and closes the port. Nothing more is sent. */
-  async stop(): Promise<void> {
+  /** Cuts cskburn off from the radio, at once: nothing more is sent, whatever cskburn goes on to do. */
+  cut(): void {
     this.dead = true;
     this.wake?.();
+  }
+
+  /** Cuts cskburn off from the radio and closes the port. */
+  async stop(): Promise<void> {
+    this.cut();
     await this.close();
   }
 
@@ -198,8 +203,11 @@ interface CskRun {
  * Runs one cskburn command line against `port` in a fresh module instance.
  * `onLine` gets every output line, including the `\r`-terminated progress lines. When
  * it returns true the run is stopped there: the port is closed and cskburn, cut off from
- * the radio, is left to give up by itself. A port that cannot be opened or stops taking
- * data ends the run the same way, with a FlashError.
+ * the radio, is left to give up by itself. The WebAssembly cskburn prints a line before
+ * it sends its next command, and is cut off before `onLine` returns, so nothing is sent
+ * after a line that stops the run. A real cskburn program is ended instead, as fast as
+ * that goes. A port that cannot be opened or stops taking data ends the run the same
+ * way, with a FlashError.
  */
 async function runCskburn(
   port: SerialPort,
@@ -212,6 +220,8 @@ async function runCskburn(
   const lines: string[] = [];
   let pending = '';
   let cut = false;
+  /** The module, once there is one: a real program is ended through it. */
+  let running: CskModule | null = null;
   const emit = (code: number | null) => {
     // Cut off from the radio, cskburn goes on to report errors that mean nothing.
     if (cut) return;
@@ -221,6 +231,9 @@ async function runCskburn(
         lines.push(pending);
         if (onLine(pending) === true) {
           cut = true;
+          // Here and now, not when the run is next looked at: cskburn is about to go on.
+          adapter.cut();
+          running?.stop?.();
           stop();
         }
       }
@@ -238,6 +251,7 @@ async function runCskburn(
   });
   const factory = await options.loadModule();
   const mod = (await factory({ cskSerial: adapter, stdout: emit, stderr: emit })) as CskModule;
+  running = mod;
   for (const [path, data] of Object.entries(files)) mod.FS.writeFile(path, data);
   const exited = new Promise<number>((resolve) => {
     mod.onExit = resolve;
@@ -326,17 +340,23 @@ function refuseOverlap(segments: Segment[]): void {
  * Writes each segment (app at 0x0, DSP image at 0x100000) and has the chip verify it.
  * Segments that overlap are refused before anything is sent.
  * The radio must already be in flashing mode: off, hold the secondary PTT, power on, release.
+ *
+ * `onlyChip` is for a backup, which belongs to one radio: the ID of the chip it was read
+ * from. cskburn then reads the chip's ID first, in the same run, and the run is stopped
+ * there with a WrongRadioError when it is another chip, or gives no ID: nothing is
+ * written to it.
  */
 export async function flashCsk(
   port: SerialPort,
   segments: Segment[],
   ctx: FlashContext,
   options: CskOptions,
+  onlyChip?: string,
 ): Promise<void> {
   refuseOverlap(segments);
   const total = segments.reduce((n, s) => n + s.data.length, 0);
   const files: Record<string, Uint8Array> = {};
-  const args = ['--verify-all'];
+  const args = onlyChip === undefined ? ['--verify-all'] : ['--chip-id', '--verify-all'];
   segments.forEach((s, i) => {
     files[`/part${i}.bin`] = s.data;
     args.push(`0x${s.address.toString(16)}`, `/part${i}.bin`);
@@ -344,23 +364,47 @@ export async function flashCsk(
 
   let part = -1;
   let before = 0;
-  const onLine = (line: string) => {
+  /** The ID the chip gave, when one was asked for. */
+  let chipId: string | null = null;
+  /** Why the run was stopped before anything was written, when it was. */
+  let wrong: WrongRadioError | null = null;
+  const onLine = (line: string): boolean => {
     const progress = /^\s*([\d.]+) KB \/ ([\d.]+) KB/.exec(line);
     if (progress) {
       const done =
         before + Math.min(Math.round(Number(progress[1]) * 1024), segments[part]?.data.length ?? 0);
       ctx.progress({ phase: 'write', done, total });
-      return;
+      return false;
+    }
+    ctx.log(line);
+    if (onlyChip !== undefined) {
+      chipId ??= /chip-id:\s*([0-9A-Fa-f]+)/.exec(line)?.[1] ?? null;
+      if (chipId !== null && chipId.toUpperCase() !== onlyChip.toUpperCase()) {
+        wrong = new WrongRadioError(
+          `This backup is of another radio (ID ending ${onlyChip.slice(-8)}); the one connected ends ` +
+            `${chipId.slice(-8)}. Nothing was written to it.`,
+        );
+        return true;
+      }
+      // cskburn gives the ID before it erases or writes. Should it ever not, stop here.
+      if (chipId === null && /^(Burning|Erasing)\b/.test(line)) {
+        wrong = new WrongRadioError(
+          'The radio did not give its chip ID, so it cannot be told whether this backup is its own. ' +
+            'Nothing was written to it.',
+        );
+        return true;
+      }
     }
     if (line.startsWith('Burning partition')) {
       if (part >= 0) before += segments[part].data.length;
       part++;
     }
-    ctx.log(line);
+    return false;
   };
 
   ctx.progress({ phase: 'connect', done: 0, total });
   const run = await runCskburn(port, args, files, onLine, options);
+  if (wrong) throw wrong as WrongRadioError;
   if (!succeeded(run) || !run.lines.some((l) => l.startsWith('Finished'))) throw failure(run);
   ctx.progress({ phase: 'done', done: total, total });
 }

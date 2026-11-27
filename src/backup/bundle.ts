@@ -46,6 +46,8 @@ export interface BundleManifest {
   parts: ManifestPart[];
   /** What made the bundle. */
   tool: { name: string; userAgent: string };
+  /** Present when the backup was read from a simulated radio: it must never be written to a real one. */
+  simulated?: true;
 }
 
 /** An opened bundle. */
@@ -112,6 +114,7 @@ export async function makeBundle(
       name: 'openrtx-web-flasher',
       userAgent: typeof navigator === 'undefined' ? '' : navigator.userAgent,
     },
+    ...(backup.simulated ? { simulated: true as const } : {}),
   };
   // Stored, not compressed: firmware and flash dumps barely shrink, and a plain zip
   // can be picked apart with any tool.

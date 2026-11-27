@@ -191,6 +191,14 @@ answers is known from other tools, and for the TYT family from one MD-9600.
   every start. A build without `dsp_firmware.bin` can still be flashed, with a warning:
   that is only right for a radio that already runs OpenRTX. Restoring a backup writes
   the whole flash, DSP included.
+- Restoring a backup, not run on a radio yet: the run asks the chip for its ID first
+  (`--chip-id` with the image, one cskburn run) and stops before anything is erased when
+  it is not the ID in the backup. The page's cskburn sends nothing more once the ID is
+  wrong. The command line's cskburn is a separate program that does not wait, so it is
+  also asked to read 16 KiB (`--read 0x0:0x4000:guard.bin`) between the ID and the write:
+  over a second at 115200 baud, in which the program is ended. To confirm on the bench:
+  that cskburn takes `--chip-id`, `--read` and an image in one run on a C62, and reads
+  before it erases, as its source says.
 - First runs on a real C62 (21 Nov 2026, Chrome on macOS, a Prolific cable):
   - The page's backup of all 4 MiB was identical to a `cskburn --read` dump of the same
     radio, except for 12,816 bytes in 0x3B1A90–0x3B4FAF that the original firmware

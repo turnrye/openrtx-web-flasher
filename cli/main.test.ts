@@ -258,7 +258,13 @@ describe('simulated radios (--sim)', () => {
     expect(backup.text).toContain('Put the radio in flashing mode again before you flash it.');
     expect(backup.text).toContain(READ);
     const saved = await backupIn(out);
-    expect(saved.manifest).toMatchObject({ radio: 'c62', radioId: 'C620240900065701', idKind: 'chip-id' });
+    expect(saved.manifest).toMatchObject({
+      radio: 'c62',
+      radioId: 'C620240900065701',
+      idKind: 'chip-id',
+      // The backup says where it came from: it is never written to a real radio.
+      simulated: true,
+    });
 
     const flash = await run(['flash', 'c62', C62_ZIP, '--sim', '--yes']);
     expect(flash.code).toBe(0);
@@ -272,6 +278,8 @@ describe('simulated radios (--sim)', () => {
 
     const restore = await run(['flash', 'c62', saved.path, '--sim', '--yes']);
     expect(restore.code).toBe(0);
+    // The simulated chip is asked who it is before the backup is written back to it.
+    expect(restore.text).toContain('chip-id: C620240900065701');
     expect(restore.text).toContain('Burning partition 1/1');
     expect(restore.text).toContain(WRITTEN);
   }, 60_000);
@@ -521,6 +529,84 @@ describe('real hardware, stood in for by fakes', () => {
     expect(none.code).toBe(1);
     expect(none.text).toContain('There is no ready-made cskburn for this computer');
     expect(none.text).toContain('--cskburn');
+  });
+
+  it('does not write the backup of a simulated radio to a real one, and says so first', async () => {
+    const out = folder();
+    expect((await run(['backup', 'c62', '--sim', '--out', out])).code).toBe(0);
+    const simulated = await backupIn(out);
+    expect(simulated.manifest.simulated).toBe(true);
+
+    const dir = folder();
+    const serial = serialOver(new SimRt4d());
+    const modules: NodeModules = {
+      usb: untouchable,
+      hid: untouchable,
+      serial: () => Promise.resolve(serial),
+    };
+    const argv = ['flash', 'c62', simulated.path, '--yes', '--experimental', '--port', '/dev/tty.fake'];
+    const { code, text } = await run([...argv, '--cskburn', standInCskburn(dir)], { modules });
+    expect(code).toBe(1);
+    // Nothing else is said: no walk through flashing mode for a write that will not happen.
+    expect(text).toBe(
+      'This backup was read from a simulated radio, not a real one, so it cannot be written to a real radio. ' +
+        'Nothing was sent to the radio.',
+    );
+    expect(existsSync(join(dir, 'record.json'))).toBe(false);
+  }, 60_000);
+
+  it('restores a C62 backup only onto the chip it was read from', async () => {
+    const serial = serialOver(new SimRt4d());
+    const modules: NodeModules = {
+      usb: untouchable,
+      hid: untouchable,
+      serial: () => Promise.resolve(serial),
+    };
+    const image = random(64 * 1024);
+    /** A backup of the C62 whose chip has this ID, as a file. */
+    const backupOf = async (radioId: string) => {
+      const made = await makeBundle(
+        { id: 'c62', name: 'Retevis C62 / C2' },
+        {
+          radioId,
+          idKind: 'chip-id',
+          notes: [],
+          parts: [{ file: 'flash.bin', kind: 'internal-flash', address: 0, data: image, complete: true }],
+        },
+        'flashing-mode',
+        new Date('2026-11-20T10:00:00'),
+      );
+      return fileOf(made.name, made.zip);
+    };
+    const options = ['--yes', '--experimental', '--port', '/dev/tty.fake', '--cskburn'];
+
+    // The radio that is connected (the stand-in cskburn answers for it) is another one.
+    const other = folder();
+    const refused = await run(
+      ['flash', 'c62', await backupOf('C620240900065701'), ...options, standInCskburn(other)],
+      { modules },
+    );
+    expect(refused.code).toBe(1);
+    expect(refused.text).toContain(
+      'This backup is of another radio (ID ending 00065701); the one connected ends 89ABCDEF. Nothing was written to it.',
+    );
+    // Not a failed flash: nothing to try again, nothing to report.
+    expect(refused.text).not.toContain('Failed:');
+    expect(refused.text).not.toContain('To report this');
+    expect(refused.text).not.toContain('Burning partition');
+    expect(existsSync(join(other, 'record.json'))).toBe(false);
+
+    // The radio the backup was read from.
+    const same = folder();
+    const written = await run(
+      ['flash', 'c62', await backupOf(STAND_IN_CHIP_ID), ...options, standInCskburn(same)],
+      { modules },
+    );
+    expect(written.code).toBe(0);
+    const record = JSON.parse(readFileSync(join(same, 'record.json'), 'utf8')) as CskburnRecord;
+    expect(record.args).toContain('--chip-id');
+    expect(record.parts).toEqual({ '0x0': sha256(image) });
+    expect(written.text).toContain('Burning partition 1/1');
   });
 
   it('gives the page’s message when the C62 is not in flashing mode', async () => {

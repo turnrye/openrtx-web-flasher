@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** Picks the device and the flasher for a radio. The only place that knows every method. */
 import { siteUrl } from '../base.ts';
-import type { DeviceEnv } from '../devices.ts';
+import { isSimulated, type DeviceEnv } from '../devices.ts';
 import { readStock } from '../backup/stock.ts';
-import type { AlreadyBackedUp, Known, RadioBackup } from '../backup/types.ts';
+import {
+  isAlready,
+  type AlreadyBackedUp,
+  type IdKind,
+  type Known,
+  type RadioBackup,
+} from '../backup/types.ts';
 import { backupFor, type Radio } from '../radios.ts';
 import { flashCs7000Robot, SECOND_SLOT } from './cs7000-robot.ts';
 import { backupCsk, flashCsk, type CskModuleLoader } from './csk.ts';
@@ -12,7 +18,7 @@ import { flashRt4d } from './rt4d.ts';
 import { flashRt950 } from './rt950.ts';
 import { flashDfuSe, parseDfuFile, rawSegment, readDfuSe } from './stm32dfu.ts';
 import { flashTyt } from './tyt.ts';
-import { FlashError, type FlashContext, type Segment } from './types.ts';
+import { FlashError, WrongRadioError, type FlashContext, type Segment } from './types.ts';
 
 /** STM32 and GD32 ROM bootloaders, and the TYT bootloader that borrows ST's IDs. */
 const DFU_FILTERS: USBDeviceFilter[] = [
@@ -93,9 +99,23 @@ const C62_FLASH_SIZE = 4 * 1024 * 1024;
  * Reads the radio for a backup, the way `backupFor(radio)` describes: everything the
  * page can read. `size` overrides how much of a C62 is read (the simulated one has a
  * small flash). `known` is asked as soon as the radio's ID is known; when it says the
- * radio is already backed up, nothing more is read.
+ * radio is already backed up, nothing more is read. A backup of a simulated radio says
+ * that it is one.
  */
 export async function backupDevice(
+  radio: Radio,
+  picked: PickedDevice,
+  ctx: FlashContext,
+  size?: number,
+  known?: Known,
+): Promise<RadioBackup | AlreadyBackedUp> {
+  const read = await readDevice(radio, picked, ctx, size, known);
+  if (!isAlready(read) && isSimulated(picked.device)) read.simulated = true;
+  return read;
+}
+
+/** The read behind `backupDevice`. */
+async function readDevice(
   radio: Radio,
   picked: PickedDevice,
   ctx: FlashContext,
@@ -160,19 +180,61 @@ export async function backupDevice(
 }
 
 /**
- * Writes `firmware` to the picked device with the flasher for `radio`. `restore` is true
- * for the image out of a backup made by this page: a raw image of the whole flash, not
- * a firmware build. `also` holds the other images of the build that the radio needs
- * (`Radio.alsoWrites`); they are written first, in the same run.
+ * What a backup says about the radio it was read from: its manifest (`BundleManifest`)
+ * is one.
+ */
+export interface BackupOrigin {
+  radioId: string | null;
+  idKind: IdKind | null;
+  /** Set when the backup was read from a simulated radio. */
+  simulated?: boolean;
+}
+
+/** Why a backup of a simulated radio is not written to a real one. */
+export const SIMULATED_BACKUP =
+  'This backup was read from a simulated radio, not a real one, so it cannot be written to a real radio. ' +
+  'Nothing was sent to the radio.';
+
+/**
+ * Why the backup that `origin` describes must not be written to the picked device, as
+ * far as can be told without asking the radio anything: it was read from a simulated
+ * radio and this one is real, or the device's USB serial number is not the one in the
+ * backup. Null when nothing speaks against it. A C62 only says who it is when asked, so
+ * `flashDevice` checks its chip ID in the run that writes.
+ */
+export function restoreRefusal(origin: BackupOrigin, picked: PickedDevice): string | null {
+  if (origin.simulated && !isSimulated(picked.device)) return SIMULATED_BACKUP;
+  if (origin.idKind !== 'usb-serial' || !origin.radioId || picked.api !== 'usb') return null;
+  const serial = usbSerial(picked.device);
+  if (serial === null || serial === origin.radioId) return null;
+  return (
+    `This backup is of another radio (ID ending ${origin.radioId.slice(-8)}); the one connected ends ` +
+    `${serial.slice(-8)}. Nothing was sent to it.`
+  );
+}
+
+/**
+ * Writes `firmware` to the picked device with the flasher for `radio`. `also` holds the
+ * other images of the build that the radio needs (`Radio.alsoWrites`); they are written
+ * first, in the same run.
+ *
+ * `restore` is given for the image out of a backup made by this page: a raw image of the
+ * whole flash, not a firmware build. It is what the backup says about the radio it came
+ * from (its manifest). A backup belongs to one radio, so where the radio can say who it
+ * is, it is asked first: the USB serial number of an STM32 radio, the chip ID of a C62.
+ * When that is not the radio in the backup, or the backup is of a simulated radio and
+ * this one is real, a WrongRadioError is thrown and nothing is written.
  */
 export async function flashDevice(
   radio: Radio,
   picked: PickedDevice,
   firmware: Uint8Array,
   ctx: FlashContext,
-  restore = false,
+  restore: BackupOrigin | null = null,
   also: Segment[] = [],
 ): Promise<void> {
+  const refusal = restore && restoreRefusal(restore, picked);
+  if (refusal) throw new WrongRadioError(refusal);
   switch (radio.method) {
     case 'tyt-dfu':
       return flashTyt(picked.device as USBDevice, firmware, ctx);
@@ -202,9 +264,14 @@ export async function flashDevice(
     case 'rt950-serial':
       return flashRt950(picked.device as SerialPort, firmware, ctx);
     case 'csk-serial':
-      return flashCsk(picked.device as SerialPort, [...also, { address: 0, data: firmware }], ctx, {
-        loadModule: loadCskburn,
-      });
+      return flashCsk(
+        picked.device as SerialPort,
+        [...also, { address: 0, data: firmware }],
+        ctx,
+        { loadModule: loadCskburn },
+        // The chip's ID is the radio ID of a C62 backup.
+        restore?.idKind === 'chip-id' && restore.radioId ? restore.radioId : undefined,
+      );
     case 'uf2-copy':
       throw new FlashError('This radio is flashed by copying the file onto its USB drive.');
   }

@@ -57,6 +57,8 @@ export interface RadioBackup {
   parts: BackupPart[];
   /** Things worth telling the user, e.g. "the radio gave only the first megabyte". */
   notes: string[];
+  /** True when what was read is a simulated radio, not a real one. */
+  simulated?: boolean;
 }
 
 /** Total bytes in a backup's parts. */

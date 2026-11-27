@@ -98,6 +98,9 @@ SHA-256. The page downloads it and keeps a second copy in the browser; the Backu
 section at the bottom lists them for every model, to save again, restore or forget. The
 copy in the browser is a convenience: it goes when site data is cleared and does not
 follow you to another computer. A backup is specific to one radio; keep it private.
+Where the radio can say who it is before it is written (the chip ID of a C62, the USB
+serial number of an STM32 radio), a backup of another radio is refused. A backup of a
+simulated radio says so in `backup.json` and is only written to a simulated radio.
 
 The backup step starts by finding out which radio is connected. When this browser
 already holds a complete backup of that radio, the page says so and does not read it

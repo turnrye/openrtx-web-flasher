@@ -54,6 +54,8 @@ export interface SimCsk6Options {
   corruptReads?: boolean;
   /** How long the chip takes to answer each command; 0 when left out. */
   replyDelayMs?: number;
+  /** The chip's eFuse ID, 8 bytes; C620240900065701 when left out. */
+  chipId?: Uint8Array;
 }
 
 /** Simulated C62 behind a USB serial adapter. */
@@ -206,7 +208,11 @@ export class SimCsk6 {
       case 0xf3: // FLASH_ID: capacity byte 0x16 = 4 MiB
         return this.reply(op, 0x1640c8);
       case 0xf4:
-        return this.reply(op, 0, Uint8Array.from([0xc6, 0x20, 0x24, 0x09, 0x00, 0x06, 0x57, 0x01]));
+        return this.reply(
+          op,
+          0,
+          this.options.chipId ?? Uint8Array.from([0xc6, 0x20, 0x24, 0x09, 0x00, 0x06, 0x57, 0x01]),
+        );
       case 0x13: // MD5: address, size
         return this.reply(op, 0, await this.options.md5(this.flash.subarray(u32(0), u32(0) + u32(1))));
       case 0x0e: {

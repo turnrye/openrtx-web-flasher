@@ -18,11 +18,13 @@ import type { CskModuleLoader } from '../src/flash/csk.ts';
 import {
   flashDevice,
   pickDevice,
+  restoreRefusal,
   setCskburnLoader,
+  SIMULATED_BACKUP,
   type PickedDevice,
   type Purpose,
 } from '../src/flash/run.ts';
-import type { FlashContext, Segment } from '../src/flash/types.ts';
+import { WrongRadioError, type FlashContext, type Segment } from '../src/flash/types.ts';
 import {
   apiFor,
   backupFor,
@@ -420,22 +422,6 @@ function contextFor(devices: Devices, io: Io, log: string[]): FlashContext {
   };
 }
 
-/**
- * Why a backup must not be restored onto the radio that was found: it says it is another
- * one. Null when it does not. Only the STM32 radios say who they are before anything is
- * sent: their USB serial number is the ID in the backup.
- */
-function otherRadio(build: Build, picked: PickedDevice): string | null {
-  const backup = build.backup;
-  if (backup?.idKind !== 'usb-serial' || !backup.radioId || picked.api !== 'usb') return null;
-  const serial = picked.device.serialNumber?.trim();
-  if (!serial || serial === backup.radioId) return null;
-  return (
-    `This backup is of another radio (ID ending ${backup.radioId.slice(-8)}); the one connected ends ` +
-    `${serial.slice(-8)}. Nothing was sent to it.`
-  );
-}
-
 /** Says how a simulated radio compares with what was done to it; the exit code is 1 when it differs. */
 function simVerdict(io: Io, problems: string[], good: string): number {
   problems.forEach((problem) => io.say(`Simulator: ${problem}.`));
@@ -456,6 +442,8 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   const build = await resolveBuild(what, radio, options.repo, source);
   const file = fileForRadio(radio, build);
   if (!file) throw new Error(nothingFor(radio, build));
+  // Said before anything else: no walk through flashing mode for a write that will not happen.
+  if (build.backup?.simulated && options.sim === undefined) throw new Error(SIMULATED_BACKUP);
   const data = await fileData(build, file, source);
   const hash = file.sha256 ?? (await sha256Hex(data));
   const companions = companionsFor(radio, build);
@@ -511,7 +499,8 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   };
   const picked = await pick(radio, devices, 'flash', io);
   if (!picked) return 1;
-  const other = otherRadio(build, picked);
+  // A radio that says who it is before anything is sent: flashDevice would refuse it too.
+  const other = build.backup ? restoreRefusal(build.backup, picked) : null;
   if (other) {
     io.say(other);
     return 1;
@@ -519,9 +508,14 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   try {
     ctx.log(`Flashing ${file.name} (${data.length} bytes) to ${radio.name}`);
     io.say('Do not unplug or switch off the radio.');
-    await flashDevice(radio, picked, data, ctx, !!build.backup, also);
+    await flashDevice(radio, picked, data, ctx, build.backup ?? null, also);
   } catch (e) {
     const message = messageOf(e);
+    // The backup is of another radio: nothing was written, and nothing went wrong to report.
+    if (e instanceof WrongRadioError) {
+      io.say(message);
+      return 1;
+    }
     io.say(`Failed: ${message} Put the radio back in flashing mode and try again.`);
     if (!devices.probes) {
       io.say(`To report this: ${reportLink(host, { ...about, outcome: 'failed', error: message, log })}`);

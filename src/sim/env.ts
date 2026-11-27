@@ -15,7 +15,7 @@
  * The last simulated radio is reachable as `window.__ortxSim`, so a browser test can ask
  * it whether it really holds the firmware that was flashed.
  */
-import type { DeviceEnv } from '../devices.ts';
+import { markSimulated, type DeviceEnv } from '../devices.ts';
 import { parseSgl } from '../flash/gd77.ts';
 import { parseDfuFile, rawSegment } from '../flash/stm32dfu.ts';
 import { parseTytFirmware } from '../flash/tyt.ts';
@@ -158,7 +158,7 @@ export function simulatedEnv(mode: string): DeviceEnv {
     return fail ? broken(device) : device;
   };
 
-  return {
+  const env: DeviceEnv = {
     simulated: true,
     supports: () => true,
     sleep: (ms) => (simSleep ? simSleep(ms) : new Promise((resolve) => setTimeout(resolve, Math.min(ms, 2)))),
@@ -305,5 +305,13 @@ export function simulatedEnv(mode: string): DeviceEnv {
     },
 
     backupSize: (radio) => (radio.method === 'csk-serial' ? SIM_CSK_BACKUP : undefined),
+  };
+  // Every device handed out is marked, so that a backup read from one says it came from a
+  // simulated radio and is never written to a real one.
+  return {
+    ...env,
+    usb: async (...args) => markSimulated(await env.usb(...args)),
+    hid: async (...args) => markSimulated(await env.hid(...args)),
+    serial: async (...args) => markSimulated(await env.serial(...args)),
   };
 }
