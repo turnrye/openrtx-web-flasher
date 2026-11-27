@@ -28,5 +28,5 @@ export const rt950Serial: SerialDriver = {
   }),
   flash: (port, { firmware, ctx }) => flashRt950(port, firmware, ctx),
   read: (port, { ctx, known }) => readRt950Stock(port, ctx, undefined, known),
-  simulator: async () => (await import('./sims.ts')).rt950SerialSim,
+  simulator: async () => (await import('../sim/env.ts')).rt950SerialSim,
 };

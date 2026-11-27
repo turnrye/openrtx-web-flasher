@@ -80,5 +80,5 @@ export const stm32Dfu: UsbDriver = {
       ],
     };
   },
-  simulator: async () => (await import('./sims.ts')).stm32DfuSim,
+  simulator: async () => (await import('../sim/env.ts')).stm32DfuSim,
 };

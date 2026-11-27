@@ -35,5 +35,5 @@ export const tytDfu: UsbDriver = {
   }),
   flash: (dev, { firmware, ctx }) => flashTyt(dev, firmware, ctx),
   read: (dev, { radio, ctx, known }) => readTytStock(dev, radio.id as TytStockModel, ctx, known),
-  simulator: async () => (await import('./sims.ts')).tytDfuSim,
+  simulator: async () => (await import('../sim/env.ts')).tytDfuSim,
 };

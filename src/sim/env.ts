@@ -13,17 +13,27 @@
  * original firmware, a simulated radio in normal mode. Which simulated radio a method
  * has for which purpose is its driver's to say (src/drivers/<method>.sim.ts).
  *
+ * This module is all the simulator code there is to load, and nothing loads it unless
+ * asked: the page for `?sim=`, a driver for its simulated radios. So every method's
+ * simulators are handed on from here, and the page of someone flashing a real radio
+ * downloads none of it.
+ *
  * The last simulated radio is reachable as `window.__ortxSim`, so a browser test can ask
  * it whether it really holds the firmware that was flashed.
  */
 import { markSimulated, type DeviceEnv } from '../devices.ts';
 import { driverFor } from '../drivers/index.ts';
-// Not used by name: imported so that the simulators arrive with this module, as one
-// download, and a driver that asks for its own finds it loaded.
-import '../drivers/sims.ts';
 import type { Purpose } from '../flash/run.ts';
 import { FlashError } from '../flash/types.ts';
 import type { Radio } from '../radios.ts';
+
+export { cs7000RobotSim } from '../drivers/cs7000-robot.sim.ts';
+export { cskSerialSim } from '../drivers/csk-serial.sim.ts';
+export { gd77HidSim } from '../drivers/gd77-hid.sim.ts';
+export { rt4dSerialSim } from '../drivers/rt4d-serial.sim.ts';
+export { rt950SerialSim } from '../drivers/rt950-serial.sim.ts';
+export { stm32DfuSim } from '../drivers/stm32-dfu.sim.ts';
+export { tytDfuSim } from '../drivers/tyt-dfu.sim.ts';
 
 /** What a browser test can ask about the simulated radio. */
 export interface SimProbe {

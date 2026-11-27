@@ -49,8 +49,8 @@ export interface DeviceDriver<Api extends WebApi, Device> extends Described {
   /** Reads the radio for a backup, in the mode `backup` names. Absent when the method cannot read. */
   read?: (device: Device, job: ReadJob) => Promise<RadioBackup | AlreadyBackedUp>;
   /**
-   * Loads the method's simulated radios (src/drivers/sims.ts). A dynamic import, so that
-   * only `?sim=`, the command line's `--sim` and tests ever load a simulator.
+   * Loads the method's simulated radios, by way of src/sim/env.ts. A dynamic import, so
+   * that only `?sim=`, the command line's `--sim` and tests ever load a simulator.
    */
   simulator: () => Promise<Simulator<Device>>;
   /** How much of its simulated radio a backup reads, when the real size would take minutes. */

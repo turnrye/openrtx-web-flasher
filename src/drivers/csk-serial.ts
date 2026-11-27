@@ -72,5 +72,5 @@ export const cskSerial: SerialDriver = {
       ],
     };
   },
-  simulator: async () => (await import('./sims.ts')).cskSerialSim,
+  simulator: async () => (await import('../sim/env.ts')).cskSerialSim,
 };

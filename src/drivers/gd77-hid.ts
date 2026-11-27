@@ -31,5 +31,5 @@ export const gd77Hid: HidDriver = {
   // The fingerprint that stands for an ID only comes at the end of the short read, so
   // `known` is never asked.
   read: (dev, { radio, ctx }) => readGd77Stock(dev, radio.hidModel === 'DM-1801' ? 'DM-1801' : 'GD-77', ctx),
-  simulator: async () => (await import('./sims.ts')).gd77HidSim,
+  simulator: async () => (await import('../sim/env.ts')).gd77HidSim,
 };

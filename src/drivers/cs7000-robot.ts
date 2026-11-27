@@ -28,5 +28,5 @@ export const cs7000Robot: UsbDriver = {
     }
     return flashCs7000Robot(dev, segments[0].data, ctx);
   },
-  simulator: async () => (await import('./sims.ts')).cs7000RobotSim,
+  simulator: async () => (await import('../sim/env.ts')).cs7000RobotSim,
 };

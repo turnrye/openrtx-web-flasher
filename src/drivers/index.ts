@@ -3,7 +3,8 @@
  * The flashing methods, each with everything that depends on it: the browser API and
  * the devices to offer, what a backup is, how to flash, how to read, and its simulated
  * radios. This is the only list of methods. A new one is an entry here and its driver
- * file; a radio names its method in the catalogue (src/radios.ts) and needs nothing here.
+ * file (and, for its simulated radios, a line in src/sim/env.ts); a radio names its
+ * method in the catalogue (src/radios.ts) and needs nothing here.
  */
 import type { WebApi } from '../devices.ts';
 import type { Radio } from '../radios.ts';
