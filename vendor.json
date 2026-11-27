@@ -15,7 +15,7 @@
     "repo": "https://github.com/OpenRTX/openrtx.github.io.git",
     "commit": "a939a79474fb2e8772820dedcd4a1aa4b931991b",
     "license": "none stated (OpenRTX/openrtx.github.io issue 19 proposes CC-BY-SA-4.0)",
-    "use": "The OpenRTX website's pages and pictures, copied into site/content/docs/ at build time by scripts/import-docs.mjs. Not committed here; each page's edit link goes to this repository.",
+    "use": "The OpenRTX website's pages and pictures, copied into site/content/docs/ at build time by scripts/import-docs.mjs, and its emulator, Matrix delegation file and favicon.ico, copied into public/ by scripts/vendor.mjs. Not committed here; each page's edit link goes to this repository.",
     "edit": "https://github.com/OpenRTX/openrtx.github.io/edit/master/"
   },
   "files": {

@@ -81,6 +81,16 @@ test('every page of the old website is in the sidebar', async ({ page }) => {
   await expect(sidebar.locator('a[href="https://github.com/OpenRTX/OpenRTX-external-docs"]')).toHaveCount(1);
 });
 
+test('the old website’s files that are not pages are served where they were', async ({ request }) => {
+  // Matrix finds openrtx.org's server here; the emulator and the icon have their own addresses.
+  const matrix = await request.get('../.well-known/matrix/server');
+  expect(matrix.status()).toBe(200);
+  expect(await matrix.json()).toHaveProperty(['m.server']);
+  for (const path of ['../emulator/', '../emulator/openrtx_linux.wasm', '../favicon.ico']) {
+    expect((await request.get(path)).status(), path).toBe(200);
+  }
+});
+
 test('an address of the old docsify site lands on the new page, at the heading it named', async ({
   page,
 }) => {
