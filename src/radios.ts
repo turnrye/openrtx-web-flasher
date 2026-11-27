@@ -572,9 +572,11 @@ export function backupFor(radio: Radio): Backup {
       return {
         how: 'read',
         mode: 'normal',
-        time: 'about seven minutes',
+        time: 'about half an hour',
         holds:
-          'the first 4 MB of the memory chip: calibration, settings, channels, zones, contacts, the logo, fonts and voices',
+          'the whole 16 MB memory chip: calibration, settings, channels, zones, contacts, the logo, fonts, voices and the address book',
+        caveat:
+          'This read has not been run on a real RT-4D yet. Other tools read the first 4 MB this way; if your radio does not give the rest, the backup keeps what was read and says so.',
         restorable: false,
       };
     case 'rt950-serial':

@@ -209,7 +209,7 @@ describe('simulated radios (--sim)', () => {
     expect(backup.text).toContain(READ);
     const saved = await backupIn(out);
     expect(saved.manifest).toMatchObject({ radio: 'rt4d', source: 'original-firmware' });
-    expect(saved.parts[0].data.length).toBe(4 * 1024 * 1024);
+    expect(saved.parts[0].data.length).toBe(16 * 1024 * 1024);
 
     const flash = await run(['flash', 'rt4d', RT4D_BIN, '--sim', '--yes']);
     expect(flash.code).toBe(0);

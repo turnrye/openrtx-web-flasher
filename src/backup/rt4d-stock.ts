@@ -12,6 +12,15 @@
  * tells the two apart. The memory map is Dual Tachyon's Flash-Layout wiki page,
  * https://github.com/DualTachyon/rt-4d-wiki/wiki/Flash-Layout (CC-BY-4.0).
  *
+ * The chip is 16 MiB: that page puts the address book at 0x400000 to 0xFFFFFF, and
+ * OpenRTX's driver table for this radio (platform/drivers/NVM/nvmem_rt4d.c) gives the
+ * same size. The tool stops after 4096 blocks, the first 4 MiB, and leaves the address
+ * book out. This reader goes on to block 16383. The 16-bit block index reaches that far,
+ * and the RT-890 firmware named below serves any index without a bound; that the
+ * RT-4D's original firmware does the same has not been measured on a radio. So a read
+ * that stops above 4 MiB keeps what it has and is marked incomplete, and one whose
+ * upper part only repeats the first 4 MiB is cut back to them.
+ *
  * That tool also sends `34 00 00 10 cs` ("notify") before the bulk read and
  * `34 52 05 EE 79` ("close") after a complete read or write. Neither is sent here: the
  * tool itself reads block 0 before the notify and ignores the notify's result, so
@@ -35,8 +44,10 @@ import type { AlreadyBackedUp, BackupPart, BackupScope, Known, RadioBackup } fro
 export const RT4D_SPI_BLOCK_SIZE = 0x400;
 /** Scope 'quick': calibration, settings, channels, zones, contacts and the other user data. */
 export const RT4D_QUICK_BYTES = 0x100000;
-/** Scope 'all': the 4 MiB the reference tool dumps (4096 blocks). */
-export const RT4D_ALL_BYTES = 0x400000;
+/** Scope 'all': the whole 16 MiB chip (16384 blocks). */
+export const RT4D_ALL_BYTES = 0x1000000;
+/** What the reference tool dumps (4096 blocks): everything below the address book. */
+export const RT4D_REFERENCE_BYTES = 0x400000;
 /** The calibration area, whose checksum stands in for a serial number. */
 export const RT4D_CALIBRATION_BYTES = 0x1000;
 
@@ -202,8 +213,21 @@ function noFirstBlock(failures: BlockFailure[]): FlashError {
 }
 
 /**
- * Reads the start of the RT-4D's SPI flash while the radio runs its original firmware:
- * the first 1 MiB for 'quick', the first 4 MiB for 'all'. Takes a closed port, opens it
+ * True when the radio answered the blocks above the first 4 MiB with those 4 MiB over
+ * again: its firmware looks at fewer bits of the block index than were sent. The
+ * calibration at the start of the chip is what makes a repeat unmistakable.
+ */
+function repeatsFirst(data: Uint8Array): boolean {
+  if (data.length < 2 * RT4D_REFERENCE_BYTES) return false;
+  const first = data.subarray(0, RT4D_REFERENCE_BYTES);
+  if (first.every((b) => b === first[0])) return false;
+  const second = data.subarray(RT4D_REFERENCE_BYTES, 2 * RT4D_REFERENCE_BYTES);
+  return first.every((b, i) => b === second[i]);
+}
+
+/**
+ * Reads the RT-4D's SPI flash while the radio runs its original firmware: the first
+ * 1 MiB for 'quick', all 16 MiB for 'all'. Takes a closed port, opens it
  * at 115200 baud and closes it again whatever happens. Sends nothing but block reads.
  * Throws FlashError when not even the first block can be read; a read that fails later
  * returns what was read so far, marked incomplete.
@@ -317,27 +341,43 @@ export async function readRt4dStock(
 
   if (recognised !== null) return { known: recognised };
 
+  const repeated = stopped === null && repeatsFirst(data);
+  if (repeated) {
+    done = RT4D_REFERENCE_BYTES;
+    ctx.log('Above 0x400000 the radio sent the first 4 MiB again; keeping the first 4 MiB only.');
+  }
+  const whole = stopped === null && !repeated;
   const part: BackupPart = {
     file: 'spi-flash.bin',
     kind: 'spi-flash',
     address: 0,
-    data: stopped === null ? data : data.slice(0, done),
-    complete: stopped === null,
+    data: whole ? data : data.slice(0, done),
+    complete: whole,
   };
   const notes: string[] = [];
-  if (stopped !== null) {
+  if (repeated) {
+    part.note = `Above ${address(done)} the radio repeated the first 4 MiB instead of giving what is there.`;
+    notes.push(
+      'This is the first 4 MiB of the 16 MiB memory chip. This radio does not give the address book above it (0x400000 to 0xFFFFFF) to this read: it sent the first 4 MiB again, and that copy was dropped.',
+    );
+  } else if (stopped !== null) {
     part.note = `The read stopped at ${address(done)} of ${address(total)}: ${stopped.replace(/\.$/, '')}.`;
     notes.push(
       `Only the first ${done} of ${total} bytes were read; then the radio stopped answering properly. Read it again for a complete backup.`,
     );
+    if (scope === 'all' && done >= RT4D_REFERENCE_BYTES) {
+      notes.push(
+        'Everything below 0x400000 is in this backup: calibration, settings, channels, zones, contacts, the boot logo, fonts and voices. What is missing is part of the address book above it.',
+      );
+    }
   }
   if (scope === 'quick') {
     notes.push(
       'This is the first megabyte of the memory chip: calibration, settings, channels, zones, contacts and the other things you can change. The boot logo, fonts and voice prompts above it are not included.',
     );
-  } else {
+  } else if (whole) {
     notes.push(
-      'This is the first 4 MiB of the 16 MiB memory chip. The address book above it (0x400000 to 0xFFFFFF) is not included.',
+      'This is the whole 16 MiB memory chip, the address book (0x400000 to 0xFFFFFF) included. The firmware is not in it: the program memory of this radio cannot be read.',
     );
   }
 

@@ -7,12 +7,13 @@ import {
   RT4D_ALL_BYTES,
   RT4D_CALIBRATION_BYTES,
   RT4D_QUICK_BYTES,
+  RT4D_REFERENCE_BYTES,
   RT4D_SPI_BLOCK_SIZE,
   type Rt4dStockOptions,
 } from './rt4d-stock.ts';
 import type { BackupScope } from './types.ts';
 import { FlashError, quietContext, type Progress } from '../flash/types.ts';
-import { SimRt4dStock, type SimRt4dStockOptions } from '../sim/rt4d-stock.ts';
+import { SIM_RT4D_SPI_FLASH_SIZE, SimRt4dStock, type SimRt4dStockOptions } from '../sim/rt4d-stock.ts';
 
 /** Short timeouts so the failure cases do not wait for a real radio. */
 const fast: Rt4dStockOptions = { responseTimeoutMs: 40, quietMs: 2 };
@@ -85,19 +86,61 @@ describe('readRt4dStock', () => {
     expect(backup.firmware).toBeUndefined();
   });
 
-  it('reads the first 4 MiB of a 16 MiB chip for the all scope', async () => {
+  it('reads the whole 16 MiB chip for the all scope, address book included', async () => {
     const { sim, seen, done } = run('all', {});
     const backup = await done;
 
     const [part] = backup.parts;
+    expect(RT4D_ALL_BYTES).toBe(SIM_RT4D_SPI_FLASH_SIZE);
     expect(part.complete).toBe(true);
     expect(part.data.length).toBe(RT4D_ALL_BYTES);
-    expect(Buffer.compare(part.data, sim.flash.subarray(0, RT4D_ALL_BYTES))).toBe(0);
+    expect(Buffer.compare(part.data, sim.flash)).toBe(0);
     expect(sim.reads).toHaveLength(RT4D_ALL_BYTES / RT4D_SPI_BLOCK_SIZE);
     expect(Math.max(...sim.reads)).toBe(RT4D_ALL_BYTES / RT4D_SPI_BLOCK_SIZE - 1);
     expect(onlyRead(sim)).toBe(true);
     expect(seen.at(-1)).toEqual({ phase: 'done', done: RT4D_ALL_BYTES, total: RT4D_ALL_BYTES });
-    expect(backup.notes.join(' ')).toMatch(/address book .* not included/);
+    expect(backup.notes.join(' ')).toMatch(/whole 16 MiB memory chip, the address book .* included/);
+    expect(backup.notes.join(' ')).toMatch(/firmware is not in it/);
+  });
+
+  it('keeps the first 4 MiB, marked incomplete, when the radio gives nothing above them', async () => {
+    const first = RT4D_REFERENCE_BYTES / RT4D_SPI_BLOCK_SIZE;
+    const { sim, done } = run('all', { silentFrom: first });
+    const backup = await done;
+
+    const [part] = backup.parts;
+    expect(part.complete).toBe(false);
+    expect(part.data.length).toBe(RT4D_REFERENCE_BYTES);
+    expect(Buffer.compare(part.data, sim.flash.subarray(0, RT4D_REFERENCE_BYTES))).toBe(0);
+    expect(part.note).toMatch(/stopped at 0x400000 of 0x1000000/);
+    expect(backup.notes.join(' ')).toMatch(/Everything below 0x400000 is in this backup/);
+    expect(backup.notes.join(' ')).not.toMatch(/whole 16 MiB/);
+    expect(backup.radioId).toBe(sha16(sim.flash.subarray(0, RT4D_CALIBRATION_BYTES)));
+    expect(Math.max(...sim.reads)).toBe(first);
+    expect(onlyRead(sim)).toBe(true);
+  });
+
+  it('does not take a repeat of the first 4 MiB for the rest of the chip', async () => {
+    const { sim, log, done } = run('all', { wrapBlocks: RT4D_REFERENCE_BYTES / RT4D_SPI_BLOCK_SIZE });
+    const backup = await done;
+
+    const [part] = backup.parts;
+    expect(part.complete).toBe(false);
+    expect(part.data.length).toBe(RT4D_REFERENCE_BYTES);
+    expect(Buffer.compare(part.data, sim.flash.subarray(0, RT4D_REFERENCE_BYTES))).toBe(0);
+    expect(part.note).toMatch(/repeated the first 4 MiB/);
+    expect(backup.notes.join(' ')).toMatch(/does not give the address book/);
+    expect(backup.notes.join(' ')).not.toMatch(/whole 16 MiB/);
+    expect(log.some((line) => line.includes('sent the first 4 MiB again'))).toBe(true);
+    expect(onlyRead(sim)).toBe(true);
+  });
+
+  it('takes a blank chip above the first 4 MiB for what it is', async () => {
+    const { sim, done } = run('all', {}, fast, (radio) => radio.flash.fill(0xff, RT4D_REFERENCE_BYTES));
+    const backup = await done;
+    expect(backup.parts[0].complete).toBe(true);
+    expect(backup.parts[0].data.length).toBe(RT4D_ALL_BYTES);
+    expect(Buffer.compare(backup.parts[0].data, sim.flash)).toBe(0);
   });
 
   it('opens the port at 115200 8N1 and closes it afterwards', async () => {

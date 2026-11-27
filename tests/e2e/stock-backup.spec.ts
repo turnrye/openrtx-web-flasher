@@ -187,13 +187,19 @@ for (const radio of ['gd77', 'dm1801']) {
   });
 }
 
-test('rt4d: reads the first 4 MB of the memory chip, and the same radio gets the same ID twice', async ({
+test('rt4d: reads the whole 16 MB memory chip, and the same radio gets the same ID twice', async ({
   page,
 }) => {
   await toBackup(page, 'rt4d');
+  await expect(step(page, 'step-backup')).toContainText('about half an hour');
   const first = await backUp(page);
   expect(first.manifest.parts).toHaveLength(1);
-  expect(first.manifest.parts[0]).toMatchObject({ kind: 'spi-flash', address: 0, size: 4 * 1024 * 1024 });
+  expect(first.manifest.parts[0]).toMatchObject({
+    kind: 'spi-flash',
+    address: 0,
+    size: 16 * 1024 * 1024,
+    complete: true,
+  });
   await expectFaithful(page, first);
 
   const second = await backUp(page);
