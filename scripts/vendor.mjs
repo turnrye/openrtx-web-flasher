@@ -260,13 +260,7 @@ const docs = importDocs({
   edit: pins.website.edit,
 });
 console.log(`website: ${docs.pages} pages and ${docs.media} pictures in ${docs.out}/`);
-// The flasher's own notes in docs/ are pages of the site as well, under /flasher/. They
-// stay in docs/ so they read on the forge too; this is a copy, made on every run.
-const notes = importDocs({
-  source: join(root, 'docs'),
-  out: join(root, 'site', 'content', 'docs', 'flasher'),
-  edit: 'https://github.com/turnrye/openrtx-web-flasher/edit/main/docs/',
-});
-console.log(`docs: ${notes.pages} pages in ${notes.out}/`);
+// The flasher's own notes in docs/ are for whoever works on it: they stay there, read
+// on the forge, and are not pages of the site.
 if (noWasm) console.log('cskburn: skipped (--no-wasm)');
 else await buildCskburn();

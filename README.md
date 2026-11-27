@@ -259,7 +259,7 @@ change it and run `npm run vendor -- --update`.
     scripts/             vendor step, website import, drawings, firmware mirror, screenshots
     ci/                  build, test and publish scripts shared by both forges
     tools/cskburn-wasm/  the serial layer cskburn is compiled with
-    docs/                hosting, QA, bench notes, the bench record, backup coverage; also published under /flasher/
+    docs/                hosting, QA, bench notes, the bench record, backup coverage (not pages of the site)
     vendor.json          what comes from elsewhere, and at which version
 
 ## Hosting
