@@ -374,7 +374,7 @@ export function BackupStep(props: Props) {
           The page reads {backup.holds} and saves it as one zip file.{' '}
           {backup.restorable
             ? 'That file is the way back to what the radio runs now: the page can flash it back.'
-            : 'The page cannot write it back, but it is the record of what your radio held, including what a repair would need.'}{' '}
+            : 'The page cannot write it back. It is a record of what the page could read from your radio, not of everything in it.'}{' '}
           Keep it, and keep it private: it is specific to your radio.
         </p>
         {backup.caveat && <p>{backup.caveat}</p>}

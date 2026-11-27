@@ -62,6 +62,10 @@ for (const radio of ['mod17', 'cs7000p']) {
 
     // Flashing comes after the backup step.
     await expect(step(page, 'step-flash')).toHaveAttribute('data-mode', 'waiting');
+    // A Module 17 is all program memory; the CS7000 Plus has a memory chip this read leaves out.
+    if (radio === 'mod17') await expect(page.getByTestId('backup-not-included')).toHaveCount(0);
+    else await expect(page.getByTestId('backup-not-included')).toContainText('32 MB memory chip');
+    await expect(page.getByTestId('backup-unchecked')).toHaveText('Unchecked on this model');
 
     const backup = await backUp(page);
     expect(backup.name).toMatch(new RegExp(`^backup_${radio}_sim0001_\\d{8}-\\d{4}\\.zip$`));
@@ -215,6 +219,7 @@ test('the T-TWR Plus is backed up by copying a file', async ({ page }) => {
   await choose(page, 'ttwrplus');
   await enter(page);
   await expect(page.getByTestId('backup-copy')).toContainText('CURRENT.UF2');
+  await expect(page.getByTestId('backup-copy')).toContainText('It is the firmware only');
   await page.getByTestId('backup-continue').click();
   await expect(step(page, 'step-backup')).toContainText('done');
   await expect(step(page, 'step-flash')).toHaveAttribute('data-mode', 'open');

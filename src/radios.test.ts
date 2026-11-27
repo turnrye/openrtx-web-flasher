@@ -85,8 +85,18 @@ describe('radio catalogue', () => {
       const backup = backupFor(r);
       return backup.how === 'read' && backup.unchecked;
     }).map((r) => r.id);
-    // Of the TYT radios only the MD-9600 read was measured; the RT-950 Pro's never was.
-    expect(unchecked).toEqual(['md3x0', 'mduv3x0', 'dm1701', 'rt950pro']);
+    // docs/bench-notes.md: only the C62 has been read from the page on a real radio.
+    expect(unchecked).toEqual(
+      RADIOS.filter((r) => r.method !== 'uf2-copy' && r.id !== 'c62').map((r) => r.id),
+    );
+    // Each of those reads names what it leaves out, or leaves nothing out.
+    const silent = RADIOS.filter((r) => {
+      const backup = backupFor(r);
+      return backup.how === 'read' && !backup.notIncluded;
+    }).map((r) => r.id);
+    expect(silent).toEqual(['mod17', 'c62']);
+    const rt4d = backupFor(radioById('rt4d')!);
+    expect(rt4d.how === 'read' && rt4d.time).toBe('about half an hour');
     const c62 = backupFor(radioById('c62')!);
     expect(c62.how === 'read' && c62.endsFlashingMode).toBe(true);
   });
