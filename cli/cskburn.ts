@@ -120,12 +120,39 @@ interface ModuleShape {
  * removed as soon as its run is over, and whatever is left when the process ends.
  */
 const folders = new Set<string>();
+/** What ends each cskburn program that is still running: none may outlive this one. */
+const programs = new Set<() => void>();
 let watchingExit = false;
+
+/** The signals that tell this program to stop, and their numbers: it then exits with 128 + the number. */
+const STOP_SIGNALS = { SIGHUP: 1, SIGINT: 2, SIGTERM: 15 } as const;
+
+/** Ends the programs still running and removes the folders of their runs. */
+function cleanUp(): void {
+  programs.forEach((end) => end());
+  folders.forEach(dropFolder);
+}
+
+/**
+ * Has `cleanUp` run when this program ends, also when it is interrupted (Ctrl+C), told
+ * to end or loses its terminal: Node tells no 'exit' listener about those unless they
+ * are listened for, and cskburn would go on with a radio's flash left in the folder.
+ */
+function watchExit(): void {
+  if (watchingExit) return;
+  watchingExit = true;
+  process.once('exit', cleanUp);
+  for (const [signal, number] of Object.entries(STOP_SIGNALS)) {
+    process.once(signal, () => {
+      cleanUp();
+      process.exit(128 + number);
+    });
+  }
+}
 
 /** A new private folder for one cskburn run. */
 function runFolder(): string {
-  if (!watchingExit) process.once('exit', () => folders.forEach(dropFolder));
-  watchingExit = true;
+  watchExit();
   const dir = mkdtempSync(join(tmpdir(), 'cskburn-'));
   folders.add(dir);
   return dir;
@@ -203,16 +230,16 @@ export function nativeCskburn(binary: string, port: string): CskModuleLoader {
           ]);
           const child = spawn(binary, argv, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
           let ended = false;
-          kill = () => child.kill();
+          const endProgram = () => void child.kill();
+          kill = endProgram;
           // Nor may it outlive this program.
-          const atExit = () => child.kill();
-          process.once('exit', atExit);
+          programs.add(endProgram);
           /** Passes the exit code on, once. Only a read that worked leaves something to fetch. */
           const end = (code: number) => {
             if (ended) return;
             ended = true;
             kill = null;
-            process.off('exit', atExit);
+            programs.delete(endProgram);
             if (code !== 0 || !args.includes('--read')) dropFolder(dir);
             module.onExit?.(code);
           };

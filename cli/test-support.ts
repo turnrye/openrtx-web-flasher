@@ -200,7 +200,8 @@ export const STAND_IN_CHIP_ID = '0123456789ABCDEF';
  * images it was given in `dir`/record.json. Asked to read and to write, it reads first,
  * as cskburn does, and takes a moment over it. With `silent` it plays a radio that is not
  * in flashing mode. With `slow` it takes a minute over a read after giving the chip ID.
- * It leaves its process ID in `dir`/pid. Returns the program's path.
+ * It leaves its process ID in `dir`/pid and the folder it runs in in `dir`/cwd. Returns
+ * the program's path.
  */
 export function standInCskburn(dir: string, silent = false, slow = false): string {
   const path = join(dir, 'cskburn');
@@ -219,6 +220,7 @@ if (${JSON.stringify(silent)}) {
   process.exit(1);
 }
 fs.writeFileSync(${JSON.stringify(join(dir, 'pid'))}, String(process.pid));
+fs.writeFileSync(${JSON.stringify(join(dir, 'cwd'))}, process.cwd());
 say('Entering update mode...');
 if (args.includes('--chip-id')) say('chip-id: ${STAND_IN_CHIP_ID}');
 const read = args.indexOf('--read');

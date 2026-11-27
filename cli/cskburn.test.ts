@@ -226,6 +226,49 @@ describe('a native cskburn in the place of the WebAssembly module', () => {
     expect(existsSync(join(dir, 'record.json'))).toBe(false);
   });
 
+  it('ends the program and removes its folder when the command line is interrupted', async () => {
+    const signals = [
+      ['SIGHUP', 129],
+      ['SIGINT', 130],
+      ['SIGTERM', 143],
+    ] as const;
+    const before = signals.map(([signal]) => new Set(process.listeners(signal)));
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    // A module of its own, so that what it listens for can be told from what was there.
+    vi.resetModules();
+    const fresh = await import('./cskburn.ts');
+    const added = () =>
+      signals.map(([signal], i) => process.listeners(signal).filter((l) => !before[i].has(l)));
+    try {
+      const dir = folder();
+      // A backup, ten minutes on a radio: the stand-in gives the chip ID and then reads on.
+      const options = { loadModule: fresh.nativeCskburn(standInCskburn(dir, false, true), '/dev/fake') };
+      const read = backupCsk(untouched, 96 * 1024, quietContext(), options).catch((e: unknown) => e);
+      await vi.waitFor(() => expect(existsSync(join(dir, 'cwd'))).toBe(true), { timeout: 5000 });
+      const pid = Number(readFileSync(join(dir, 'pid'), 'utf8'));
+      const runFolder = readFileSync(join(dir, 'cwd'), 'utf8');
+      expect(existsSync(runFolder)).toBe(true);
+      expect(added().map((listeners) => listeners.length)).toEqual([1, 1, 1]);
+
+      // Ctrl+C.
+      (added()[1][0] as (signal: string) => void)('SIGINT');
+      expect(exit).toHaveBeenLastCalledWith(130);
+      // What may hold a radio's flash is gone, and so is the program that held the port.
+      expect(existsSync(runFolder)).toBe(false);
+      await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow(), { timeout: 5000 });
+      expect(await read).toBeInstanceOf(Error);
+
+      // The other two ways to be told to stop end the same way, with their own exit codes.
+      (added()[0][0] as (signal: string) => void)('SIGHUP');
+      expect(exit).toHaveBeenLastCalledWith(129);
+      (added()[2][0] as (signal: string) => void)('SIGTERM');
+      expect(exit).toHaveBeenLastCalledWith(143);
+    } finally {
+      added().forEach((listeners, i) => listeners.forEach((l) => process.off(signals[i][0], l)));
+      exit.mockRestore();
+    }
+  });
+
   it('turns a radio that is not in flashing mode into the page’s message', async () => {
     const options = { loadModule: nativeCskburn(standInCskburn(folder(), true), '/dev/fake') };
     await expect(
