@@ -29,7 +29,7 @@ import {
   type CiRun,
   type Fetcher,
 } from '../src/firmware/github.ts';
-import type { Radio } from '../src/radios.ts';
+import { RADIOS, type Radio } from '../src/radios.ts';
 
 /** Where firmware comes from unless --repo says otherwise. */
 export const DEFAULT_REPO = 'OpenRTX/OpenRTX';
@@ -56,8 +56,13 @@ interface ApiRelease {
   assets: { name: string; size: number; browser_download_url: string; digest?: string | null }[];
 }
 
-/** Firmware files as OpenRTX names them, minus the emulator: the rule of scripts/mirror-firmware.mjs. */
+/**
+ * Firmware files as OpenRTX names them, minus the emulator: the rule of
+ * scripts/mirror-firmware.mjs. And the files a radio of the catalogue needs written
+ * beside its firmware (`alsoWrites`), which go by a plain name such as dsp_firmware.bin.
+ */
 function isFirmware(name: string): boolean {
+  if (RADIOS.some((radio) => radio.alsoWrites?.some((companion) => companion.file === name))) return true;
   return /^openrtx_[a-z0-9]+[_.]/i.test(name) && !/^openrtx_linux/i.test(name);
 }
 
