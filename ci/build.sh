@@ -22,6 +22,11 @@ npm ci
 step "Fetch and build pinned third-party parts (vendor.json)"
 node scripts/vendor.mjs
 
+# The site's code reads the pages through astro:content, whose types Astro writes from
+# them: lint and the type check need those, and a fresh checkout has none.
+step "Astro's content types"
+npx astro sync
+
 step "Format, lint and types"
 npm run format:check
 npm run lint
