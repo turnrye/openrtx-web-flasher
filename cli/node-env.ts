@@ -195,11 +195,21 @@ export function nodeEnv(modules: NodeModules, io: Io, port?: string): DeviceEnv 
     usb: async (filters, radio, purpose) => {
       const drive = radio.method === 'cs7000-robot';
       const { WebUSB } = await modules.usb(drive ? 'storage' : undefined);
-      const usb = new WebUSB({ devicesFound: (devices) => pickOne(devices, usbLabel, 'USB device', io) });
+      /** Why no device was picked from the ones that fit, when that is why there is none. */
+      let unpicked: Error | undefined;
+      const usb = new WebUSB({
+        devicesFound: (devices) =>
+          pickOne(devices, usbLabel, 'USB device', io).catch((e: unknown) => {
+            unpicked = e instanceof Error ? e : new Error(String(e));
+            throw unpicked;
+          }),
+      });
       try {
         const device = await usb.requestDevice({ filters });
         return drive ? takingOver(device) : patient(device);
       } catch (e) {
+        // The libusb package calls whatever the choice threw "not found"; the reason is kept here.
+        if (unpicked) throw unpicked;
         if (e instanceof Error && e.name === 'NotFoundError') {
           throw new FlashError(
             `No ${radio.name} was found on USB. Connect it and put it in ${modeFor(radio, purpose)}.`,
