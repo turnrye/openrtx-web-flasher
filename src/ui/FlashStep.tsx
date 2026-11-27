@@ -4,6 +4,7 @@
  * command for the usual tool.
  */
 import { useEffect, useState } from 'preact/hooks';
+import { siteUrl } from '../base.ts';
 import { isChooserCancel, type DeviceEnv } from '../devices.ts';
 import { asksForSuccess } from '../feedback.ts';
 import {
@@ -57,7 +58,7 @@ function Download({ file, primary }: { file: BuildFile; primary?: boolean }) {
   const text = `Download ${file.name}`;
   if (file.path) {
     return (
-      <a class={cls} href={file.path} download={file.name} data-testid="download">
+      <a class={cls} href={siteUrl(file.path)} download={file.name} data-testid="download">
         {text}
       </a>
     );

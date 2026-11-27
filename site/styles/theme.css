@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/*
+ * The one stylesheet of the site: Starlight's documented Tailwind 4 set-up (without
+ * Tailwind's reset, which would undo Starlight's own), daisyUI for components, and the
+ * OpenRTX palette for both. The palette is the Standard theme of the OpenRTX UI toolkit
+ * plus the brand gold; the site is dark only, like the radio's screen.
+ */
+@layer base, starlight, theme, components, utilities;
+
+@import '@astrojs/starlight-tailwind';
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities);
+
+/* Classes used by the flasher's components live outside site/. */
+@source '../../src';
+
+@plugin 'daisyui' {
+  themes: false;
+  logs: false;
+}
+
+/* Starlight puts data-theme="dark" on <html>; the daisyUI theme takes the same name. */
+@plugin 'daisyui/theme' {
+  name: 'dark';
+  default: true;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #000000;
+  --color-base-200: #2c2e33;
+  --color-base-300: #3a3d42;
+  --color-base-content: #ffffff;
+  --color-primary: #fab413;
+  --color-primary-content: #000000;
+  --color-secondary: #2d7df6;
+  --color-secondary-content: #ffffff;
+  --color-accent: #e8571c;
+  --color-accent-content: #000000;
+  --color-neutral: #2c2e33;
+  --color-neutral-content: #ffffff;
+  --color-info: #2d7df6;
+  --color-info-content: #ffffff;
+  --color-success: #35c84b;
+  --color-success-content: #000000;
+  --color-warning: #f5731e;
+  --color-warning-content: #000000;
+  --color-error: #e8571c;
+  --color-error-content: #000000;
+
+  --radius-selector: 0.25rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* The same palette for Starlight's own chrome, through the starlight-tailwind mapping. */
+@theme {
+  --font-sans: Ubuntu, system-ui, sans-serif;
+  --font-mono: 'Ubuntu Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --color-muted: #9a9ea6;
+  --color-separator: #33363b;
+  --color-accent-200: #fab413;
+  --color-accent-600: #fab413;
+  --color-accent-900: #3a2c08;
+  --color-accent-950: #2a2006;
+  --color-gray-200: #ffffff;
+  --color-gray-300: #d0d2d6;
+  --color-gray-400: #9a9ea6;
+  --color-gray-600: #3a3d42;
+  --color-gray-700: #33363b;
+  --color-gray-800: #2c2e33;
+  --color-gray-900: #000000;
+}
+
+/* Starlight leaves out Tailwind's reset; inside app markup, bare controls start clean. */
+.not-content :where(button, a) {
+  font: inherit;
+  color: inherit;
+}
+
+.not-content :where(button) {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Keyboard focus in the brand gold, after daisyUI's own rings. */
+@layer utilities {
+  .not-content :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

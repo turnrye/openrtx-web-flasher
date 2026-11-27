@@ -24,19 +24,21 @@ function feedbackUrl(): string {
   return set === undefined || set === '' ? DEFAULT_FEEDBACK_URL : set;
 }
 
-// base './' keeps every URL relative, so the same build runs at a domain root, under
-// /<repo>/ on a Pages host, or under /pr-preview/pr-N/.
-export default defineConfig({
-  base: './',
-  plugins: [preact()],
-  define: {
+/** The constants compiled into the site and the command line alike (src/build.d.ts). */
+export function buildDefines(): Record<string, string> {
+  return {
     __BUILD_ID__: JSON.stringify(buildId()),
     __FEEDBACK_URL__: JSON.stringify(feedbackUrl()),
+  };
+}
+
+// The site itself is built by Astro (astro.config.ts). This file is what Vitest reads,
+// and where the command line's build (cli/vite.config.ts) takes the constants from.
+export default defineConfig({
+  plugins: [preact()],
+  define: buildDefines(),
+  test: {
+    include: ['src/**/*.test.ts', 'cli/**/*.test.ts', 'scripts/**/*.test.ts'],
+    environment: 'node',
   },
-  build: {
-    target: 'es2022',
-    sourcemap: true,
-    rolldownOptions: { input: ['index.html', 'licences.html'] },
-  },
-  test: { include: ['src/**/*.test.ts', 'cli/**/*.test.ts'], environment: 'node' },
 });

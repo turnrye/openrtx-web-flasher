@@ -9,6 +9,7 @@
  */
 import { unzipSync } from 'fflate';
 import { isBundle, openBundle, restorablePart, type BundleManifest } from '../backup/bundle.ts';
+import { siteUrl } from '../base.ts';
 import { pickFile, type Companion, type Radio } from '../radios.ts';
 
 /** One firmware file of a build. */
@@ -52,7 +53,7 @@ export interface Manifest {
 }
 
 /** Loads the list of mirrored builds; resolves to null when the site was built without them. */
-export async function loadManifest(base: string = document.baseURI): Promise<Manifest | null> {
+export async function loadManifest(base: string = siteUrl()): Promise<Manifest | null> {
   try {
     const response = await fetch(new URL('firmware/manifest.json', base));
     if (!response.ok) return null;
@@ -69,7 +70,7 @@ export async function sha256Hex(bytes: Uint8Array): Promise<string> {
 }
 
 /** Returns the bytes of `file`, downloading and checking a mirrored file when needed. */
-export async function fileBytes(file: BuildFile, base: string = document.baseURI): Promise<Uint8Array> {
+export async function fileBytes(file: BuildFile, base: string = siteUrl()): Promise<Uint8Array> {
   if (file.data) return file.data;
   if (!file.path) throw new Error(`${file.name} has no data`);
   const response = await fetch(new URL(file.path, base));

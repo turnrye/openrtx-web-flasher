@@ -340,14 +340,6 @@ export function App() {
 
   return (
     <div class="page">
-      <header class="topbar">
-        <img src="openrtx_logo.svg" alt="" />
-        <h1>OpenRTX Flasher</h1>
-        <span class="tag" title="Community prototype, not an official OpenRTX release">
-          prototype
-        </span>
-      </header>
-
       <p class="intro">
         Put <a href="https://openrtx.org">OpenRTX</a>, the free firmware for digital ham radios, on your
         radio. Pick the radio, pick a version, and follow the steps.
@@ -448,12 +440,7 @@ export function App() {
 
       <footer>
         <p>
-          Community prototype for the <a href="https://openrtx.org">OpenRTX</a> project. Free software under
-          the GNU GPL v3 or later; <a href="https://github.com/turnrye/openrtx-web-flasher">source</a>,{' '}
-          <a href="licences.html" data-testid="licences">
-            licences and credits
-          </a>
-          . Flashing firmware is at your own risk.{' '}
+          Flashing firmware is at your own risk.{' '}
           <ReportLink report={{ outcome: 'suggestion' }} label="Feedback" testid="feedback" plain />.
         </p>
         {manifest?.generated && (

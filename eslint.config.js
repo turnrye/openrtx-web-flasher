@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/',
+      '.astro/',
       'cli/dist/',
       'public/',
       'node_modules/',

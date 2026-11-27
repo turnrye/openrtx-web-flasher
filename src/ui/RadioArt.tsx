@@ -4,8 +4,11 @@
  * CS7000 and MD-380 are Joshua Murphy's device mock-ups, the rest are drawn in the same
  * manner. Each radio also has an "enter" drawing with the keys to hold shown in gold.
  */
+import { siteUrl } from '../base.ts';
 
 /** Shows the drawing of the radio with target name `id`. Decorative: text names the radio. */
 export function RadioArt({ id, enter = false }: { id: string; enter?: boolean }) {
-  return <img class="radio-art" src={`art/${id}${enter ? '-enter' : ''}.svg`} alt="" draggable={false} />;
+  return (
+    <img class="radio-art" src={siteUrl(`art/${id}${enter ? '-enter' : ''}.svg`)} alt="" draggable={false} />
+  );
 }

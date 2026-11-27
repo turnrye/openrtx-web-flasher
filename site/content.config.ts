@@ -1,0 +1,9 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+import { defineCollection } from 'astro:content';
+import { docsLoader } from '@astrojs/starlight/loaders';
+import { docsSchema } from '@astrojs/starlight/schema';
+
+// Every page of the site is a Markdown file under site/content/docs/.
+export const collections = {
+  docs: defineCollection({ loader: docsLoader(), schema: docsSchema() }),
+};

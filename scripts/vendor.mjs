@@ -25,6 +25,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildArt } from './art.mjs';
 import { cacheDir, download, retry } from './cache.mjs';
+import { importDocs } from './import-docs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const cache = cacheDir();
@@ -251,5 +252,13 @@ if (update) writeFileSync(pinsPath, JSON.stringify(pins, null, 2) + '\n');
 buildLogo(files['openrtx_logo.svg']);
 const drawn = buildArt({ files, out: join(root, 'public', 'art') });
 console.log(`art: ${drawn.length} drawings in public/art/`);
+// The website's pages, for the site that Astro builds around the flasher.
+const website = await checkout('website', pins.website.repo, pins.website.commit);
+const docs = importDocs({
+  source: website,
+  out: join(root, 'site', 'content', 'docs'),
+  edit: pins.website.edit,
+});
+console.log(`website: ${docs.pages} pages and ${docs.media} pictures in ${docs.out}/`);
 if (noWasm) console.log('cskburn: skipped (--no-wasm)');
 else await buildCskburn();

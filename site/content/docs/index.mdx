@@ -1,0 +1,64 @@
+---
+title: OpenRTX
+description: Free and open source firmware for digital amateur radios.
+template: splash
+editUrl: false
+hero:
+  title: Free firmware for digital ham radios
+  tagline: OpenRTX is modular, open source firmware for handheld and mobile amateur radios, with M17 digital voice built in. It runs on radios you may already own.
+  image:
+    file: ../../../public/openrtx_logo.svg
+    alt: The OpenRTX logo
+  actions:
+    - text: Flash your radio
+      link: flash/
+      icon: right-arrow
+      variant: primary
+    - text: Read the users' guide
+      link: user_guide/
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Start here
+
+<CardGrid>
+  <Card title="Put it on your radio" icon="rocket">
+    The [flasher](flash/) runs in Chrome or Edge on a computer. Pick your radio, pick a version, and it walks
+    you through a backup, flashing mode and the flash itself.
+  </Card>
+  <Card title="Is my radio supported?" icon="list-format">
+    The [development status](dev_status/) page lists every radio and what works on it. The [backup
+    coverage](backup/) page says what the flasher can and cannot save first.
+  </Card>
+  <Card title="Using it" icon="open-book">
+    The [users' guide](user_guide/) covers the screens, the menus and M17. Each radio has its own [hardware
+    page](hardware/hardware/).
+  </Card>
+  <Card title="Help out" icon="heart">
+    Every page has an "Edit page" link at the bottom. [How to contribute](contribute/) explains it in plain
+    words: no programming, no special tools.
+  </Card>
+</CardGrid>
+
+## For developers
+
+<CardGrid>
+  <LinkCard
+    title="Developers' guide"
+    href="developers_guide/"
+    description="How the firmware is put together."
+  />
+  <LinkCard
+    title="Compiling"
+    href="compiling/"
+    description="Build OpenRTX for a radio or for your computer."
+  />
+  <LinkCard title="Get in touch" href="get_in_touch/" description="Chat, office hours and where to ask." />
+  <LinkCard
+    title="Source code"
+    href="https://github.com/OpenRTX/OpenRTX"
+    description="The firmware on GitHub, GPL-3.0-or-later."
+  />
+</CardGrid>

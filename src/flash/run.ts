@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** Picks the device and the flasher for a radio. The only place that knows every method. */
+import { siteUrl } from '../base.ts';
 import type { DeviceEnv } from '../devices.ts';
 import { readStock } from '../backup/stock.ts';
 import type { AlreadyBackedUp, Known, RadioBackup } from '../backup/types.ts';
@@ -27,7 +28,7 @@ const GD77_FILTERS: HIDDeviceFilter[] = [{ vendorId: 0x15a2, productId: 0x0073 }
 
 /** Loads the cskburn WebAssembly module that ships next to the page. */
 let loadCskburn: CskModuleLoader = async () => {
-  const url = new URL('cskburn/cskburn.mjs', document.baseURI).href;
+  const url = siteUrl('cskburn/cskburn.mjs');
   const module = (await import(/* @vite-ignore */ url)) as { default: Awaited<ReturnType<CskModuleLoader>> };
   return module.default;
 };
