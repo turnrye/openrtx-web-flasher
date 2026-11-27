@@ -40,13 +40,6 @@ export type IdKind =
   /** No ID can be read: a checksum of the radio's factory calibration stands in. */
   | 'fingerprint';
 
-/** How much to read. */
-export type BackupScope =
-  /** What matters most and reads fast: codeplug, settings, factory data. */
-  | 'quick'
-  /** Everything the radio will give. */
-  | 'all';
-
 /** The result of reading a radio. */
 export interface RadioBackup {
   /** Identifies this unit, or null when nothing could be read that does. */

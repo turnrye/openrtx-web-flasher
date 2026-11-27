@@ -85,11 +85,11 @@ async function readDevice(
 ): Promise<RadioBackup | AlreadyBackedUp> {
   const backup = backupFor(radio);
   if (backup.how !== 'read') throw new FlashError('This radio cannot be read out.');
-  if (backup.mode === 'normal') return readStock(radio, picked.device, 'all', ctx, known);
+  if (backup.mode === 'normal') return readStock(radio, picked.device, ctx, known);
   const driver = driverFor(radio);
   const reader = driver.api === null ? null : forDevice(driver);
   if (!reader?.read) throw new FlashError('This radio cannot be read out.');
-  return reader.read(picked.device, { radio, scope: 'all', ctx, size, known });
+  return reader.read(picked.device, { radio, ctx, size, known });
 }
 
 /**

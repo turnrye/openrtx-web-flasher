@@ -32,7 +32,7 @@
 import { hexSpaced } from '../bytes.ts';
 import { DfuDevice, DfuState, dfuStateName, hex32, type DfuStatus } from '../flash/dfu.ts';
 import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
-import type { AlreadyBackedUp, BackupPart, BackupScope, Known, RadioBackup } from './types.ts';
+import type { AlreadyBackedUp, BackupPart, Known, RadioBackup } from './types.ts';
 
 /** Radio families this reader knows. */
 export type TytStockModel = 'md3x0' | 'mduv3x0' | 'md9600' | 'dm1701';
@@ -49,10 +49,8 @@ export interface TytStockPlan {
   info: readonly number[];
   /** The most to ask for in the one snapshot of the internal flash (at most 65535). */
   snapshot: number;
-  /** Bytes of SPI flash that scope 'all' reads, from address 0. */
+  /** Bytes of SPI flash to read, from address 0: all of it. */
   spiSize: number;
-  /** The codeplug areas that scope 'quick' reads; multiples of 1024 bytes. */
-  quick: readonly TytStockRange[];
   /** True when this plan was measured on a real radio of this model. */
   checked: boolean;
 }
@@ -85,46 +83,21 @@ const BOOTLOADER_INTERFACE = '@Internal Flash /0x0800C000/01*016Kg,01*064Kg,07*1
 const INFO_CODES = [0x02, 0x01, 0x03, 0x04, 0x05, 0x07, 0x08, 0x32, 0x33, 0x50];
 /** W25Q128, on all four models. Some early VHF MD-380s have a 1 MB chip. */
 const SPI_SIZE = 0x1000000;
-/** Codeplug of the single-band radios: dmrconfig md380.c MEMSZ; qdmr 0x2000-0x3ffff. */
-const CODEPLUG_LOW: TytStockRange = { address: 0, length: 0x40000 };
-/** Second codeplug area of the dual-band radios: dmrconfig uv380.c, qdmr uv390/dm1701. */
-const CODEPLUG_HIGH: TytStockRange = { address: 0x110000, length: 0x90000 };
-
 /**
  * The plan per model. Only the MD-9600's was measured on a radio (RadioFoundry
- * hardware-md9600.md 15.2, and again on a second MD-9600). Its quick read is the first
- * 2 MB in one run, as measured; it covers both codeplug areas.
+ * hardware-md9600.md 15.2, and again on a second MD-9600).
  *
  * Assumed for the other three: that their original firmware answers the same info
  * codes, gives the same snapshot of internal flash before program mode and reads all
  * 16 MB of SPI flash in program mode, since they share the bootloader, the normal-mode
- * interface string and the vendor's programming protocol. Their quick ranges are the
- * codeplug areas dmrconfig and qdmr read, widened to start at 0 as dmrconfig does, and
- * reached as both do: address 0 once, then block 2 + address / 1024.
+ * interface string and the vendor's programming protocol. The SPI flash is reached as
+ * dmrconfig and qdmr reach it: address 0 once, then block 2 + address / 1024.
  */
 export const TYT_STOCK_PLANS: Readonly<Record<TytStockModel, TytStockPlan>> = {
-  md9600: {
-    info: INFO_CODES,
-    snapshot: 65535,
-    spiSize: SPI_SIZE,
-    quick: [{ address: 0, length: 0x200000 }],
-    checked: true,
-  },
-  md3x0: { info: INFO_CODES, snapshot: 65535, spiSize: SPI_SIZE, quick: [CODEPLUG_LOW], checked: false },
-  mduv3x0: {
-    info: INFO_CODES,
-    snapshot: 65535,
-    spiSize: SPI_SIZE,
-    quick: [CODEPLUG_LOW, CODEPLUG_HIGH],
-    checked: false,
-  },
-  dm1701: {
-    info: INFO_CODES,
-    snapshot: 65535,
-    spiSize: SPI_SIZE,
-    quick: [CODEPLUG_LOW, CODEPLUG_HIGH],
-    checked: false,
-  },
+  md9600: { info: INFO_CODES, snapshot: 65535, spiSize: SPI_SIZE, checked: true },
+  md3x0: { info: INFO_CODES, snapshot: 65535, spiSize: SPI_SIZE, checked: false },
+  mduv3x0: { info: INFO_CODES, snapshot: 65535, spiSize: SPI_SIZE, checked: false },
+  dm1701: { info: INFO_CODES, snapshot: 65535, spiSize: SPI_SIZE, checked: false },
 };
 
 /** A request outside the allowlist; it was not sent. */
@@ -256,11 +229,6 @@ function hexBytes(data: Uint8Array, limit = data.length): string {
 /** A code or byte as two hex digits. */
 function hex2(value: number): string {
   return value.toString(16).padStart(2, '0');
-}
-
-/** An SPI flash address as six hex digits. */
-function hex6(value: number): string {
-  return value.toString(16).padStart(6, '0');
 }
 
 /** Text of a thrown value, without a final full stop so it fits inside a sentence. */
@@ -422,10 +390,10 @@ function snapshotPart(data: Uint8Array, planned: number): BackupPart {
   };
 }
 
-/** The backup part for one SPI range. */
-function spiPart(range: TytStockRange, read: SpiRead, scope: BackupScope): BackupPart {
+/** The backup part for the SPI flash. */
+function spiPart(range: TytStockRange, read: SpiRead): BackupPart {
   const part: BackupPart = {
-    file: scope === 'all' ? 'spi-flash.bin' : `spi-flash-${hex6(range.address)}.bin`,
+    file: 'spi-flash.bin',
     kind: 'spi-flash',
     address: range.address,
     data: read.data,
@@ -437,31 +405,24 @@ function spiPart(range: TytStockRange, read: SpiRead, scope: BackupScope): Backu
   return part;
 }
 
-/** The SPI ranges a scope reads. */
-function spiRanges(plan: TytStockPlan, scope: BackupScope): readonly TytStockRange[] {
-  return scope === 'all' ? [{ address: 0, length: plan.spiSize }] : plan.quick;
-}
-
 /**
  * Bytes a backup plans to read, for the progress bar. An info block counts as the 1024
  * bytes asked for, since its real size is not known ahead.
  */
-function plannedBytes(plan: TytStockPlan, scope: BackupScope): number {
-  const spiBytes = spiRanges(plan, scope).reduce((sum, r) => sum + r.length, 0);
-  return plan.info.length * BLOCK + plan.snapshot + spiBytes;
+function plannedBytes(plan: TytStockPlan): number {
+  return plan.info.length * BLOCK + plan.snapshot + plan.spiSize;
 }
 
 /** The whole read from the original firmware, through the guard. */
 async function readOriginal(
   g: TytStockGuard,
   plan: TytStockPlan,
-  scope: BackupScope,
   ctx: FlashContext,
   known?: Known,
 ): Promise<RadioBackup | AlreadyBackedUp> {
-  const ranges = spiRanges(plan, scope);
-  const total = plannedBytes(plan, scope);
-  const spiBytes = total - plan.info.length * BLOCK - plan.snapshot;
+  const range: TytStockRange = { address: 0, length: plan.spiSize };
+  const total = plannedBytes(plan);
+  const spiBytes = plan.spiSize;
   const parts: BackupPart[] = [];
   const notes: string[] = [];
   let done = 0;
@@ -538,21 +499,17 @@ async function readOriginal(
       rethrowRefused(e);
       stopped = reasonOf(e);
     }
-    let read = 0;
-    for (const range of ranges) {
-      // Once the read has stopped, what is left is not tried. It is listed all the same,
-      // empty: a backup that lacks a planned part must not look whole.
-      const r: SpiRead =
-        stopped === null ? await readSpiRange(g, range, advance) : { data: new Uint8Array(0), stopped };
-      parts.push(spiPart(range, r, scope));
-      read += r.data.length;
-      stopped = r.stopped;
-    }
+    // Without program mode the read is not tried. The part is listed all the same, empty:
+    // a backup that lacks a planned part must not look whole.
+    const r: SpiRead =
+      stopped === null ? await readSpiRange(g, range, advance) : { data: new Uint8Array(0), stopped };
+    parts.push(spiPart(range, r));
+    stopped = r.stopped;
     if (stopped === null) {
       await g.abort().catch(() => {});
     } else {
       await toIdle(g).catch(() => {});
-      tell(`The SPI flash read stopped early, with ${read} of ${spiBytes} bytes: ${stopped}.`);
+      tell(`The SPI flash read stopped early, with ${r.data.length} of ${spiBytes} bytes: ${stopped}.`);
     }
   } finally {
     // The original firmware leaves program mode only by restarting.
@@ -575,9 +532,8 @@ async function readOriginal(
 
 /**
  * Reads a TYT-family radio through its original firmware without changing anything on
- * it: the info blocks, one snapshot of the start of the internal flash, then the SPI
- * flash (all of it, or the codeplug areas for scope 'quick'), then `91 05` so the radio
- * restarts. A part the radio refuses or cuts short is kept, marked incomplete; every
+ * it: the info blocks, one snapshot of the start of the internal flash, then all of the
+ * SPI flash, then `91 05` so the radio restarts. A part the radio refuses or cuts short is kept, marked incomplete; every
  * planned part is in the result, one that could not be read at all as an empty part with
  * a note that says why.
  *
@@ -592,25 +548,22 @@ async function readOriginal(
 export async function readTytStock(
   dev: USBDevice,
   model: TytStockModel,
-  scope: BackupScope,
   ctx: FlashContext,
 ): Promise<RadioBackup>;
 export async function readTytStock(
   dev: USBDevice,
   model: TytStockModel,
-  scope: BackupScope,
   ctx: FlashContext,
   known: Known | undefined,
 ): Promise<RadioBackup | AlreadyBackedUp>;
 export async function readTytStock(
   dev: USBDevice,
   model: TytStockModel,
-  scope: BackupScope,
   ctx: FlashContext,
   known?: Known,
 ): Promise<RadioBackup | AlreadyBackedUp> {
   const plan = TYT_STOCK_PLANS[model];
-  ctx.progress({ phase: 'connect', done: 0, total: plannedBytes(plan, scope) });
+  ctx.progress({ phase: 'connect', done: 0, total: plannedBytes(plan) });
   const dfu = await DfuDevice.open(dev, ctx);
   try {
     const kind = dfu.alternateSetting === 0 ? tytStockDeviceKind(dfu.interfaceName) : null;
@@ -627,7 +580,7 @@ export async function readTytStock(
       );
     }
     ctx.log('The radio runs its original firmware. Reading it changes nothing on the radio.');
-    const backup = await readOriginal(new TytStockGuard(dfu, true), plan, scope, ctx, known);
+    const backup = await readOriginal(new TytStockGuard(dfu, true), plan, ctx, known);
     if ('known' in backup) return backup;
     if (!plan.checked) {
       backup.notes.push(

@@ -24,6 +24,6 @@ export const rt4dSerial: SerialDriver = {
     restorable: false,
   }),
   flash: (port, { firmware, ctx }) => flashRt4d(port, firmware, ctx),
-  read: (port, { scope, ctx, known }) => readRt4dStock(port, scope, ctx, undefined, known),
+  read: (port, { ctx, known }) => readRt4dStock(port, ctx, undefined, known),
   simulator: async () => (await import('./sims.ts')).rt4dSerialSim,
 };

@@ -6,25 +6,22 @@ import {
   rt4dStockChecksum,
   RT4D_ALL_BYTES,
   RT4D_CALIBRATION_BYTES,
-  RT4D_QUICK_BYTES,
   RT4D_REFERENCE_BYTES,
   RT4D_SPI_BLOCK_SIZE,
   type Rt4dStockOptions,
 } from './rt4d-stock.ts';
-import type { BackupScope } from './types.ts';
 import { FlashError, quietContext, type Progress } from '../flash/types.ts';
 import { SIM_RT4D_SPI_FLASH_SIZE, SimRt4dStock, type SimRt4dStockOptions } from '../sim/rt4d-stock.ts';
 
 /** Short timeouts so the failure cases do not wait for a real radio. */
 const fast: Rt4dStockOptions = { responseTimeoutMs: 40, quietMs: 2 };
 
-/** A chip just large enough for the quick scope, to keep the tests light. */
-const small: SimRt4dStockOptions = { flashSize: RT4D_QUICK_BYTES };
+/** A small chip, for the tests that are about the simulator or read only the start. */
+const small: SimRt4dStockOptions = { flashSize: 0x100000 };
 
-/** Reads a fresh simulator and returns what happened. */
+/** Reads a fresh simulator, a whole 16 MiB chip unless told otherwise, and returns what happened. */
 function run(
-  scope: BackupScope,
-  simOptions: SimRt4dStockOptions = small,
+  simOptions: SimRt4dStockOptions = {},
   options: Rt4dStockOptions = fast,
   prepare?: (sim: SimRt4dStock) => void,
 ) {
@@ -34,7 +31,6 @@ function run(
   const log: string[] = [];
   const done = readRt4dStock(
     sim,
-    scope,
     quietContext({ progress: (p) => seen.push(p), log: (m) => log.push(m) }),
     options,
   );
@@ -62,50 +58,35 @@ describe('rt4dStockChecksum', () => {
 });
 
 describe('readRt4dStock', () => {
-  it('reads the first megabyte for the quick scope', async () => {
-    const { sim, seen, done } = run('quick', { flashSize: 2 * RT4D_QUICK_BYTES });
+  it('reads the whole 16 MiB chip, address book included', async () => {
+    const { sim, seen, done } = run();
     const backup = await done;
 
     expect(backup.parts).toHaveLength(1);
     const [part] = backup.parts;
+    expect(RT4D_ALL_BYTES).toBe(SIM_RT4D_SPI_FLASH_SIZE);
     expect(part.file).toBe('spi-flash.bin');
     expect(part.kind).toBe('spi-flash');
     expect(part.address).toBe(0);
     expect(part.complete).toBe(true);
     expect(part.note).toBeUndefined();
-    expect(part.data.length).toBe(RT4D_QUICK_BYTES);
-    expect(Buffer.compare(part.data, sim.flash.subarray(0, RT4D_QUICK_BYTES))).toBe(0);
-
-    const blocks = RT4D_QUICK_BYTES / RT4D_SPI_BLOCK_SIZE;
-    expect(sim.reads).toEqual(Array.from({ length: blocks }, (_, i) => i));
-    expect(onlyRead(sim)).toBe(true);
-    expect(seen[0]).toEqual({ phase: 'connect', done: 0, total: RT4D_QUICK_BYTES });
-    expect(seen.at(-1)).toEqual({ phase: 'done', done: RT4D_QUICK_BYTES, total: RT4D_QUICK_BYTES });
-    expect(seen.filter((p) => p.phase === 'read')).toHaveLength(blocks);
-    expect(backup.notes.join(' ')).toMatch(/first megabyte/);
-    expect(backup.firmware).toBeUndefined();
-  });
-
-  it('reads the whole 16 MiB chip for the all scope, address book included', async () => {
-    const { sim, seen, done } = run('all', {});
-    const backup = await done;
-
-    const [part] = backup.parts;
-    expect(RT4D_ALL_BYTES).toBe(SIM_RT4D_SPI_FLASH_SIZE);
-    expect(part.complete).toBe(true);
     expect(part.data.length).toBe(RT4D_ALL_BYTES);
     expect(Buffer.compare(part.data, sim.flash)).toBe(0);
-    expect(sim.reads).toHaveLength(RT4D_ALL_BYTES / RT4D_SPI_BLOCK_SIZE);
-    expect(Math.max(...sim.reads)).toBe(RT4D_ALL_BYTES / RT4D_SPI_BLOCK_SIZE - 1);
+
+    const blocks = RT4D_ALL_BYTES / RT4D_SPI_BLOCK_SIZE;
+    expect(sim.reads).toEqual(Array.from({ length: blocks }, (_, i) => i));
     expect(onlyRead(sim)).toBe(true);
+    expect(seen[0]).toEqual({ phase: 'connect', done: 0, total: RT4D_ALL_BYTES });
     expect(seen.at(-1)).toEqual({ phase: 'done', done: RT4D_ALL_BYTES, total: RT4D_ALL_BYTES });
+    expect(seen.filter((p) => p.phase === 'read')).toHaveLength(blocks);
+    expect(backup.firmware).toBeUndefined();
     expect(backup.notes.join(' ')).toMatch(/whole 16 MiB memory chip, the address book .* included/);
     expect(backup.notes.join(' ')).toMatch(/firmware is not in it/);
   });
 
   it('keeps the first 4 MiB, marked incomplete, when the radio gives nothing above them', async () => {
     const first = RT4D_REFERENCE_BYTES / RT4D_SPI_BLOCK_SIZE;
-    const { sim, done } = run('all', { silentFrom: first });
+    const { sim, done } = run({ silentFrom: first });
     const backup = await done;
 
     const [part] = backup.parts;
@@ -121,7 +102,7 @@ describe('readRt4dStock', () => {
   });
 
   it('does not take a repeat of the first 4 MiB for the rest of the chip', async () => {
-    const { sim, log, done } = run('all', { wrapBlocks: RT4D_REFERENCE_BYTES / RT4D_SPI_BLOCK_SIZE });
+    const { sim, log, done } = run({ wrapBlocks: RT4D_REFERENCE_BYTES / RT4D_SPI_BLOCK_SIZE });
     const backup = await done;
 
     const [part] = backup.parts;
@@ -136,7 +117,7 @@ describe('readRt4dStock', () => {
   });
 
   it('takes a blank chip above the first 4 MiB for what it is', async () => {
-    const { sim, done } = run('all', {}, fast, (radio) => radio.flash.fill(0xff, RT4D_REFERENCE_BYTES));
+    const { sim, done } = run({}, fast, (radio) => radio.flash.fill(0xff, RT4D_REFERENCE_BYTES));
     const backup = await done;
     expect(backup.parts[0].complete).toBe(true);
     expect(backup.parts[0].data.length).toBe(RT4D_ALL_BYTES);
@@ -144,7 +125,7 @@ describe('readRt4dStock', () => {
   });
 
   it('opens the port at 115200 8N1 and closes it afterwards', async () => {
-    const { sim, done } = run('quick');
+    const { sim, done } = run();
     await done;
     expect(sim.opens).toEqual([
       { baudRate: 115200, dataBits: 8, stopBits: 1, parity: 'none', flowControl: 'none' },
@@ -154,7 +135,7 @@ describe('readRt4dStock', () => {
   });
 
   it('copes with replies that arrive in pieces and with noise on the line', async () => {
-    const { sim, done } = run('quick', { ...small, chunkBytes: 100, noise: [0x00, 0xff, 0x52] });
+    const { sim, done } = run({ chunkBytes: 100, noise: [0x00, 0xff, 0x52] });
     const backup = await done;
     expect(backup.parts[0].complete).toBe(true);
     expect(Buffer.compare(backup.parts[0].data, sim.flash)).toBe(0);
@@ -163,7 +144,7 @@ describe('readRt4dStock', () => {
 
   it('says so when the radio is in flashing mode', async () => {
     for (const bootloaderReply of [[0xff], [0xff, 0xff, 0xff, 0xff]]) {
-      const { sim, seen, done } = run('quick', { ...small, mode: 'bootloader', bootloaderReply });
+      const { sim, seen, done } = run({ mode: 'bootloader', bootloaderReply });
       const error = await done.catch((e: unknown) => e);
       expect(error).toBeInstanceOf(FlashError);
       expect((error as FlashError).message).toMatch(/flashing mode/);
@@ -175,7 +156,7 @@ describe('readRt4dStock', () => {
   });
 
   it('says to check the cable when nothing answers', async () => {
-    const { sim, done } = run('quick', { ...small, mode: 'silent' });
+    const { sim, done } = run({ mode: 'silent' });
     const error = await done.catch((e: unknown) => e);
     expect(error).toBeInstanceOf(FlashError);
     expect((error as FlashError).message).toMatch(/did not answer/);
@@ -186,7 +167,7 @@ describe('readRt4dStock', () => {
   });
 
   it('rejects answers that are not the original firmware’s', async () => {
-    const { sim, done } = run('quick', { ...small, wrongHeader: { block: 0, times: Infinity } });
+    const { sim, done } = run({ wrongHeader: { block: 0, times: Infinity } });
     const error = await done.catch((e: unknown) => e);
     expect(error).toBeInstanceOf(FlashError);
     expect((error as FlashError).message).toMatch(/answer starts with 52 00 01, not 52 00 00/);
@@ -195,18 +176,18 @@ describe('readRt4dStock', () => {
   });
 
   it('asks again for a block whose checksum is wrong', async () => {
-    const { sim, log, done } = run('quick', { ...small, corruptChecksum: { block: 7 } });
+    const { sim, log, done } = run({ corruptChecksum: { block: 7 } });
     const backup = await done;
     expect(backup.parts[0].complete).toBe(true);
     expect(Buffer.compare(backup.parts[0].data, sim.flash)).toBe(0);
     expect(sim.reads.filter((b) => b === 7)).toHaveLength(2);
-    expect(sim.reads).toHaveLength(RT4D_QUICK_BYTES / RT4D_SPI_BLOCK_SIZE + 1);
+    expect(sim.reads).toHaveLength(RT4D_ALL_BYTES / RT4D_SPI_BLOCK_SIZE + 1);
     expect(log.some((line) => /Block 7 .*checksum/.test(line))).toBe(true);
     expect(onlyRead(sim)).toBe(true);
   });
 
   it('asks again for a block whose header is for another block', async () => {
-    const { sim, done } = run('quick', { ...small, wrongHeader: { block: 300 } });
+    const { sim, done } = run({ wrongHeader: { block: 300 } });
     const backup = await done;
     expect(backup.parts[0].complete).toBe(true);
     expect(Buffer.compare(backup.parts[0].data, sim.flash)).toBe(0);
@@ -215,7 +196,7 @@ describe('readRt4dStock', () => {
   });
 
   it('asks again for a block that got no answer', async () => {
-    const { sim, done } = run('quick', { ...small, drop: { block: 3, times: 2 } });
+    const { sim, done } = run({ drop: { block: 3, times: 2 } });
     const backup = await done;
     expect(backup.parts[0].complete).toBe(true);
     expect(Buffer.compare(backup.parts[0].data, sim.flash)).toBe(0);
@@ -224,7 +205,7 @@ describe('readRt4dStock', () => {
   });
 
   it('keeps what was read when a block never comes', async () => {
-    const { sim, seen, done } = run('quick', { ...small, drop: { block: 20 } });
+    const { sim, seen, done } = run({ drop: { block: 20 } });
     const backup = await done;
     const [part] = backup.parts;
     const kept = 20 * RT4D_SPI_BLOCK_SIZE;
@@ -237,7 +218,7 @@ describe('readRt4dStock', () => {
     expect(backup.notes.join(' ')).toMatch(/Read it again/);
     expect(sim.reads.filter((b) => b === 20)).toHaveLength(3);
     expect(Math.max(...sim.reads)).toBe(20);
-    expect(seen.at(-1)).toEqual({ phase: 'done', done: kept, total: RT4D_QUICK_BYTES });
+    expect(seen.at(-1)).toEqual({ phase: 'done', done: kept, total: RT4D_ALL_BYTES });
     // The calibration area was read, so the radio still has its ID.
     expect(backup.radioId).toBe(sha16(sim.flash.subarray(0, RT4D_CALIBRATION_BYTES)));
     expect(onlyRead(sim)).toBe(true);
@@ -245,11 +226,7 @@ describe('readRt4dStock', () => {
   });
 
   it('keeps what was read when a block stays corrupted', async () => {
-    const { sim, done } = run(
-      'quick',
-      { ...small, corruptChecksum: { block: 2, times: Infinity } },
-      { ...fast, attempts: 2 },
-    );
+    const { sim, done } = run({ corruptChecksum: { block: 2, times: Infinity } }, { ...fast, attempts: 2 });
     const backup = await done;
     const [part] = backup.parts;
     expect(part.complete).toBe(false);
@@ -265,23 +242,23 @@ describe('readRt4dStock', () => {
   });
 
   it('identifies the radio by a checksum of its calibration area', async () => {
-    const first = run('quick');
+    const first = run();
     const backup = await first.done;
     expect(backup.idKind).toBe('fingerprint');
     expect(backup.radioId).toMatch(/^[0-9a-f]{16}$/);
     expect(backup.radioId).toBe(sha16(first.sim.flash.subarray(0, RT4D_CALIBRATION_BYTES)));
 
-    // The same radio gives the same ID whatever else is on the chip and whatever the scope.
-    const again = run('quick', small, fast, (sim) => sim.flash.fill(0x5a, RT4D_CALIBRATION_BYTES));
+    // The same radio gives the same ID whatever else is on the chip.
+    const again = run({}, fast, (sim) => sim.flash.fill(0x5a, RT4D_CALIBRATION_BYTES));
     expect((await again.done).radioId).toBe(backup.radioId);
 
-    const other = run('quick', { ...small, seed: 2 });
+    const other = run({ seed: 2 });
     expect((await other.done).radioId).not.toBe(backup.radioId);
   });
 
   it('gives no ID for a blank calibration area', async () => {
     for (const fill of [0xff, 0x00]) {
-      const { sim, done } = run('quick', small, fast, (s) => s.flash.fill(fill, 0, RT4D_CALIBRATION_BYTES));
+      const { sim, done } = run({}, fast, (s) => s.flash.fill(fill, 0, RT4D_CALIBRATION_BYTES));
       const backup = await done;
       expect(backup.radioId).toBeNull();
       expect(backup.idKind).toBeNull();
@@ -294,9 +271,7 @@ describe('readRt4dStock', () => {
   it('reports a port that will not open', async () => {
     const sim = new SimRt4dStock(small);
     await sim.open({ baudRate: 9600 });
-    await expect(readRt4dStock(sim, 'quick', quietContext(), fast)).rejects.toThrow(
-      /Could not open the serial port/,
-    );
+    await expect(readRt4dStock(sim, quietContext(), fast)).rejects.toThrow(/Could not open the serial port/);
     expect(sim.forbidden).toEqual([]);
   });
 });
@@ -345,7 +320,7 @@ describe('a radio that is already backed up', () => {
   it('is recognised from its first 4 KiB, and the read stops there', async () => {
     const sim = new SimRt4dStock(small);
     const asked: string[] = [];
-    const result = await readRt4dStock(sim, 'all', quietContext(), fast, (id) => {
+    const result = await readRt4dStock(sim, quietContext(), fast, (id) => {
       asked.push(id);
       return true;
     });
@@ -357,9 +332,9 @@ describe('a radio that is already backed up', () => {
   });
 
   it('is read in full when its ID is not one that is known', async () => {
-    const sim = new SimRt4dStock(small);
-    const result = await readRt4dStock(sim, 'quick', quietContext(), fast, () => false);
+    const sim = new SimRt4dStock();
+    const result = await readRt4dStock(sim, quietContext(), fast, () => false);
     expect('known' in result).toBe(false);
-    expect(sim.reads).toHaveLength(RT4D_QUICK_BYTES / 1024);
+    expect(sim.reads).toHaveLength(RT4D_ALL_BYTES / 1024);
   });
 });

@@ -41,7 +41,7 @@ describe('a HID device of this computer as a WebHID device', () => {
   it('carries the page’s GD-77 reader, and only reads', async () => {
     const sim = new SimGd77Stock({ model: 'GD-77' });
     const { web } = deviceOver(sim);
-    const backup = await readGd77Stock(web, 'GD-77', 'all', quietContext());
+    const backup = await readGd77Stock(web, 'GD-77', quietContext());
     expect(sim.forbidden).toEqual([]);
     expect(backup.parts.length).toBeGreaterThan(0);
     for (const part of backup.parts) {

@@ -27,7 +27,6 @@ export const rt950Serial: SerialDriver = {
     restorable: false,
   }),
   flash: (port, { firmware, ctx }) => flashRt950(port, firmware, ctx),
-  // One size: the protocol reaches 64 KiB and that reads in seconds.
   read: (port, { ctx, known }) => readRt950Stock(port, ctx, undefined, known),
   simulator: async () => (await import('./sims.ts')).rt950SerialSim,
 };

@@ -7,13 +7,14 @@
 import { driverFor, forDevice } from '../drivers/index.ts';
 import { FlashError, type FlashContext } from '../flash/types.ts';
 import type { Radio } from '../radios.ts';
-import type { AlreadyBackedUp, BackupScope, Known, RadioBackup } from './types.ts';
+import type { AlreadyBackedUp, Known, RadioBackup } from './types.ts';
 
 /** The device objects a reader may be handed. */
 export type StockDevice = USBDevice | SerialPort | HIDDevice;
 
 /**
- * Reads `radio` through its original firmware. Every reader only reads. `known` lets a
+ * Reads `radio` through its original firmware: everything the reader can get. Every
+ * reader only reads. `known` lets a
  * reader stop once it has recognised a radio that is already backed up; the GD-77 family
  * learns its ID only at the end of its short read, so it never stops early. The caller
  * decides whether a radio's ID is good enough to stop on (`idIsPerUnit`), and leaves
@@ -22,7 +23,6 @@ export type StockDevice = USBDevice | SerialPort | HIDDevice;
 export async function readStock(
   radio: Radio,
   device: StockDevice,
-  scope: BackupScope,
   ctx: FlashContext,
   known?: Known,
 ): Promise<RadioBackup | AlreadyBackedUp> {
@@ -32,5 +32,5 @@ export async function readStock(
   if (!reader?.read || backup.how !== 'read' || backup.mode !== 'normal') {
     throw new FlashError(`The ${radio.name} is not backed up through its original firmware.`);
   }
-  return reader.read(device, { radio, scope, ctx, known });
+  return reader.read(device, { radio, ctx, known });
 }

@@ -30,7 +30,6 @@ export const gd77Hid: HidDriver = {
   flash: (dev, { radio, firmware, ctx }) => flashGd77(dev, firmware, radio.hidModel ?? 'GD-77', ctx),
   // The fingerprint that stands for an ID only comes at the end of the short read, so
   // `known` is never asked.
-  read: (dev, { radio, scope, ctx }) =>
-    readGd77Stock(dev, radio.hidModel === 'DM-1801' ? 'DM-1801' : 'GD-77', scope, ctx),
+  read: (dev, { radio, ctx }) => readGd77Stock(dev, radio.hidModel === 'DM-1801' ? 'DM-1801' : 'GD-77', ctx),
   simulator: async () => (await import('./sims.ts')).gd77HidSim,
 };

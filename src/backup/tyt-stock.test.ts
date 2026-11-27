@@ -18,7 +18,7 @@ import type { BackupPart, RadioBackup } from './types.ts';
 
 const MODELS = Object.keys(TYT_STOCK_PLANS) as TytStockModel[];
 const INFO_FILES = ['02', '01', '03', '04', '05', '07', '08', '32', '33', '50'].map((c) => `info-${c}.bin`);
-/** A smaller SPI flash where the test is not about its size. */
+/** A smaller SPI flash, for the tests that never get as far as reading all of it. */
 const SMALL: SimTytStockOptions = { spiSize: 0x200000 };
 
 /** The part with this file name; fails the test when it is missing. */
@@ -73,25 +73,11 @@ describe('the plans', () => {
     expect(MODELS.filter((m) => TYT_STOCK_PLANS[m].checked)).toEqual(['md9600']);
   });
 
-  it('every range is whole 1024-byte blocks inside the SPI flash', () => {
+  it('every plan reads the SPI flash in whole 1024-byte blocks, and one snapshot a control transfer can carry', () => {
     for (const model of MODELS) {
       const plan = TYT_STOCK_PLANS[model];
       expect(plan.snapshot).toBeLessThanOrEqual(65535);
       expect(plan.spiSize % 1024).toBe(0);
-      for (const r of plan.quick) {
-        expect(r.address % 1024).toBe(0);
-        expect(r.length % 1024).toBe(0);
-        expect(r.address + r.length).toBeLessThanOrEqual(plan.spiSize);
-      }
-    }
-  });
-
-  it('the quick ranges cover the codeplug areas dmrconfig and qdmr read', () => {
-    const covers = (model: TytStockModel, from: number, to: number) =>
-      TYT_STOCK_PLANS[model].quick.some((r) => r.address <= from && r.address + r.length >= to);
-    for (const model of MODELS) expect(covers(model, 0x2000, 0x40000)).toBe(true);
-    for (const model of ['mduv3x0', 'dm1701', 'md9600'] as const) {
-      expect(covers(model, 0x110000, 0x1a0000)).toBe(true);
     }
   });
 });
@@ -228,7 +214,7 @@ describe('a backup from the original firmware', () => {
   for (const model of MODELS) {
     it(`${model}: everything, byte for byte, then the restart`, async () => {
       const sim = new SimTytStock();
-      const backup = await readTytStock(sim, model, 'all', quietContext());
+      const backup = await readTytStock(sim, model, quietContext());
       expect(sim.forbidden).toEqual([]);
       expectInfoAndSnapshot(backup, sim);
       const spi = part(backup, 'spi-flash.bin');
@@ -244,35 +230,18 @@ describe('a backup from the original firmware', () => {
       expect(sim.commands.at(-1)).toBe('91 05');
       expect(sim.opened).toBe(false);
     });
-
-    it(`${model}: the codeplug areas only`, async () => {
-      const sim = new SimTytStock();
-      const backup = await readTytStock(sim, model, 'quick', quietContext());
-      expect(sim.forbidden).toEqual([]);
-      expectInfoAndSnapshot(backup, sim);
-      const ranges = TYT_STOCK_PLANS[model].quick;
-      expect(backup.parts).toHaveLength(INFO_FILES.length + 1 + ranges.length);
-      for (const r of ranges) {
-        const spi = part(backup, `spi-flash-${r.address.toString(16).padStart(6, '0')}.bin`);
-        expect(spi.kind).toBe('spi-flash');
-        expect(spi.address).toBe(r.address);
-        expect(spi.complete).toBe(true);
-        expect(sameBytes(spi.data, sim.spi.subarray(r.address, r.address + r.length))).toBe(true);
-      }
-      expect(sim.restarts).toBe(1);
-    });
   }
 
   it('says so when the plan was not measured on a radio of that model', async () => {
-    const unchecked = await readTytStock(new SimTytStock(SMALL), 'md3x0', 'quick', quietContext());
+    const unchecked = await readTytStock(new SimTytStock(), 'md3x0', quietContext());
     expect(unchecked.notes.join('\n')).toMatch(/not been checked on a radio/);
-    const checked = await readTytStock(new SimTytStock(SMALL), 'md9600', 'quick', quietContext());
+    const checked = await readTytStock(new SimTytStock(), 'md9600', quietContext());
     expect(checked.notes).toEqual([]);
   });
 
   it('sends the measured sequence: info, snapshot, program mode, address 0, SPI, restart', async () => {
-    const sim = new SimTytStock(SMALL);
-    await readTytStock(sim, 'md3x0', 'quick', quietContext());
+    const sim = new SimTytStock();
+    await readTytStock(sim, 'md3x0', quietContext());
     expect(sim.commands).toEqual([
       'a2 02',
       'a2 01',
@@ -306,28 +275,21 @@ describe('a backup from the original firmware', () => {
       'ABORT',
       'DNLOAD 0 len=2',
     ]);
-    expect(sim.requests.filter((r) => /^UPLOAD (?!0 )\d+ len=1024$/.test(r))).toHaveLength(0x40000 / 1024);
-    expect(sim.requests.at(-4)).toBe('UPLOAD 257 len=1024');
+    const blocks = sim.requests.filter((r) => /^UPLOAD (?!0 )\d+ len=1024$/.test(r));
+    expect(blocks).toHaveLength(0x1000000 / 1024);
+    // The address stays at 0 and the block number walks the chip: block 2 + address / 1024.
+    expect(blocks[0]).toBe('UPLOAD 2 len=1024');
+    expect(blocks[0x110000 / 1024]).toBe(`UPLOAD ${2 + 0x110000 / 1024} len=1024`);
+    expect(sim.requests.at(-4)).toBe(`UPLOAD ${2 + 0x1000000 / 1024 - 1} len=1024`);
     expect(sim.requests.slice(-3)).toEqual(['ABORT', 'DNLOAD 0 len=2', 'GETSTATUS']);
     expect(sim.requests.some((r) => r === 'GETSTATE' || r === 'DETACH')).toBe(false);
   });
 
-  it('reaches the second codeplug area by block number, with the address left at 0', async () => {
-    const sim = new SimTytStock(SMALL);
-    await readTytStock(sim, 'mduv3x0', 'quick', quietContext());
-    const blocks = sim.requests.filter((r) => /^UPLOAD \d+ len=1024$/.test(r) && !r.startsWith('UPLOAD 0 '));
-    expect(blocks[0]).toBe('UPLOAD 2 len=1024');
-    expect(blocks[255]).toBe('UPLOAD 257 len=1024');
-    expect(blocks[256]).toBe(`UPLOAD ${2 + 0x110000 / 1024} len=1024`);
-    expect(blocks.at(-1)).toBe(`UPLOAD ${2 + 0x1a0000 / 1024 - 1} len=1024`);
-    expect(sim.commands.filter((c) => c.startsWith('21'))).toEqual(['21 00 00 00 00']);
-  });
-
   it('reports progress in bytes, never backwards, ending at the total', async () => {
     const seen: Progress[] = [];
-    const sim = new SimTytStock(SMALL);
-    await readTytStock(sim, 'mduv3x0', 'quick', quietContext({ progress: (p) => seen.push({ ...p }) }));
-    const total = 10 * 1024 + 65535 + 0x40000 + 0x90000;
+    const sim = new SimTytStock();
+    await readTytStock(sim, 'mduv3x0', quietContext({ progress: (p) => seen.push({ ...p }) }));
+    const total = 10 * 1024 + 65535 + 0x1000000;
     expect(seen.every((p) => p.total === total)).toBe(true);
     expect(seen[0]).toEqual({ phase: 'connect', done: 0, total });
     expect(seen.at(-1)).toEqual({ phase: 'done', done: total, total });
@@ -343,17 +305,17 @@ describe('a backup from the original firmware', () => {
       log: (m) => lines.push(m),
       sleep: async (ms) => void sleeps.push(ms),
     });
-    await readTytStock(new SimTytStock(SMALL), 'md9600', 'quick', ctx);
+    await readTytStock(new SimTytStock(), 'md9600', ctx);
     const log = lines.join('\n');
     expect(log).toMatch(/Original firmware version V006\.009\./);
-    expect(log).toMatch(/Reading 2 MB of SPI flash, up to about 1 min\./);
+    expect(log).toMatch(/Reading 16 MB of SPI flash, up to about 6 min\./);
     expect(log).toMatch(/restart command \(91 05\)/);
     expect(sleeps).toEqual([]);
   });
 
   it('reads the interface name from the descriptors when the browser gives none', async () => {
-    const sim = new SimTytStock({ ...SMALL, exposeInterfaceNames: false });
-    const backup = await readTytStock(sim, 'md3x0', 'quick', quietContext());
+    const sim = new SimTytStock({ exposeInterfaceNames: false });
+    const backup = await readTytStock(sim, 'md3x0', quietContext());
     expect(backup.parts).toHaveLength(INFO_FILES.length + 2);
     expect(sim.forbidden).toEqual([]);
   });
@@ -361,17 +323,17 @@ describe('a backup from the original firmware', () => {
 
 describe('the radio ID', () => {
   it('is null when the UID is blank', async () => {
-    const sim = new SimTytStock({ ...SMALL, uid: null });
-    const backup = await readTytStock(sim, 'md3x0', 'quick', quietContext());
+    const sim = new SimTytStock({ uid: null });
+    const backup = await readTytStock(sim, 'md3x0', quietContext());
     expect(backup.radioId).toBeNull();
     expect(backup.idKind).toBeNull();
     expect(part(backup, 'info-07.bin').data).toHaveLength(16);
   });
 
   it('is null when the radio does not answer block 07, and the rest is still read', async () => {
-    const sim = new SimTytStock(SMALL);
+    const sim = new SimTytStock();
     sim.stallInfo = [0x07];
-    const backup = await readTytStock(sim, 'md3x0', 'quick', quietContext());
+    const backup = await readTytStock(sim, 'md3x0', quietContext());
     expect(sim.forbidden).toEqual([]);
     expect(backup.radioId).toBeNull();
     expect(backup.idKind).toBeNull();
@@ -384,12 +346,12 @@ describe('the radio ID', () => {
     expect(backup.parts.filter((p) => !p.complete).map((p) => p.file)).toEqual(['info-07.bin']);
     expect(backup.notes).toContain('The radio did not give info block 07.');
     expect(sameBytes(part(backup, 'info-08.bin').data, sim.infoBlock(0x08))).toBe(true);
-    expect(part(backup, 'spi-flash-000000.bin').complete).toBe(true);
+    expect(part(backup, 'spi-flash.bin').complete).toBe(true);
   });
 
   it('has no firmware version when the answer is not one', async () => {
-    const sim = new SimTytStock({ ...SMALL, version: Uint8Array.of(0xff, 0xff, 0xff, 0xff) });
-    const backup = await readTytStock(sim, 'md3x0', 'quick', quietContext());
+    const sim = new SimTytStock({ version: Uint8Array.of(0xff, 0xff, 0xff, 0xff) });
+    const backup = await readTytStock(sim, 'md3x0', quietContext());
     expect(backup.firmware).toBeUndefined();
     expect(part(backup, 'info-02.bin').data).toHaveLength(4);
   });
@@ -398,8 +360,8 @@ describe('the radio ID', () => {
 describe('a host that caps a control transfer at 4096 bytes (Linux)', () => {
   it('gives a shorter snapshot, marked incomplete with a note', async () => {
     const lines: string[] = [];
-    const sim = new SimTytStock({ ...SMALL, usbCap: 4096 });
-    const backup = await readTytStock(sim, 'md9600', 'quick', quietContext({ log: (m) => lines.push(m) }));
+    const sim = new SimTytStock({ usbCap: 4096 });
+    const backup = await readTytStock(sim, 'md9600', quietContext({ log: (m) => lines.push(m) }));
     expect(sim.forbidden).toEqual([]);
     const snapshot = part(backup, 'bootloader-4096.bin');
     expect(snapshot.complete).toBe(false);
@@ -412,7 +374,7 @@ describe('a host that caps a control transfer at 4096 bytes (Linux)', () => {
     expect(sim.requests.filter((r) => r.startsWith('UPLOAD 2 len=')).slice(0, 1)).toEqual([
       'UPLOAD 2 len=4096',
     ]);
-    const spi = part(backup, 'spi-flash-000000.bin');
+    const spi = part(backup, 'spi-flash.bin');
     expect(spi.complete).toBe(true);
     expect(sameBytes(spi.data, sim.spi)).toBe(true);
     expect(sim.restarts).toBe(1);
@@ -423,7 +385,7 @@ describe('a read that stops part-way', () => {
   it('keeps what was read when the radio refuses a block, and still restarts it', async () => {
     const sim = new SimTytStock();
     sim.stallSpiAt = 0x123456;
-    const backup = await readTytStock(sim, 'md9600', 'all', quietContext());
+    const backup = await readTytStock(sim, 'md9600', quietContext());
     expect(sim.forbidden).toEqual([]);
     const spi = part(backup, 'spi-flash.bin');
     expect(spi.complete).toBe(false);
@@ -441,39 +403,21 @@ describe('a read that stops part-way', () => {
   it('keeps a block the radio cut short, and stops there', async () => {
     const sim = new SimTytStock(SMALL);
     sim.shortSpiAt = 0x1000 + 100;
-    const backup = await readTytStock(sim, 'mduv3x0', 'quick', quietContext());
+    const backup = await readTytStock(sim, 'mduv3x0', quietContext());
     expect(sim.forbidden).toEqual([]);
-    const spi = part(backup, 'spi-flash-000000.bin');
+    const spi = part(backup, 'spi-flash.bin');
     expect(spi.complete).toBe(false);
     expect(sameBytes(spi.data, sim.spi.subarray(0, 0x1000 + 100))).toBe(true);
     expect(spi.note).toMatch(/the radio sent 100 bytes of a 1024-byte block/);
-    // The second area was not tried after the first one failed; it is listed as not read.
-    const second = part(backup, 'spi-flash-110000.bin');
-    expect(second.complete).toBe(false);
-    expect(second.data).toHaveLength(0);
-    expect(second.note).toMatch(/stopped after 0 of 589824 bytes/);
-    expect(sim.requests.some((r) => r.startsWith(`UPLOAD ${2 + 0x110000 / 1024} `))).toBe(false);
-    expect(sim.restarts).toBe(1);
-  });
-
-  it('keeps the first area when the second one fails', async () => {
-    const sim = new SimTytStock(SMALL);
-    sim.stallSpiAt = 0x110000;
-    const backup = await readTytStock(sim, 'dm1701', 'quick', quietContext());
-    expect(part(backup, 'spi-flash-000000.bin').complete).toBe(true);
-    const second = part(backup, 'spi-flash-110000.bin');
-    expect(second.complete).toBe(false);
-    expect(second.address).toBe(0x110000);
-    expect(second.data).toHaveLength(0);
-    expect(second.note).toMatch(/stopped after 0 of 589824 bytes: The device refused DFU UPLOAD/);
-    expect(backup.notes.some((n) => n.includes('stopped early, with 262144 of 851968 bytes'))).toBe(true);
+    // The block after the short one was not asked for.
+    expect(sim.requests.some((r) => r.startsWith(`UPLOAD ${2 + 0x1400 / 1024} `))).toBe(false);
     expect(sim.restarts).toBe(1);
   });
 
   it('lists the SPI flash as an incomplete part when not one block of it was read', async () => {
     const sim = new SimTytStock(SMALL);
     sim.stallSpiAt = 0;
-    const backup = await readTytStock(sim, 'mduv3x0', 'all', quietContext());
+    const backup = await readTytStock(sim, 'mduv3x0', quietContext());
     expect(sim.forbidden).toEqual([]);
     const spi = part(backup, 'spi-flash.bin');
     expect(spi.kind).toBe('spi-flash');
@@ -491,20 +435,18 @@ describe('a read that stops part-way', () => {
   it('lists the SPI flash as an incomplete part when the radio does not enter program mode', async () => {
     const sim = new SimTytStock(SMALL);
     sim.refuseProgramMode = true;
-    const backup = await readTytStock(sim, 'dm1701', 'quick', quietContext());
+    const backup = await readTytStock(sim, 'dm1701', quietContext());
     expect(sim.forbidden).toEqual([]);
-    for (const file of ['spi-flash-000000.bin', 'spi-flash-110000.bin']) {
-      const spi = part(backup, file);
-      expect(spi.complete).toBe(false);
-      expect(spi.data).toHaveLength(0);
-      expect(spi.note).toMatch(/stopped after 0 of \d+ bytes: The device refused DFU DNLOAD/);
-    }
+    const spi = part(backup, 'spi-flash.bin');
+    expect(spi.complete).toBe(false);
+    expect(spi.data).toHaveLength(0);
+    expect(spi.note).toMatch(/stopped after 0 of 16777216 bytes: The device refused DFU DNLOAD/);
     expectInfoAndSnapshot(backup, sim);
   });
 
   it('lists the bootloader snapshot as an incomplete part when no read size passes', async () => {
-    const sim = new SimTytStock({ ...SMALL, usbCap: 1024 });
-    const backup = await readTytStock(sim, 'md9600', 'quick', quietContext());
+    const sim = new SimTytStock({ usbCap: 1024 });
+    const backup = await readTytStock(sim, 'md9600', quietContext());
     expect(sim.forbidden).toEqual([]);
     const snapshot = part(backup, 'bootloader-0.bin');
     expect(snapshot.kind).toBe('internal-flash');
@@ -513,14 +455,14 @@ describe('a read that stops part-way', () => {
     expect(snapshot.data).toHaveLength(0);
     expect(snapshot.note).toMatch(/could not be read/);
     expect(backup.notes).toContain('The start of the internal flash (the bootloader) could not be read.');
-    expect(part(backup, 'spi-flash-000000.bin').complete).toBe(true);
+    expect(part(backup, 'spi-flash.bin').complete).toBe(true);
   });
 
   it('throws when nothing at all could be read, after restarting the radio', async () => {
     const sim = new SimTytStock({ ...SMALL, usbCap: 1024 });
     sim.stallInfo = [...TYT_STOCK_PLANS.md9600.info];
     sim.stallSpiAt = 0;
-    await expect(readTytStock(sim, 'md9600', 'quick', quietContext())).rejects.toThrow(
+    await expect(readTytStock(sim, 'md9600', quietContext())).rejects.toThrow(
       /Nothing could be read from the radio/,
     );
     expect(sim.forbidden).toEqual([]);
@@ -533,7 +475,7 @@ describe('a read that stops part-way', () => {
 describe('a radio that is not running its original firmware', () => {
   it('refuses the bootloader, asks for the radio in normal mode, sends nothing', async () => {
     const sim = new SimTytStock({ ...SMALL, mode: 'bootloader' });
-    const attempt = readTytStock(sim, 'md9600', 'all', quietContext());
+    const attempt = readTytStock(sim, 'md9600', quietContext());
     await expect(attempt).rejects.toBeInstanceOf(FlashError);
     await expect(attempt).rejects.toThrow(/flashing mode.*normal mode.*Nothing was sent/);
     expect(sim.requests).toEqual([]);
@@ -552,10 +494,9 @@ describe('a radio that is not running its original firmware', () => {
     ];
     for (const alternateNames of names) {
       const sim = new SimTytStock({ ...SMALL, alternateNames });
-      await expect(
-        readTytStock(sim, 'md9600', 'all', quietContext()),
-        String(alternateNames),
-      ).rejects.toThrow(/not a radio running its original firmware, so nothing was sent/);
+      await expect(readTytStock(sim, 'md9600', quietContext()), String(alternateNames)).rejects.toThrow(
+        /not a radio running its original firmware, so nothing was sent/,
+      );
       expect(sim.requests).toEqual([]);
       expect(sim.forbidden).toEqual([]);
     }
@@ -655,7 +596,7 @@ describe('a radio that is already backed up', () => {
   it('is recognised by its UID before anything slow, and left running as it was', async () => {
     const sim = new SimTytStock(SMALL);
     const asked: string[] = [];
-    const result = await readTytStock(sim, 'md9600', 'all', quietContext(), (id) => {
+    const result = await readTytStock(sim, 'md9600', quietContext(), (id) => {
       asked.push(id);
       return true;
     });
@@ -668,17 +609,17 @@ describe('a radio that is already backed up', () => {
   });
 
   it('is read in full when its ID is not one that is known', async () => {
-    const sim = new SimTytStock(SMALL);
-    const result = await readTytStock(sim, 'md9600', 'quick', quietContext(), () => false);
+    const sim = new SimTytStock();
+    const result = await readTytStock(sim, 'md9600', quietContext(), () => false);
     expect('known' in result).toBe(false);
     expect(sim.commands).toContain('91 01');
     expect(sim.restarts).toBe(1);
   });
 
   it('is never asked about when the radio has no ID of its own', async () => {
-    const sim = new SimTytStock({ ...SMALL, uid: null });
+    const sim = new SimTytStock({ uid: null });
     let asked = 0;
-    const result = await readTytStock(sim, 'md9600', 'quick', quietContext(), () => {
+    const result = await readTytStock(sim, 'md9600', quietContext(), () => {
       asked++;
       return true;
     });

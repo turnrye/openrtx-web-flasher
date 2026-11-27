@@ -4,7 +4,7 @@
  * file named after it. Everything that used to ask "which method is this?" looks the
  * driver up (`driverFor`) and asks it instead.
  */
-import type { AlreadyBackedUp, BackupScope, Known, RadioBackup } from '../backup/types.ts';
+import type { AlreadyBackedUp, Known, RadioBackup } from '../backup/types.ts';
 import type { WebApi } from '../devices.ts';
 import type { BackupOrigin, Purpose } from '../flash/run.ts';
 import type { FlashContext, Segment } from '../flash/types.ts';
@@ -25,8 +25,6 @@ export interface FlashJob {
 /** What a backup read is given, besides the device. */
 export interface ReadJob {
   radio: Radio;
-  /** How much to read, for the readers that know more than one amount. */
-  scope: BackupScope;
   ctx: FlashContext;
   /** How many bytes to read when that is not the radio's real size (simulated radios are small). */
   size?: number;

@@ -9,11 +9,13 @@ import {
   readGd77Stock,
   type Gd77StockOptions,
 } from './gd77-stock.ts';
-import type { BackupScope } from './types.ts';
 import { encodeGd77Frame, gd77Framing, type Gd77Model } from '../flash/gd77.ts';
 import { FlashError, quietContext, type Progress } from '../flash/types.ts';
 import { SimGd77 } from '../sim/gd77.ts';
 import { SimGd77Stock, type SimGd77StockOptions } from '../sim/gd77-stock.ts';
+
+/** The one note of a read that went well: what the radio does not give in normal mode. */
+const ONLY_THE_CODEPLUG = [expect.stringMatching(/whole 1 MB memory chip .* special start-up mode/)];
 
 /** A short timeout so the failure cases do not wait for a real radio. */
 const fast: Gd77StockOptions = { responseTimeoutMs: 40 };
@@ -23,7 +25,6 @@ const MODELS: Gd77Model[] = ['GD-77', 'DM-1801'];
 /** Reads a fresh simulator and returns what happened. */
 function run(
   simOptions: SimGd77StockOptions,
-  scope: BackupScope = 'quick',
   options: Gd77StockOptions = fast,
   prepare?: (sim: SimGd77Stock) => void,
 ) {
@@ -34,7 +35,6 @@ function run(
   const done = readGd77Stock(
     sim,
     simOptions.model,
-    scope,
     quietContext({ progress: (p) => seen.push(p), log: (m) => log.push(m) }),
     options,
   );
@@ -113,7 +113,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
     expect(backup.idKind).toBe('fingerprint');
     expect(backup.radioId).toBe(sha16(sim.calibration.subarray(0, GD77_CALIBRATION_DATA_BYTES)));
     expect(backup.firmware).toBe(model === 'GD-77' ? 'MD-760P V311' : '1801 V210');
-    expect(backup.notes).toEqual([]);
+    expect(backup.notes).toEqual(ONLY_THE_CODEPLUG);
 
     expect(sim.steps).toEqual(['PROGRA', 'M', 'ACK', 'CWB0', 'CWB1', 'CWB0']);
     expect(sim.ended).toBe(1);
@@ -128,7 +128,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
   });
 
   it('asks for the codeplug in 32-byte requests and never for the skipped range', async () => {
-    const { sim, done } = run({ model }, 'quick', { ...fast, calibration: false });
+    const { sim, done } = run({ model }, { ...fast, calibration: false });
     const backup = await done;
 
     expect(backup.parts.map((p) => p.file)).toEqual([
@@ -183,7 +183,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
   });
 
   it('lists the calibration as not read when the window reads as 0xFF', async () => {
-    const { sim, done } = run({ model }, 'quick', fast, (s) => s.calibration.fill(0xff));
+    const { sim, done } = run({ model }, fast, (s) => s.calibration.fill(0xff));
     const backup = await done;
     expect(backup.parts).toHaveLength(4);
     expect(backup.parts[3]).toMatchObject({ file: 'calibration.bin', complete: false });
@@ -220,7 +220,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
   );
 
   it('keeps a window without the calibration marker but takes no ID from it', async () => {
-    const { sim, done } = run({ model }, 'quick', fast, (s) => s.calibration.set([0x12, 0x34]));
+    const { sim, done } = run({ model }, fast, (s) => s.calibration.set([0x12, 0x34]));
     const backup = await done;
     const calibration = backup.parts.find((p) => p.file === 'calibration.bin');
     expect(calibration?.note).toMatch(/does not start with the bytes A0 0F/);
@@ -245,7 +245,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
 
   it('sends the real bootloader simulator one frame and then stops', async () => {
     const sim = new SimGd77({ model });
-    const error = await readGd77Stock(sim, model, 'quick', quietContext(), fast).catch((e: unknown) => e);
+    const error = await readGd77Stock(sim, model, quietContext(), fast).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(FlashError);
     expect((error as FlashError).message).toMatch(
       /in normal mode.*switch it on without holding the side keys/,
@@ -260,7 +260,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
   it('gives the same ID for the same radio and another for another', async () => {
     const first = await run({ model }).done;
     // The codeplug changed, the calibration did not.
-    const again = await run({ model }, 'all', fast, (s) => {
+    const again = await run({ model }, fast, (s) => {
       s.eeprom.fill(0x5a, 0x80, 0x7c00);
       s.eeprom.fill(0xa5, 0x8000);
       s.flash.fill(0x3c);
@@ -269,17 +269,6 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
     expect(first.radioId).toMatch(/^[0-9a-f]{16}$/);
     expect(again.radioId).toBe(first.radioId);
     expect(other.radioId).not.toBe(first.radioId);
-  });
-
-  it('reads the same for the all scope and says what is missing', async () => {
-    const quick = await run({ model }).done;
-    const { sim, done } = run({ model }, 'all');
-    const all = await done;
-    expect(all.parts.map((p) => p.file)).toEqual(quick.parts.map((p) => p.file));
-    all.parts.forEach((part, i) => expect(Buffer.compare(part.data, quick.parts[i].data)).toBe(0));
-    expect(all.notes.join(' ')).toMatch(/whole 1 MB memory chip .* special start-up mode/);
-    expect(quick.notes.join(' ')).not.toMatch(/memory chip/);
-    expect(onlyRead(sim)).toBe(true);
   });
 
   it('works with unnumbered reports', async () => {
@@ -296,7 +285,7 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
   it('leaves a device open that was open before', async () => {
     const sim = new SimGd77Stock({ model });
     await sim.open();
-    await readGd77Stock(sim, model, 'quick', quietContext(), fast);
+    await readGd77Stock(sim, model, quietContext(), fast);
     expect(sim.opened).toBe(true);
     expect(onlyRead(sim)).toBe(true);
   });
@@ -325,13 +314,7 @@ describe('readGd77Stock', () => {
   it('notes a radio that identifies itself as another model', async () => {
     const sim = new SimGd77Stock({ model: 'DM-1801' });
     const log: string[] = [];
-    const backup = await readGd77Stock(
-      sim,
-      'GD-77',
-      'quick',
-      quietContext({ log: (m) => log.push(m) }),
-      fast,
-    );
+    const backup = await readGd77Stock(sim, 'GD-77', quietContext({ log: (m) => log.push(m) }), fast);
     expect(backup.firmware).toBe('1801 V210');
     expect(backup.notes.join(' ')).toMatch(/calls itself "1801"/);
     expect(log.some((line) => line.startsWith('Warning:'))).toBe(true);
@@ -344,7 +327,7 @@ describe('readGd77Stock', () => {
     const { done } = run({ model: 'GD-77', ident });
     const backup = await done;
     expect(backup.firmware).toBe('MD-760 V200');
-    expect(backup.notes).toEqual([]);
+    expect(backup.notes).toEqual(ONLY_THE_CODEPLUG);
   });
 
   it('rejects an identification of the wrong length', async () => {

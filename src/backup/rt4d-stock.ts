@@ -40,13 +40,11 @@ import { fingerprintUnlessBlank, hexSpaced } from '../bytes.ts';
 import { RT4D_BAUD_RATE } from '../flash/rt4d.ts';
 import { withSerial, type SerialReader } from '../flash/serial.ts';
 import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
-import type { AlreadyBackedUp, BackupPart, BackupScope, Known, RadioBackup } from './types.ts';
+import type { AlreadyBackedUp, BackupPart, Known, RadioBackup } from './types.ts';
 
 /** Bytes per block of the read command. */
 export const RT4D_SPI_BLOCK_SIZE = 0x400;
-/** Scope 'quick': calibration, settings, channels, zones, contacts and the other user data. */
-export const RT4D_QUICK_BYTES = 0x100000;
-/** Scope 'all': the whole 16 MiB chip (16384 blocks). */
+/** What is read: the whole 16 MiB chip (16384 blocks). */
 export const RT4D_ALL_BYTES = 0x1000000;
 /** What the reference tool dumps (4096 blocks): everything below the address book. */
 export const RT4D_REFERENCE_BYTES = 0x400000;
@@ -157,9 +155,9 @@ function repeatsFirst(data: Uint8Array): boolean {
 }
 
 /**
- * Reads the RT-4D's SPI flash while the radio runs its original firmware: the first
- * 1 MiB for 'quick', all 16 MiB for 'all'. Takes a closed port, opens it
- * at 115200 baud and closes it again whatever happens. Sends nothing but block reads.
+ * Reads the RT-4D's SPI flash while the radio runs its original firmware, all 16 MiB of
+ * it. Takes a closed port, opens it at 115200 baud and closes it again whatever happens.
+ * Sends nothing but block reads.
  * Throws FlashError when not even the first block can be read; a read that fails later
  * returns what was read so far, marked incomplete.
  *
@@ -168,20 +166,17 @@ function repeatsFirst(data: Uint8Array): boolean {
  */
 export async function readRt4dStock(
   port: SerialPort,
-  scope: BackupScope,
   ctx: FlashContext,
   options?: Rt4dStockOptions,
 ): Promise<RadioBackup>;
 export async function readRt4dStock(
   port: SerialPort,
-  scope: BackupScope,
   ctx: FlashContext,
   options: Rt4dStockOptions | undefined,
   known: Known | undefined,
 ): Promise<RadioBackup | AlreadyBackedUp>;
 export async function readRt4dStock(
   port: SerialPort,
-  scope: BackupScope,
   ctx: FlashContext,
   options: Rt4dStockOptions = {},
   known?: Known,
@@ -189,7 +184,7 @@ export async function readRt4dStock(
   const responseTimeoutMs = options.responseTimeoutMs ?? 2000;
   const quietMs = options.quietMs ?? 100;
   const attempts = Math.max(1, options.attempts ?? 3);
-  const total = scope === 'quick' ? RT4D_QUICK_BYTES : RT4D_ALL_BYTES;
+  const total = RT4D_ALL_BYTES;
   const data = new Uint8Array(total);
   let done = 0;
   let stopped = null as string | null;
@@ -269,17 +264,13 @@ export async function readRt4dStock(
     notes.push(
       `Only the first ${done} of ${total} bytes were read; then the radio stopped answering properly. Read it again for a complete backup.`,
     );
-    if (scope === 'all' && done >= RT4D_REFERENCE_BYTES) {
+    if (done >= RT4D_REFERENCE_BYTES) {
       notes.push(
         'Everything below 0x400000 is in this backup: calibration, settings, channels, zones, contacts, the boot logo, fonts and voices. What is missing is part of the address book above it.',
       );
     }
   }
-  if (scope === 'quick') {
-    notes.push(
-      'This is the first megabyte of the memory chip: calibration, settings, channels, zones, contacts and the other things you can change. The boot logo, fonts and voice prompts above it are not included.',
-    );
-  } else if (whole) {
+  if (whole) {
     notes.push(
       'This is the whole 16 MiB memory chip, the address book (0x400000 to 0xFFFFFF) included. The firmware is not in it: the program memory of this radio cannot be read.',
     );

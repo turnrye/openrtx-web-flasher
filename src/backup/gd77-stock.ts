@@ -42,7 +42,7 @@ import {
   type Gd77Model,
 } from '../flash/gd77.ts';
 import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
-import type { BackupPart, BackupScope, PartKind, RadioBackup } from './types.ts';
+import type { BackupPart, PartKind, RadioBackup } from './types.ts';
 
 /** Bytes per read request; the most the radio returns (hid.c, OpenGD77CPS). */
 const READ_BYTES = 32;
@@ -259,8 +259,8 @@ class StockReader {
 
 /**
  * Reads the codeplug of a GD-77 or DM-1801 that runs its original firmware, and the
- * calibration when the radio shows it at CPS address 0x7C00. Both scopes read the
- * same; the radio gives no more in normal mode. Opens `dev` if needed (and then closes
+ * calibration when the radio shows it at CPS address 0x7C00. The radio gives no more
+ * in normal mode, and the backup says so. Opens `dev` if needed (and then closes
  * it again). Sends no write command. Throws FlashError when the radio does not take
  * the handshake (it is in flashing mode, or off) or a codeplug read fails. A
  * calibration window that cannot be read does not fail the read: the calibration is
@@ -269,7 +269,6 @@ class StockReader {
 export async function readGd77Stock(
   dev: HIDDevice,
   model: Gd77Model,
-  scope: BackupScope,
   ctx: FlashContext,
   options: Gd77StockOptions = {},
 ): Promise<RadioBackup> {
@@ -395,11 +394,9 @@ export async function readGd77Stock(
     });
     notes.push(noCalibration);
   }
-  if (scope === 'all') {
-    notes.push(
-      'The whole 1 MB memory chip of this radio can only be read in a special start-up mode that this page does not use yet. This backup holds the codeplug, which is all the radio gives in normal mode.',
-    );
-  }
+  notes.push(
+    'The whole 1 MB memory chip of this radio can only be read in a special start-up mode that this page does not use yet. This backup holds the codeplug, which is all the radio gives in normal mode.',
+  );
   ctx.progress({ phase: 'done', done: total, total });
   ctx.log(`Read ${parts.reduce((sum, p) => sum + p.data.length, 0)} bytes in ${parts.length} parts`);
   return { radioId, idKind: radioId === null ? null : 'fingerprint', firmware, parts, notes };
