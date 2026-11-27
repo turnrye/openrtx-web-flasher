@@ -14,9 +14,16 @@
 /* Classes used by the flasher's components live outside site/. */
 @source '../../src';
 
+/*
+ * Only the components the flasher uses. The stylesheet is on every page, and several of
+ * daisyUI's other class names (hero, stack, dropdown, toggle) are Starlight's too.
+ */
 @plugin 'daisyui' {
   themes: false;
   logs: false;
+  include:
+    alert, badge, button, card, collapse, fieldset, input, join, label, link, list, loading, progress, radius,
+    select;
 }
 
 /* Starlight puts data-theme="dark" on <html>; the daisyUI theme takes the same name. */
@@ -76,23 +83,47 @@
   --color-gray-900: #000000;
 }
 
-/* Starlight leaves out Tailwind's reset; inside app markup, bare controls start clean. */
-.not-content :where(button, a) {
-  font: inherit;
-  color: inherit;
+/*
+ * ---------------------------------------------------------------------------------
+ * Hand-written rules. Everything else on the site is Starlight, daisyUI components or
+ * Tailwind utilities; what follows is what none of them has.
+ * ---------------------------------------------------------------------------------
+ */
+
+/*
+ * Starlight leaves out Tailwind's reset, so inside app markup (`not-content`) bare
+ * buttons, links and lists start clean. In the components layer: after Starlight's own
+ * styles, before daisyUI and the utilities, which must win over it.
+ */
+@layer components {
+  .not-content :where(button, a) {
+    font: inherit;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .not-content :where(button) {
+    border: 0;
+    padding: 0;
+    background: none;
+    text-align: inherit;
+  }
+
+  .not-content :where(summary) {
+    cursor: pointer;
+  }
 }
 
-.not-content :where(button) {
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-}
-
-/* Keyboard focus in the brand gold, after daisyUI's own rings. */
 @layer utilities {
-  .not-content :focus-visible {
+  /* Keyboard focus in the brand gold, after daisyUI's own rings. */
+  .not-content :focus-visible,
+  .not-content .collapse:has(> summary:focus-visible) {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+
+  /* daisyUI's card takes Starlight's cards too (same class name): keep them square. */
+  .sl-markdown-content .card:not(:where(.not-content *)) {
+    border-radius: 0;
   }
 }

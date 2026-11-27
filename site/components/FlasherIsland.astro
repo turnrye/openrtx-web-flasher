@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // The flasher on a page of the site. It talks to radios through browser APIs, so it
 // only ever runs in the browser: nothing of it is rendered at build time.
+// `not-content` is Starlight's opt-out: its Markdown typography stays off the app.
 import { App } from '../../src/app.tsx';
-import '../../src/ui/styles.css';
 ---
 
-<App client:only="preact" />
-<noscript>This page needs JavaScript to list firmware and talk to the radio.</noscript>
+<div class="not-content">
+  <App client:only="preact" />
+  <noscript>This page needs JavaScript to list firmware and talk to the radio.</noscript>
+</div>

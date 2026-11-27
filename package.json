@@ -24,7 +24,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings 0",
-    "lint:css": "stylelint \"src/**/*.css\"",
+    "lint:css": "stylelint \"site/styles/**/*.css\"",
     "lint:sh": "node scripts/shellcheck.mjs ci/*.sh",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

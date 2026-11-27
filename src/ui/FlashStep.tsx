@@ -17,12 +17,15 @@ import {
 } from '../firmware/builds.ts';
 import { flashDevice, type PickedDevice, type Purpose } from '../flash/run.ts';
 import type { Progress, Segment } from '../flash/types.ts';
-import { apiFor, filesFor, type Radio } from '../radios.ts';
+import { apiFor, backupFor, filesFor, type Radio } from '../radios.ts';
+import { lastFlashed, type Flashed } from '../settings.ts';
 import { Activity, paintGate } from './Activity.tsx';
-import { formatSize } from './common.tsx';
+import { BuildFacts, describeBuild } from './BuildFacts.tsx';
+import { ChooserHelp, ChooserHint } from './Chooser.tsx';
+import { formatDate, formatSize, Notice, Out } from './common.tsx';
 import { ExperimentalGate } from './Experimental.tsx';
 import { RadioArt } from './RadioArt.tsx';
-import { CopyReport, ReportLink, ReportNote, type ReportDraft } from './Report.tsx';
+import { CopyReport, ReportLink, ReportNote, StillFailing, type ReportDraft } from './Report.tsx';
 import { OtherTools } from './UseInstead.tsx';
 
 /** Where a flash attempt stands. */
@@ -36,7 +39,7 @@ interface Props {
   env: DeviceEnv;
   /** Whether this browser can talk to this radio at all. */
   supported: boolean;
-  /** Whether talking to this radio is allowed: it was checked on hardware, or experimental flashing is on. */
+  /** Whether writing to this radio is allowed: it was checked on hardware, or experimental flashing is on. */
   allowed: boolean;
   /** Turns experimental flashing on or off. */
   onExperimental: (on: boolean) => void;
@@ -48,13 +51,20 @@ interface Props {
   onBusy: (busy: boolean) => void;
   /** How the backup step ended, for a report: "saved, complete", "skipped". */
   backupSummary?: string;
+  /** The ID of the radio, when the backup step read it. */
+  radioId?: string | null;
+  /** Starts over for a second radio of the same model. */
+  onAnother: () => void;
 }
 
 const API_NAME = { usb: 'WebUSB', serial: 'Web Serial', hid: 'WebHID' } as const;
 
+/** The row of buttons and notes under a step's text. */
+const ACTIONS = 'flex flex-wrap items-center gap-x-4 gap-y-2';
+
 /** A download link for a mirrored file, or a button for one that only exists in memory. */
 function Download({ file, primary }: { file: BuildFile; primary?: boolean }) {
-  const cls = `btn${primary ? ' primary' : ''}`;
+  const cls = `btn h-auto min-h-(--size) py-1 break-all ${primary ? 'btn-primary' : ''}`;
   const text = `Download ${file.name}`;
   if (file.path) {
     return (
@@ -70,6 +80,25 @@ function Download({ file, primary }: { file: BuildFile; primary?: boolean }) {
   );
 }
 
+/**
+ * Whether a flash that failed had begun to change the radio. Flashers report an erase or
+ * write phase before they send the first such command; cskburn, whose progress is read
+ * from what it prints, names the partition it is about to burn before any amount.
+ */
+export function beganWriting(phases: ReadonlySet<Progress['phase']>, log: readonly string[]): boolean {
+  return (
+    phases.has('erase') ||
+    phases.has('write') ||
+    phases.has('verify') ||
+    log.some((line) => line.startsWith('Burning partition'))
+  );
+}
+
+/** True when `build` is what `flashed` records. */
+function sameBuild(flashed: Flashed | null, build: Build): flashed is Flashed {
+  return !!flashed && flashed.label === build.label && flashed.sha === build.sha;
+}
+
 /** The flash step of the page. */
 export function FlashStep(props: Props) {
   const { radio, build, file, env, supported, allowed, getDevice, dropDevice, onBusy } = props;
@@ -81,6 +110,10 @@ export function FlashStep(props: Props) {
   const [status, setStatus] = useState<Status>('idle');
   const [progress, setProgress] = useState<Progress>({ phase: 'connect', done: 0, total: 1 });
   const [message, setMessage] = useState('');
+  /** Whether the attempt that failed had begun to erase or write. */
+  const [wrote, setWrote] = useState(false);
+  /** True after the browser's device list was closed without a pick. */
+  const [cancelled, setCancelled] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [startedAt, setStartedAt] = useState(0);
 
@@ -93,6 +126,7 @@ export function FlashStep(props: Props) {
     setHash('');
     setLoadError('');
     setStatus('idle');
+    setCancelled(false);
     setLog([]);
     const wanted = companionsFor(radio, build).filter((c) => c.found);
     Promise.all([fileBytes(file), ...wanted.map((c) => fileBytes(c.found!))])
@@ -120,7 +154,11 @@ export function FlashStep(props: Props) {
     .filter((f) => f.name !== file.name);
   const companions = companionsFor(radio, build);
   const command = radio.manual.command?.replace('{file}', file.name).replace('{model}', radio.hidModel ?? '');
+  const backup = backupFor(radio);
   const onWindows = navigator.userAgent.includes('Windows');
+  /** What this browser last flashed onto this very radio, when its ID is known; else onto one of its model. */
+  const onThisRadio = props.radioId ? lastFlashed.get(radio.id, props.radioId) : null;
+  const before = onThisRadio ?? lastFlashed.get(radio.id);
   /** What every report about this flash says; the outcome and the message are added per link. */
   const about: Omit<ReportDraft, 'outcome'> = {
     step: 'flash',
@@ -129,6 +167,9 @@ export function FlashStep(props: Props) {
       label: build.label,
       file: [file.name, ...companions.filter((c) => c.found).map((c) => c.file)].join(' + '),
       sha256: hash,
+      commit: build.sha,
+      date: build.backup ? undefined : build.date,
+      url: build.url,
     },
     backup: props.backupSummary,
     log,
@@ -138,18 +179,24 @@ export function FlashStep(props: Props) {
   const flash = async () => {
     if (!data || !also) return;
     const lines: string[] = [];
+    const phases = new Set<Progress['phase']>();
     const say = (line: string) => {
       lines.push(line);
       setLog([...lines]);
     };
     setMessage('');
+    setCancelled(false);
     setLog([]);
     const paint = paintGate();
     let device: PickedDevice;
     try {
       device = await getDevice('flash');
     } catch (e) {
-      if (isChooserCancel(e)) return;
+      if (isChooserCancel(e)) {
+        setCancelled(true);
+        return;
+      }
+      setWrote(false);
       setStatus('error');
       setMessage(e instanceof Error ? e.message : String(e));
       return;
@@ -158,7 +205,9 @@ export function FlashStep(props: Props) {
     onBusy(true);
     setStartedAt(Date.now());
     setProgress({ phase: 'connect', done: 0, total: data.length });
-    say(`Flashing ${file.name} (${data.length} bytes) to ${radio.name}`);
+    say(`Firmware: ${describeBuild(build)}`);
+    if (build.url) say(`From: ${build.url}`);
+    say(`Sending ${file.name} (${data.length} bytes) to ${radio.name}`);
     try {
       await flashDevice(
         radio,
@@ -168,6 +217,7 @@ export function FlashStep(props: Props) {
           log: say,
           sleep: (ms) => env.sleep(ms),
           progress: (p) => {
+            phases.add(p.phase);
             if (paint(p)) setProgress(p);
           },
         },
@@ -176,6 +226,12 @@ export function FlashStep(props: Props) {
       );
       setProgress({ phase: 'done', done: 1, total: 1 });
       say('Finished.');
+      lastFlashed.set(radio.id, {
+        label: build.label,
+        sha: build.sha,
+        at: new Date().toISOString(),
+        radioId: props.radioId ?? undefined,
+      });
       setStatus('done');
     } catch (e) {
       const text = e instanceof Error ? e.message : String(e);
@@ -183,37 +239,48 @@ export function FlashStep(props: Props) {
       dropDevice();
       say(`Failed: ${text}`);
       setMessage(text);
+      setWrote(beganWriting(phases, lines));
       setStatus('error');
     } finally {
       onBusy(false);
     }
   };
 
+  /** A report that the radio did not start after a flash the page called done. */
+  const notStarted: ReportDraft = {
+    ...about,
+    outcome: 'failed',
+    error: 'The page said done, but the radio did not start OpenRTX.',
+  };
+
   return (
-    <div data-testid="flash-step">
-      <div class="summary">
-        <RadioArt id={radio.id} />
-        <div>
-          <div class="what">
+    <div class="flex flex-col gap-4" data-testid="flash-step">
+      <div class="flex items-center gap-4 rounded-box bg-base-200 p-4">
+        <RadioArt id={radio.id} class="h-24 w-14 flex-none" />
+        <div class="flex min-w-0 flex-col gap-1">
+          <div class="text-lg font-medium">
             {build.label} for the {radio.name}
           </div>
-          <div class="muted small">
+          <div class="text-sm break-all text-base-content/80">
             <code>{file.name}</code> · {formatSize(file.size)}
             {hash && <> · SHA-256 {hash.slice(0, 12)}…</>}
           </div>
+          <div class="text-sm text-base-content/80">
+            <BuildFacts build={build} testid="flash-build" />
+          </div>
           {build.backup && (
-            <div class="gold small" data-testid="restoring">
+            <div class="text-sm text-primary" data-testid="restoring">
               This is a backup. Only restore it onto the radio it came from.
             </div>
           )}
           {companions.map((c) =>
             c.found ? (
-              <div class="muted small" key={c.file} data-testid="also-writes">
+              <div class="text-sm break-all text-base-content/80" key={c.file} data-testid="also-writes">
                 <code>{c.file}</code> · {formatSize(c.found.size)} · the {c.what}, written at 0x
                 {c.address.toString(16)} in the same run
               </div>
             ) : (
-              <div class="error small" key={c.file} role="alert" data-testid="missing-companion">
+              <div class="text-sm text-warning" key={c.file} role="alert" data-testid="missing-companion">
                 This build has no {c.file}. OpenRTX on the {radio.name} needs its {c.what} as well as{' '}
                 {file.name}: without it the radio starts with a black screen. Use the build zip, which has
                 both, unless this radio already runs OpenRTX.
@@ -221,156 +288,213 @@ export function FlashStep(props: Props) {
             ),
           )}
           {loadError && (
-            <div class="error" role="alert">
+            <div class="text-warning" role="alert">
               {loadError}
             </div>
           )}
         </div>
       </div>
 
-      <div class="block">
-        {radio.flashNotes && (
-          <ul data-testid="flash-notes">
-            {radio.flashNotes.map((n) => (
-              <li key={n}>{n}</li>
-            ))}
-          </ul>
-        )}
-        {radio.method === 'uf2-copy' ? (
-          <>
-            <p>Download the file and copy it onto the USB drive that appeared.</p>
-            <div class="actions">
-              <Download file={file} primary />
-            </div>
-            <p class="muted small">{radio.after}</p>
-          </>
-        ) : !supported ? (
-          <p data-testid="unsupported">
-            This browser has no {API_NAME[api!]}, which the page needs to talk to this radio. Use Chrome or
-            Edge on a computer, or flash it yourself with the file below.
-          </p>
-        ) : !allowed ? (
-          <ExperimentalGate radio={radio} onTurnOn={() => props.onExperimental(true)} />
-        ) : (
-          <>
-            {radio.verified ? (
-              <p class="ok-text small" data-testid="verified">
+      {sameBuild(before, build) && status !== 'done' && (
+        <Notice tone="info" testid="same-build">
+          {build.label} is what this browser last flashed onto{' '}
+          {onThisRadio ? 'this radio' : `a ${radio.name}`}, on {formatDate(before.at)}. Flashing it again
+          changes nothing unless that flash went wrong.
+        </Notice>
+      )}
+
+      {radio.flashNotes && (
+        <ul class="flex list-disc flex-col gap-1 ps-5" data-testid="flash-notes">
+          {radio.flashNotes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+      {radio.method === 'uf2-copy' ? (
+        <>
+          <p>Download the file and copy it onto the USB drive that appeared.</p>
+          <div class={ACTIONS}>
+            <Download file={file} primary />
+          </div>
+          <p class="text-sm text-muted">{radio.after}</p>
+        </>
+      ) : !supported ? (
+        <Notice tone="info" testid="unsupported">
+          This browser has no {API_NAME[api!]}, which the page needs to talk to this radio. Use Chrome or Edge
+          on a computer, or flash it yourself with the file below.
+        </Notice>
+      ) : !allowed ? (
+        <ExperimentalGate radio={radio} onTurnOn={() => props.onExperimental(true)} />
+      ) : (
+        <>
+          {radio.verified ? (
+            <p class="flex flex-wrap items-center gap-2 text-sm" data-testid="verified">
+              <span class="badge badge-success badge-sm">Checked</span>
+              <span>
                 Checked on a real radio:{' '}
-                {[radio.verified.version, radio.verified.platform, radio.verified.date]
+                {[radio.verified.version, radio.verified.platform, formatDate(radio.verified.date)]
                   .filter(Boolean)
                   .join(', ')}
                 .
-              </p>
-            ) : (
-              <p class="error small" data-testid="experimental-note">
-                Experimental: not yet checked on a real {radio.name}.{' '}
-                <button
-                  class="linkish"
-                  type="button"
-                  disabled={status === 'running'}
-                  data-testid="turn-off-experimental"
-                  onClick={() => props.onExperimental(false)}
-                >
-                  Turn off
-                </button>
-              </p>
-            )}
-            {onWindows && api === 'usb' && (
-              <p class="muted small">
-                On Windows the radio needs the WinUSB driver before Chrome can see it. Install it once with
-                Zadig while the radio is in flashing mode.
-              </p>
-            )}
-            <div class="actions">
+              </span>
+            </p>
+          ) : (
+            <p class="flex flex-wrap items-center gap-2 text-sm" data-testid="experimental-note">
+              <span class="badge badge-outline badge-warning badge-sm">Not checked yet</span>
+              <span>Experimental flashing is on.</span>
               <button
-                class="btn primary"
+                class="link link-primary"
                 type="button"
-                disabled={!data || !also || status === 'running'}
-                data-testid="flash"
-                onClick={() => void flash()}
+                disabled={status === 'running'}
+                data-testid="turn-off-experimental"
+                onClick={() => props.onExperimental(false)}
               >
-                {status === 'running' && <span class="spinner" aria-hidden="true" />}
-                {status === 'running' ? 'Flashing…' : status === 'idle' ? 'Connect and flash' : 'Flash again'}
+                Turn off
               </button>
-              {status === 'running' && <span class="muted">Do not unplug or switch off the radio.</span>}
-            </div>
-            {status !== 'idle' && (
-              <Activity
-                progress={progress}
-                running={status === 'running'}
-                failed={status === 'error'}
-                log={log}
-                startedAt={startedAt}
-              />
-            )}
+            </p>
+          )}
+          {status === 'error' && (
+            <Notice tone="error" role="alert" testid="flash-error">
+              <p>{message}</p>
+              {/* Some flashers say it themselves, in their own words. */}
+              {!/nothing was sent/i.test(message) && (
+                <p class="mt-1 text-sm" data-testid="flash-wrote">
+                  {wrote
+                    ? 'The radio was partly written. It may not start until a flash completes: put it in flashing mode again and try again.'
+                    : 'Nothing was written to the radio.'}
+                </p>
+              )}
+            </Notice>
+          )}
+          {status === 'done' && (
+            <Notice tone="success" role="status" testid="done">
+              <div class="flex flex-col gap-2">
+                <p class="font-medium">
+                  Done. The {radio.name} now holds{' '}
+                  <span data-testid="done-build">{describeBuild(build)}</span>.
+                </p>
+                <p data-testid="after">
+                  Next: {radio.after}
+                  {build.backup ? '' : ' It should start OpenRTX.'}
+                </p>
+              </div>
+            </Notice>
+          )}
+          {status === 'done' && (
+            <ul class="flex list-disc flex-col gap-2 ps-5" data-testid="after-flash">
+              <li>
+                The{' '}
+                <Out href={siteUrl('user_guide/')} testid="after-guide">
+                  users’ guide
+                </Out>{' '}
+                covers the screens, the menus and M17.
+              </li>
+              <li data-testid="if-not-starting">
+                If the radio does not start: put it in flashing mode again and press “Flash again”. The way
+                back is the manufacturer’s firmware, written with{' '}
+                <Out href={radio.manual.url}>{radio.manual.tool}</Out>
+                {backup.how === 'read' && backup.restorable
+                  ? ', or a backup this page took: restore it from the Backups list below.'
+                  : '.'}
+              </li>
+            </ul>
+          )}
+          {status !== 'running' && status !== 'done' && <ChooserHint radio={radio} />}
+          {onWindows && api === 'usb' && status === 'idle' && (
+            <p class="text-sm text-base-content/80" data-testid="windows-driver">
+              On Windows the radio needs the WinUSB driver before the browser can see it. Install it once with{' '}
+              <Out href="https://zadig.akeo.ie">Zadig</Out> while the radio is in flashing mode.
+            </p>
+          )}
+          <div class={ACTIONS}>
             {status === 'done' && (
-              <p class="ok-text" role="status" data-testid="done">
-                Done. {radio.after}
-              </p>
+              <button
+                class="btn h-auto min-h-(--size) py-2"
+                type="button"
+                data-testid="flash-another"
+                onClick={props.onAnother}
+              >
+                Flash another {radio.name}
+              </button>
             )}
-            {status === 'done' &&
-              (asksForSuccess(radio.verified !== null) ? (
-                // Nobody has checked this radio yet: a "worked" report is what gets it checked.
-                <div class="ask" data-testid="ask-worked">
-                  <p>Did the radio start OpenRTX? Your answer helps get the {radio.name} checked.</p>
-                  <div class="actions">
-                    <ReportLink
-                      report={{ ...about, outcome: 'worked' }}
-                      label="Yes, report that it worked"
-                      testid="report-worked"
-                    />
-                    <ReportLink
-                      report={{
-                        ...about,
-                        outcome: 'failed',
-                        error: 'The page said done, but the radio did not start OpenRTX.',
-                      }}
-                      label="No, report a problem"
-                      testid="report-failed"
-                    />
-                    <CopyReport report={{ ...about, outcome: 'worked' }} />
-                  </div>
-                  <ReportNote />
-                </div>
-              ) : (
-                // A checked radio: more successes say nothing new.
-                <p class="small" data-testid="ask-problem">
-                  Not working?{' '}
+            <button
+              class={`btn ${status === 'done' ? 'btn-ghost' : 'btn-primary'}`}
+              type="button"
+              disabled={!data || !also || status === 'running'}
+              data-testid="flash"
+              onClick={() => void flash()}
+            >
+              {status === 'running' && (
+                <span class="loading loading-spinner loading-sm" data-testid="spinner" />
+              )}
+              {status === 'running'
+                ? 'Flashing…'
+                : status === 'idle'
+                  ? 'Connect and flash'
+                  : status === 'error'
+                    ? 'Try again'
+                    : 'Flash again'}
+            </button>
+            {status === 'running' && (
+              <span class="text-sm">Do not unplug or switch off the radio, and keep this tab open.</span>
+            )}
+          </div>
+          {cancelled && <ChooserHelp radio={radio} purpose="flash" />}
+          {status === 'done' &&
+            (asksForSuccess(radio.verified !== null) ? (
+              // Nobody has checked this radio yet: a "worked" report is what gets it checked.
+              <div
+                class="flex flex-col gap-2 rounded-box border border-base-300 p-4"
+                data-testid="ask-worked"
+              >
+                <p>Did the radio start OpenRTX? Your answer helps get the {radio.name} checked.</p>
+                <div class="flex flex-wrap items-center gap-2">
                   <ReportLink
-                    report={{
-                      ...about,
-                      outcome: 'failed',
-                      error: 'The page said done, but the radio did not start OpenRTX.',
-                    }}
-                    label="Report a problem"
-                    testid="report-failed"
-                    plain
+                    report={{ ...about, outcome: 'worked' }}
+                    label="Yes, report that it worked"
+                    testid="report-worked"
                   />
-                </p>
-              ))}
-            {status === 'error' && (
-              <>
-                <p class="error" role="alert" data-testid="flash-error">
-                  {message} Put the radio back in flashing mode and try again.
-                </p>
-                <div class="actions">
-                  <ReportLink
-                    report={{ ...about, outcome: 'failed', error: message }}
-                    label="Report this"
-                    testid="report-failed"
-                  />
-                  <CopyReport report={{ ...about, outcome: 'failed', error: message }} />
+                  <ReportLink report={notStarted} label="No, report a problem" testid="report-failed" />
+                  <CopyReport report={{ ...about, outcome: 'worked' }} />
                 </div>
                 <ReportNote />
-              </>
-            )}
-          </>
-        )}
+              </div>
+            ) : (
+              // A checked radio: more successes say nothing new.
+              <p class="text-sm" data-testid="ask-problem">
+                Not working?{' '}
+                <ReportLink report={notStarted} label="Report a problem" testid="report-failed" plain />
+              </p>
+            ))}
+          {/* Always in the same place among its neighbours, so the console stays open when the flash ends. */}
+          {status !== 'idle' && (
+            <Activity
+              progress={progress}
+              running={status === 'running'}
+              failed={status === 'error'}
+              log={log}
+              startedAt={startedAt}
+            />
+          )}
+          {status === 'error' && (
+            <StillFailing
+              radio={radio}
+              purpose="flash"
+              report={{ ...about, outcome: 'failed', error: message }}
+            />
+          )}
+        </>
+      )}
 
-        {radio.method !== 'uf2-copy' && (
-          // Folded while the page can do the flashing; open when it cannot, or usually cannot.
-          <details class="more" data-testid="other-tool" open={!supported || !!radio.useInstead}>
-            <summary>Use another tool instead</summary>
+      {radio.method !== 'uf2-copy' && (
+        // Folded while the page can do the flashing; open when it cannot, or usually cannot.
+        <details
+          class="collapse-arrow collapse border border-separator"
+          data-testid="other-tool"
+          open={!supported || !!radio.useInstead}
+        >
+          <summary class="collapse-title min-h-0 py-2 text-sm">Use another tool instead</summary>
+          <div class="collapse-content flex flex-col gap-3">
             {radio.useInstead ? (
               <>
                 <p>Download the .bin file and write it with one of these:</p>
@@ -379,21 +503,28 @@ export function FlashStep(props: Props) {
             ) : (
               <>
                 <p>
-                  Download the file and write it with <a href={radio.manual.url}>{radio.manual.tool}</a>.
+                  Download the file and write it with <Out href={radio.manual.url}>{radio.manual.tool}</Out>.
                 </p>
-                {command && <pre class="command">{command}</pre>}
-                {radio.manual.windows && <p class="muted small">{radio.manual.windows}</p>}
+                {command && (
+                  <pre
+                    class="overflow-x-auto rounded-box bg-base-200 p-3 font-mono text-sm"
+                    data-testid="command"
+                  >
+                    {command}
+                  </pre>
+                )}
+                {radio.manual.windows && <p class="text-sm text-muted">{radio.manual.windows}</p>}
               </>
             )}
-            <div class="actions">
+            <div class="flex flex-wrap items-center gap-2">
               <Download file={file} />
               {extras.map((f) => (
                 <Download key={f.name} file={f} />
               ))}
             </div>
-          </details>
-        )}
-      </div>
+          </div>
+        </details>
+      )}
     </div>
   );
 }
