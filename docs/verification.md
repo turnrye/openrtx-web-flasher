@@ -13,7 +13,7 @@ points at its latest line here.
 
 Notes on the MD-9600 line:
 
-- This is the command line, not the page. It is recorded in `CHECKED` in `cli/main.ts`.
+- This is the command line, not the page. It is recorded in `commandLineVerified` in `src/radios.ts`.
   The page's `verified` stays empty for this radio.
 - Build 1cf75e7 is the `fix/cs7000p-robot-mode` branch before it was squashed into
   52be644. The TYT flasher, the DFU layer and the USB code are the same in both.
@@ -35,7 +35,7 @@ Notes on the C62 line:
 Notes on the CS7000-M17 Plus line:
 
 - This is the command line, not the page: the page cannot reach robot mode. It is
-  recorded in `CHECKED` in `cli/main.ts`. The page's `verified` stays empty for this
+  recorded in `commandLineVerified` in `src/radios.ts`. The page's `verified` stays empty for this
   radio.
 - The tool printed build 0b44884: it was built from 12fc2f7's files before they were
   committed.

@@ -6,6 +6,7 @@
  * its per-radio artifacts `openrtx-<id>`.
  */
 import { DRIVERS, driverFor } from './drivers/index.ts';
+import type { Purpose } from './flash/run.ts';
 
 /** How the bytes get into the radio: the name of a driver (src/drivers/index.ts). */
 export type Method = keyof typeof DRIVERS;
@@ -107,6 +108,27 @@ export interface Radio {
   commandLine?: Pick<Radio, 'method' | 'enter' | 'after' | 'flashNotes' | 'manual'>;
   /** Null until a flash through this page was checked on real hardware. */
   verified: Verification | null;
+  /**
+   * What the command line was checked for on real hardware, by what was done: flashing
+   * or backing up. One does not stand for the other: they are different code and, on many
+   * radios, a different mode of the radio. Nor does `verified` stand for either: that is
+   * the page in Chrome, which reaches the radio through another USB and serial layer.
+   * Left out until someone does it.
+   */
+  commandLineVerified?: Partial<Record<Purpose, Verification>>;
+}
+
+/** What is known about a radio on real hardware, whichever tool it was checked with. */
+export interface HardwareChecks {
+  /** A flash through the page; null when there has been none. */
+  page: Verification | null;
+  /** The command line, by what was done; empty when nothing was. */
+  commandLine: Partial<Record<Purpose, Verification>>;
+}
+
+/** The hardware checks on record for `radio`: the page's and the command line's. */
+export function checksFor(radio: Pick<Radio, 'verified' | 'commandLineVerified'>): HardwareChecks {
+  return { page: radio.verified, commandLine: radio.commandLineVerified ?? {} };
 }
 
 /** `radio` as the command line flashes it. */
@@ -177,6 +199,14 @@ export const RADIOS: Radio[] = [
     after: 'Remove power and apply it again.',
     manual: RADIO_TOOL,
     verified: null,
+    // docs/verification.md, 2026-11-25.
+    commandLineVerified: {
+      flash: {
+        version: 'development build 242dcee0',
+        platform: 'Node 26.9, macOS on Apple silicon',
+        date: '2026-11-25',
+      },
+    },
   },
   {
     id: 'dm1701',
@@ -322,6 +352,14 @@ export const RADIOS: Radio[] = [
       },
     },
     verified: null,
+    // docs/verification.md, 2026-11-24: in robot mode, the command line's own way in.
+    commandLineVerified: {
+      flash: {
+        version: 'development build 9951a7d1',
+        platform: 'Node 26.9, macOS on Apple silicon, robot mode',
+        date: '2026-11-24',
+      },
+    },
   },
   {
     id: 'rt4d',

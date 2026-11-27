@@ -110,7 +110,7 @@ Layer 3 has not been run with it for any radio. It reaches a radio through other
 libraries than Chrome does, and the C62 through LISTENAI's release of cskburn instead of
 the WebAssembly build, so a radio checked with the page is not checked with the command
 line. Until it is, the command line asks for `--experimental`. A bench check made with
-it is recorded in `CHECKED` in `cli/main.ts`, next to the line in `docs/verification.md`.
+it is recorded in `commandLineVerified` in `src/radios.ts`, next to the line in `docs/verification.md`.
 
 ## Current state
 

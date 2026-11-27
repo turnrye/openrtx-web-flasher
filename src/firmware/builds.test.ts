@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { radioById } from '../radios.ts';
+import { radioById, RADIOS } from '../radios.ts';
 import { zipSync } from 'fflate';
 import { companionsFor, fileForRadio, filesFromZip, type Build } from './builds.ts';
 
@@ -81,8 +81,8 @@ describe('the images a radio needs from a build', () => {
   });
 
   it('radios with one image need nothing else', () => {
-    for (const id of ['mduv3x0', 'mod17', 'cs7000p', 'gd77', 'rt4d']) {
-      expect(companionsFor(radioById(id)!, build([`openrtx_${id}_x.bin`])), id).toEqual([]);
+    for (const radio of RADIOS.filter((r) => !r.alsoWrites)) {
+      expect(companionsFor(radio, build([`openrtx_${radio.id}_x.bin`])), radio.id).toEqual([]);
     }
   });
 });

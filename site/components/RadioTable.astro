@@ -3,18 +3,26 @@
 // The radios the flasher knows, straight from its catalogue (src/radios.ts) and its
 // backup record (src/coverage.ts): what this page shows is what the tool does.
 import { gapsFor } from '../../src/coverage.ts';
-import { apiFor, RADIOS } from '../../src/radios.ts';
+import { apiFor, checksFor, RADIOS } from '../../src/radios.ts';
 
 /** How the browser reaches a radio, in a few words. */
 const CONNECTION = { usb: 'USB (WebUSB)', serial: 'Programming cable (Web Serial)', hid: 'USB (WebHID)' };
 
+/** What the command line was checked for, as the table words it. */
+const CHECKED = { flash: 'Flashing', backup: 'Backing up' };
+
 const rows = RADIOS.map((radio) => {
   const api = apiFor(radio.method);
   const gaps = gapsFor(radio);
+  const { commandLine } = checksFor(radio);
   return {
     radio,
     connection: api ? CONNECTION[api] : 'Copied as a file onto its USB drive',
     gaps,
+    // One entry for each thing the command line was checked for on a real radio.
+    commandLine: (['flash', 'backup'] as const).flatMap((purpose) =>
+      commandLine[purpose] ? [`${CHECKED[purpose]}, ${commandLine[purpose].date}`] : [],
+    ),
   };
 });
 ---
@@ -25,13 +33,14 @@ const rows = RADIOS.map((radio) => {
       <th>Radio</th>
       <th>From the browser</th>
       <th>Flashing checked on a real radio</th>
+      <th>Checked with the command line</th>
       <th>Backup before flashing</th>
       <th>Otherwise</th>
     </tr>
   </thead>
   <tbody>
     {
-      rows.map(({ radio, connection, gaps }) => (
+      rows.map(({ radio, connection, gaps, commandLine }) => (
         <tr>
           <td>
             <a href={`../flash/#${radio.id}`}>{radio.name}</a>
@@ -40,6 +49,7 @@ const rows = RADIOS.map((radio) => {
           </td>
           <td>{connection}</td>
           <td>{radio.verified ? `Yes, ${radio.verified.date}` : 'Not yet'}</td>
+          <td>{commandLine.join('; ') || 'Not yet'}</td>
           <td>
             {gaps.length === 0 ? (
               'Everything'

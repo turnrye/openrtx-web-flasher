@@ -29,6 +29,7 @@ import { messageOf, WrongRadioError, type FlashContext, type Segment } from '../
 import {
   apiFor,
   backupFor,
+  checksFor,
   filesFor,
   forCommandLine,
   idIsPerUnit,
@@ -75,30 +76,6 @@ export interface Host {
   /** The time, for a backup's name. */
   now(): Date;
 }
-
-/**
- * What this tool was checked for on real hardware: by radio id, then by what was done,
- * flashing or backing up. One does not stand for the other: they are different code and,
- * on many radios, a different mode of the radio. Empty until someone does it: `verified`
- * in src/radios.ts is about the page in Chrome, which reaches the radio through another
- * USB and serial layer.
- */
-const CHECKED: Partial<Record<string, Partial<Record<Purpose, Verification>>>> = {
-  md9600: {
-    flash: {
-      version: 'development build 242dcee0',
-      platform: 'Node 26.9, macOS on Apple silicon',
-      date: '2026-11-25',
-    },
-  },
-  cs7000p: {
-    flash: {
-      version: 'development build 9951a7d1',
-      platform: 'Node 26.9, macOS on Apple silicon, robot mode',
-      date: '2026-11-24',
-    },
-  },
-};
 
 /** What a purpose is called, at the start of a sentence and inside one. */
 const DOING: Record<Purpose, [string, string]> = {
@@ -226,8 +203,8 @@ function sayGaps(radio: Radio, io: Io, indent: string, linked: boolean): void {
 
 /** What is known about `radio` on real hardware: this tool, and the page. */
 function checkedSummary(radio: Radio): string {
-  const here = Object.entries(CHECKED[radio.id] ?? {}) as [Purpose, Verification][];
-  const page = radio.verified;
+  const { page, commandLine } = checksFor(radio);
+  const here = Object.entries(commandLine) as [Purpose, Verification][];
   return [
     here.length > 0
       ? `this tool was checked on a real one for ${here.map(([purpose, { date }]) => `${DOING[purpose][1]} (${date})`).join(' and ')}`
@@ -247,7 +224,9 @@ function showRadios(id: string | undefined, { io }: Host): number {
     }
     io.say();
     for (const purpose of ['flash', 'backup'] as const) {
-      const checked = RADIOS.filter((radio) => CHECKED[radio.id]?.[purpose]).map((radio) => radio.id);
+      const checked = RADIOS.filter((radio) => checksFor(radio).commandLine[purpose]).map(
+        (radio) => radio.id,
+      );
       io.say(
         `${DOING[purpose][0]} was checked with this tool on real hardware for: ${checked.join(', ') || 'none of them yet'}.`,
       );
@@ -396,7 +375,8 @@ async function allowed(radio: Radio, purpose: Purpose, options: Options, { io }:
     io.say('Simulator: this goes to a simulated radio. Nothing is sent to real hardware.');
     return true;
   }
-  const here = CHECKED[radio.id]?.[purpose];
+  const { commandLine, page } = checksFor(radio);
+  const here = commandLine[purpose];
   if (here) {
     io.say(
       `${DOING[purpose][0]} was checked on a real radio: ${[here.version, here.platform, here.date].filter(Boolean).join(', ')}.`,
@@ -410,13 +390,13 @@ async function allowed(radio: Radio, purpose: Purpose, options: Options, { io }:
         ? 'A failed flash can leave the radio without working firmware until you flash it again with the usual tool.'
         : 'Reading does not change the radio, but what an unchecked reader saves may be wrong or incomplete.'),
   );
-  const otherCheck = CHECKED[radio.id]?.[other];
+  const otherCheck = commandLine[other];
   if (otherCheck) {
     io.say(
       `${DOING[other][0]} one was checked (${otherCheck.date}); ${DOING[purpose][1]} is another path through this tool.`,
     );
   }
-  if (radio.verified) io.say('The web page was checked on one; this tool reaches the radio another way.');
+  if (page) io.say('The web page was checked on one; this tool reaches the radio another way.');
   const question = purpose === 'flash' ? 'I can recover my radio: go on?' : 'Read the radio all the same?';
   if (options.experimental || (await io.confirm(question))) return true;
   io.say(`Stopped${io.interactive ? '' : ': add --experimental to go on'}. Nothing was sent to the radio.`);
@@ -560,7 +540,7 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
     );
   }
   const failed = { ...about, outcome: 'failed' as const, log };
-  if (asksForSuccess(CHECKED[radio.id]?.flash !== undefined)) {
+  if (asksForSuccess(checksFor(radio).commandLine.flash !== undefined)) {
     io.say(`Did the radio start OpenRTX? Your answer helps get the ${radio.name} checked with this tool.`);
     io.say(`  Yes: ${reportLink(host, { ...about, outcome: 'worked' })}`);
     io.say(

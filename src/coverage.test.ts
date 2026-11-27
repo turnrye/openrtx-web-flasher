@@ -121,19 +121,17 @@ describe('backup coverage', () => {
   });
 
   it('gives the sizes the readers read', () => {
-    for (const id of ['md3x0', 'mduv3x0', 'md9600', 'dm1701'] as TytStockModel[]) {
-      const plan = TYT_STOCK_PLANS[id];
+    for (const { id } of RADIOS.filter((r) => r.method === 'tyt-dfu')) {
+      const plan = TYT_STOCK_PLANS[id as TytStockModel];
+      expect(plan, id).toBeDefined();
       expect(memory(id, 'spi-flash')).toMatchObject({ bytes: plan.spiSize, saved: 'all' });
       const internal = memory(id, 'internal-flash');
       expect(internal).toMatchObject({ bytes: MIB, saved: 'part' });
       expect(internal.savedText).toContain(plan.snapshot.toLocaleString('en-US'));
       expect(memory(id, 'other')).toMatchObject({ saved: 'none', close: { how: 'dumper' } });
     }
-    for (const [id, model] of [
-      ['gd77', 'GD-77'],
-      ['dm1801', 'DM-1801'],
-    ] as const) {
-      const ranges = gd77CodeplugRanges(model);
+    for (const { id, hidModel } of RADIOS.filter((r) => r.method === 'gd77-hid')) {
+      const ranges = gd77CodeplugRanges(hidModel!);
       const bytes = (kind: string) =>
         ranges
           .filter((r) => r.kind === kind)
