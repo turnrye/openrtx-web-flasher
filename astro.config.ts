@@ -53,7 +53,19 @@ export default defineConfig({
       ],
       sidebar: [
         { label: 'Flash your radio', link: '/flash/' },
-        { label: 'Start here', items: [{ slug: 'user_guide' }, { slug: 'dev_status' }, { slug: 'backup' }] },
+        { label: 'Start here', items: [{ slug: 'user_guide' }, { slug: 'dev_status' }] },
+        {
+          label: 'The flasher',
+          collapsed: true,
+          items: [
+            { slug: 'flasher/backup-coverage' },
+            { slug: 'flasher/dumper' },
+            { slug: 'flasher/qa' },
+            { slug: 'flasher/verification' },
+            { slug: 'flasher/bench-notes' },
+            { slug: 'flasher/hosting' },
+          ],
+        },
         { label: 'Radios', collapsed: true, items: [{ autogenerate: { directory: 'hardware' } }] },
         { label: 'M17', collapsed: true, items: [{ autogenerate: { directory: 'm17' } }] },
         {
