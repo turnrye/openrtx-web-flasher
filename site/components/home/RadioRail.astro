@@ -1,0 +1,46 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// A few of the radios the flasher knows, each leading to it: the ones checked on a real
+// radio first, then the ones in the newest release. Drawn with the flasher's drawings
+// until each radio has a photo.
+import { checksFor } from '../../../src/radios.ts';
+import { inRelease, radios, top } from '../../home.ts';
+
+interface Props {
+  /** How many cards to show. */
+  count?: number;
+}
+
+const { count = 5 } = Astro.props;
+const rank = (r: (typeof radios)[number]) => (r.verified ? 0 : 2) + (inRelease(r) ? 0 : 1);
+const shown = [...radios].sort((a, b) => rank(a) - rank(b)).slice(0, count);
+---
+
+<ul class="not-content m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-4 p-0" data-testid="home-radios">
+  {
+    shown.map((radio) => {
+      const checked = Boolean(checksFor(radio).page);
+      const released = inRelease(radio);
+      return (
+        <li>
+          <a
+            href={`${top}flash/#${radio.id}`}
+            class="card card-border h-full overflow-hidden border-base-200 bg-[#0c0d0f] transition-colors hover:border-gray-400"
+            data-testid={`home-radio-${radio.id}`}
+          >
+            <span class="dot-grid flex h-48 items-center justify-center border-b border-base-200">
+              <img src={`${top}art/${radio.id}.svg`} alt="" class="h-40 max-w-[80%] object-contain" loading="lazy" />
+            </span>
+            <span class="flex flex-col gap-1.5 p-4">
+              <b class="text-base leading-snug text-white">{radio.name}</b>
+              {radio.aka && <span class="text-sm text-gray-400">{radio.aka}</span>}
+              <span class:list={['font-mono text-xs tracking-wider uppercase', checked ? 'text-success' : released ? 'text-primary' : 'text-gray-400']}>
+                {checked ? '● Checked' : '○ Not checked yet'} · {released ? 'Release' : 'Development build'}
+              </span>
+            </span>
+          </a>
+        </li>
+      );
+    })
+  }
+</ul>

@@ -35,13 +35,13 @@
       "url": "https://raw.githubusercontent.com/turnrye/OpenRTX/8ec91b719886ab30bbf285ead4de246fa118dc43/tests/e2e/golden/theme/default/theme_vfo.png",
       "sha256": "6197b86b87ac4effd47c83ec552ba85f0801b40f5c890af51efe8306b4c5bb69",
       "license": "GPL-3.0-or-later",
-      "use": "What the screen of a colour-display radio shows in the drawings."
+      "use": "What the screen of a colour-display radio shows, in the drawings and on the home page."
     },
     "screen-mono.png": {
       "url": "https://raw.githubusercontent.com/turnrye/OpenRTX/8ec91b719886ab30bbf285ead4de246fa118dc43/tests/e2e/golden/theme/smallscreen/theme_vfo.png",
       "sha256": "fd94dcd00d4b0d1a7b6706ce33aac12146d6825039f65df219a3bdc20ee17e82",
       "license": "GPL-3.0-or-later",
-      "use": "What the screen of a monochrome-display radio shows in the drawings."
+      "use": "What the screen of a monochrome-display radio shows, in the drawings and on the home page."
     }
   },
   "tools": {

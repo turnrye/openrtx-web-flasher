@@ -41,6 +41,9 @@ export default defineConfig({
       customCss: [
         '@fontsource/ubuntu/latin-400.css',
         '@fontsource/ubuntu/latin-500.css',
+        '@fontsource/ubuntu/latin-700.css',
+        '@fontsource/ubuntu-mono/latin-400.css',
+        '@fontsource/vt323/latin-400.css',
         './site/styles/theme.css',
       ],
       social: [{ icon: 'github', label: 'OpenRTX on GitHub', href: 'https://github.com/OpenRTX/OpenRTX' }],
@@ -50,6 +53,8 @@ export default defineConfig({
         ThemeSelect: './site/components/Empty.astro',
         ThemeProvider: './site/components/DarkOnly.astro',
         Footer: './site/components/Footer.astro',
+        // Only the home page has a hero: its own, with a photo and the radio's screen.
+        Hero: './site/components/home/Hero.astro',
       },
       head: [
         {

@@ -1,0 +1,40 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// OpenRTX's own screen, as the firmware draws it (the UI test captures, vendor.json),
+// in a frame like the radio's. Scaled by whole steps with hard pixels, so it looks like
+// the display and never goes out of date the way a photo does.
+import { top } from '../../home.ts';
+
+interface Props {
+  /** Which display: a colour radio's 160 x 128, or a monochrome radio's 128 x 64. */
+  kind: 'colour' | 'mono';
+  /** How many screen pixels each image pixel takes. */
+  scale?: number;
+  /** A short line under the screen, or none. */
+  caption?: string;
+}
+
+const { kind, scale = 2, caption } = Astro.props;
+const size = kind === 'colour' ? { width: 160, height: 128 } : { width: 128, height: 64 };
+const alt =
+  kind === 'colour'
+    ? 'OpenRTX on a colour display: the time, the battery, 430.000 MHz, VFO and the receive meter'
+    : 'OpenRTX on a monochrome display: the time, the battery, 430.000 MHz, VFO and the receive meter';
+---
+
+<figure
+  class="not-content m-0 inline-flex max-w-full flex-col gap-2 rounded-2xl border border-base-300 bg-base-200 p-3 shadow-[inset_0_0_0_6px_#0a0a0b,0_24px_60px_rgb(0_0_0/0.7)]"
+  data-testid={`screen-${kind}`}
+>
+  <div class="dot-grid rounded-lg bg-black p-3">
+    <img
+      src={`${top}screens/${kind}.png`}
+      {alt}
+      width={size.width * scale}
+      height={size.height * scale}
+      class="block h-auto w-full max-w-full [image-rendering:pixelated]"
+      loading="lazy"
+    />
+  </div>
+  {caption && <figcaption class="px-1 font-mono text-xs tracking-widest text-gray-400 uppercase">{caption}</figcaption>}
+</figure>

@@ -1,0 +1,36 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// One section of the home page: a small gold line above its title, the title, an
+// optional link to the rest, and whatever the page puts inside. `band` gives it a panel
+// colour the full width of the window.
+interface Props {
+  eyebrow?: string;
+  title: string;
+  /** "All posts" and the like, at the right of the title. */
+  more?: { text: string; href: string };
+  band?: boolean;
+  testid?: string;
+}
+
+const { eyebrow, title, more, band = false, testid } = Astro.props;
+---
+
+<section
+  class:list={['not-content flex flex-col gap-8 py-14', band && 'full-bleed [--band:#0a0b0c]']}
+  data-testid={testid}
+>
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div class="flex flex-col gap-2">
+      {eyebrow && <p class="font-mono text-sm tracking-widest text-primary uppercase">{eyebrow}</p>}
+      <h2 class="text-3xl leading-tight font-bold text-white md:text-4xl">{title}</h2>
+    </div>
+    {
+      more && (
+        <a class="link link-primary no-underline" href={more.href}>
+          {more.text} →
+        </a>
+      )
+    }
+  </div>
+  <slot />
+</section>

@@ -7,6 +7,7 @@
  *   public/cskburn/             cskburn compiled to WebAssembly
  *   public/openrtx_logo.svg     the OpenRTX logo, editor metadata removed
  *   public/art/<radio>.svg      the radio drawings (scripts/art.mjs)
+ *   public/screens/<kind>.png   OpenRTX's own screen, colour and monochrome, for the home page
  *
  * Downloads, checkouts, the Emscripten toolchain and the compiled cskburn are kept in the
  * per-user cache (scripts/cache.mjs), so once they are there this script needs no
@@ -254,6 +255,10 @@ if (update) writeFileSync(pinsPath, JSON.stringify(pins, null, 2) + '\n');
 buildLogo(files['openrtx_logo.svg']);
 const drawn = buildArt({ files, out: join(root, 'public', 'art') });
 console.log(`art: ${drawn.length} drawings in public/art/`);
+// The same screen captures, as they are, for the home page's screen frames.
+mkdirSync(join(root, 'public', 'screens'), { recursive: true });
+cpSync(files['screen-colour.png'], join(root, 'public', 'screens', 'colour.png'));
+cpSync(files['screen-mono.png'], join(root, 'public', 'screens', 'mono.png'));
 // The website's pages, for the site that Astro builds around the flasher.
 const website = await checkout('website', pins.website.repo, pins.website.commit);
 const docs = importDocs({

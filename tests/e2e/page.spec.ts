@@ -518,13 +518,14 @@ test('the footer leads to the licences and credits, with the licence texts', asy
 
   // Every licence named has its text on the page, folded until asked for.
   const texts = page.getByTestId('licence-text');
-  await expect(texts).toHaveCount(9);
+  await expect(texts).toHaveCount(10);
   for (const [title, words] of [
     ['GNU General Public License', 'GNU GENERAL PUBLIC LICENSE'],
     ['Apache License 2.0', 'TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION'],
     ['MIT License (Preact)', 'Jason Miller'],
     ['MIT License (fflate)', 'Arjun Barrett'],
     ['Ubuntu Font Licence', 'UBUNTU FONT LICENCE'],
+    ['SIL Open Font License 1.1 (VT323)', 'SIL OPEN FONT LICENSE Version 1.1'],
   ] as const) {
     const entry = texts.filter({ hasText: title });
     await expect(entry.locator('pre')).toBeHidden();

@@ -1,0 +1,18 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Where the project talks, as the get-in-touch page lists it, and how to support it.
+import { LinkButton } from '@astrojs/starlight/components';
+---
+
+<div class="not-content flex flex-col gap-6" data-testid="home-community">
+  <p class="max-w-2xl text-lg leading-relaxed text-gray-300">
+    Most of the conversation is on Discord, bridged to a Matrix space. Questions from people new to OpenRTX are
+    welcome, and so are photos of your radio.
+  </p>
+  <div class="flex flex-wrap gap-3">
+    <LinkButton href="https://discord.gg/jZ9t8XTbmd" variant="primary">Join on Discord</LinkButton>
+    <LinkButton href="https://matrix.to/#/#openrtx:matrix.org" variant="secondary">Matrix</LinkButton>
+    <LinkButton href="https://mastodon.radio/@openrtx" variant="secondary">Mastodon</LinkButton>
+    <LinkButton href="https://liberapay.com/OpenRTX/donate" variant="secondary">Donate</LinkButton>
+  </div>
+</div>

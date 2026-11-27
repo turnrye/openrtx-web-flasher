@@ -167,3 +167,64 @@ test('the backup step says before the read what the backup will not hold', async
   await expect(page.getByTestId('backup')).toBeVisible();
   await expect(page.getByTestId('backup-gaps')).toHaveCount(0);
 });
+
+test('the home page leads with a photo, the radio’s own screen and figures counted at build time', async ({
+  page,
+}) => {
+  await page.goto('../');
+  const hero = page.getByTestId('home-hero');
+  await expect(hero.getByRole('heading', { level: 1 })).toHaveText(
+    'Free firmware for the radio you already own',
+  );
+  await expect(hero).toContainText('Free your radio');
+  // The photo and the screen both load, the screen at whole pixels.
+  const screen = hero.getByTestId('screen-colour').getByRole('img');
+  for (const image of [hero.getByRole('img', { name: /T-TWR Plus running OpenRTX/ }), screen]) {
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+  }
+  await expect(screen).toHaveCSS('image-rendering', 'pixelated');
+  await expect(page.getByTestId('home-stats')).toContainText('Radios in the flasher');
+  await expect(page.getByTestId('home-stats')).toContainText(/v\d+\.\d+\.\d+/);
+  // The gold button keeps its own colours inside the page's markup.
+  await expect(hero.getByRole('link', { name: 'Flash your radio' })).toHaveCSS('color', 'rgb(0, 0, 0)');
+});
+
+test('the home page’s radios lead to the flasher with that radio chosen, checked ones first', async ({
+  page,
+}) => {
+  await page.goto('../');
+  const cards = page.getByTestId('home-radios').getByRole('link');
+  await expect(cards).toHaveCount(5);
+  await expect(cards.first()).toContainText('Checked');
+  await cards.filter({ hasText: 'Retevis C62' }).click();
+  await expect(page).toHaveURL(/\/flash\/#c62$/);
+  await expect(step(page, 'step-radio')).toContainText('Retevis C62');
+});
+
+test('the home page names the people behind OpenRTX and its newest posts', async ({ page }) => {
+  await page.goto('../');
+  const people = page.getByTestId('home-people');
+  for (const call of ['IU2KIN', 'IU2KWO', 'IU2NUO', 'IU2NRO']) await expect(people).toContainText(call);
+  // Contributors only when the build could ask GitHub, each picture served by the site itself.
+  const pictures = page.getByTestId('home-contributors').getByRole('img');
+  if ((await pictures.count()) > 0) {
+    const host = await pictures.first().evaluate((img: HTMLImageElement) => new URL(img.src).host);
+    expect(host).toBe(new URL(page.url()).host);
+  }
+  const news = page.getByTestId('home-news').getByRole('link');
+  await expect(news).toHaveCount(3);
+  await news.first().click();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Office Hours');
+});
+
+test('the home page asks for photos through the suggestion form', async ({ page }) => {
+  await page.goto('../');
+  await expect(page.getByTestId('home-bench').getByRole('link', { name: 'Send a photo' })).toHaveAttribute(
+    'href',
+    /issues\/new\?template=docs-suggestion\.yml$/,
+  );
+  await expect(
+    page.getByTestId('home-community').getByRole('link', { name: 'Join on Discord' }),
+  ).toBeVisible();
+});

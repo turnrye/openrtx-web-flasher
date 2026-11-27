@@ -132,7 +132,14 @@ export const SHIPPED: Credit[] = [
     url: 'https://design.ubuntu.com/font',
     by: 'Copyright Canonical Ltd.',
     licence: 'Ubuntu Font Licence 1.0',
-    use: 'The typeface, as packaged by Fontsource.',
+    use: 'The typefaces Ubuntu and Ubuntu Mono, as packaged by Fontsource.',
+  },
+  {
+    name: 'VT323',
+    url: 'https://github.com/phoikoi/VT323',
+    by: 'Copyright 2011, The VT323 Project Authors (Peter Hull)',
+    licence: 'SIL Open Font License 1.1',
+    use: 'The figures in the style of a radio display, as packaged by Fontsource.',
   },
   {
     name: 'openrtx-device-mockups',

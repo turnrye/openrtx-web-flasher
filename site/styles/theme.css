@@ -68,6 +68,8 @@
 @theme {
   --font-sans: Ubuntu, system-ui, sans-serif;
   --font-mono: 'Ubuntu Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* Figures in the style of the radio's display: the home page's release, counts, callsigns. */
+  --font-readout: VT323, 'Ubuntu Mono', ui-monospace, monospace;
   --color-muted: #9a9ea6;
   --color-separator: #33363b;
   --color-accent-200: #fab413;
@@ -96,7 +98,7 @@
  * styles, before daisyUI and the utilities, which must win over it.
  */
 @layer components {
-  .not-content :where(button, a) {
+  .not-content :where(button, a:not(.sl-link-button)) {
     font: inherit;
     color: inherit;
     text-decoration: none;
@@ -111,6 +113,59 @@
 
   .not-content :where(summary) {
     cursor: pointer;
+  }
+
+  /*
+   * Starlight's cards rotate purple, orange, green, red and blue icon tiles, colours
+   * the palette does not have: every tile is the panel grey, with a gold icon.
+   */
+  .sl-markdown-content .card {
+    --sl-card-border: var(--color-base-300);
+    --sl-card-bg: var(--color-base-200);
+  }
+
+  .sl-markdown-content .card .icon {
+    color: var(--color-primary);
+  }
+
+  /* A faint dot grid behind the radio's screen and the hero, as on display glass. */
+  .dot-grid {
+    background-image: radial-gradient(rgb(250 180 19 / 16%) 1px, transparent 1.3px);
+    background-size: 9px 9px;
+  }
+
+  /* Gold corner marks round a photo, as in a viewfinder. */
+  .corner-ticks {
+    position: relative;
+  }
+
+  .corner-ticks::before {
+    --tick: linear-gradient(var(--color-primary), var(--color-primary));
+
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: -7px;
+    pointer-events: none;
+    background:
+      var(--tick) left top / 16px 2px no-repeat,
+      var(--tick) left top / 2px 16px no-repeat,
+      var(--tick) right top / 16px 2px no-repeat,
+      var(--tick) right top / 2px 16px no-repeat,
+      var(--tick) left bottom / 16px 2px no-repeat,
+      var(--tick) left bottom / 2px 16px no-repeat,
+      var(--tick) right bottom / 16px 2px no-repeat,
+      var(--tick) right bottom / 2px 16px no-repeat;
+  }
+
+  /*
+   * A band of colour (--band) the whole width of the window, from inside Starlight's
+   * centred column, without making the page scroll sideways.
+   */
+  .full-bleed {
+    background-color: var(--band, transparent);
+    box-shadow: 0 0 0 100vmax var(--band, transparent);
+    clip-path: inset(0 -100vmax);
   }
 }
 

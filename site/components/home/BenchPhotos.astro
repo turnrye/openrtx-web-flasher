@@ -1,0 +1,41 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Photos from the website of radios opened up for OpenRTX, and a tile asking for more.
+import { Image } from 'astro:assets';
+import { photo, SUGGEST_URL } from '../../home.ts';
+
+const PHOTOS = [
+  { file: 'tinyuf2_ttwrplus.jpg', caption: 'T-TWR Plus waiting for a UF2 file' },
+  { file: 'rt4d_front.jpg', caption: 'RT-4D with its front panel off' },
+  { file: 'uv380_mod_after.jpg', caption: 'MD-UV380 after the M17 mod' },
+];
+
+const shown = PHOTOS.flatMap((p) => {
+  const image = photo(p.file);
+  return image ? [{ ...p, image }] : [];
+});
+---
+
+<ul class="not-content m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4 p-0" data-testid="home-bench">
+  {
+    shown.map((p) => (
+      <li>
+        <figure class="m-0 flex flex-col gap-2">
+          <Image
+            src={p.image}
+            alt={p.caption}
+            widths={[360, 720]}
+            sizes="(min-width: 72rem) 16rem, 90vw"
+            class="block h-72 w-full rounded-box object-cover"
+          />
+          <figcaption class="text-sm text-gray-400">{p.caption}</figcaption>
+        </figure>
+      </li>
+    ))
+  }
+  <li class="flex h-72 flex-col items-center justify-center gap-3 rounded-box border-2 border-dashed border-primary p-6 text-center">
+    <b class="text-lg text-white">Your radio here</b>
+    <span class="text-sm leading-relaxed text-gray-300">Running OpenRTX on the air or on the bench? Send a photo, and say how it may be used.</span>
+    <a class="btn btn-sm btn-outline btn-primary" href={SUGGEST_URL}>Send a photo</a>
+  </li>
+</ul>
