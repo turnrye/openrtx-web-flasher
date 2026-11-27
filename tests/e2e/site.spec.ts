@@ -64,6 +64,17 @@ test('every page of the old website is in the sidebar', async ({ page }) => {
     'binary_cps_format',
     'docrepository',
     'hackathon',
+    'compiling',
+    'tests',
+    'linux',
+    'software',
+    'nvm',
+    'software_modes',
+    'coding_style',
+    'peripheral_table',
+    'rtxlink',
+    'website',
+    'at1846_registers',
   ]) {
     await expect(sidebar.locator(`a[href$="/${slug}/"]`), slug).toHaveCount(1);
   }
