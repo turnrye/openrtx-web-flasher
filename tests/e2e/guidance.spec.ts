@@ -170,10 +170,12 @@ test('every radio card says whether flashing it from this page was checked on a 
   const cards = radioCards(page);
   await expect(cards).toHaveCount(13);
   await expect(cards.getByTestId('checked-badge')).toHaveCount(13);
-  // docs/verification.md: the CS7000-M17 and the C62 are checked, nothing else yet.
+  // docs/verification.md: the MD-UV380, the DM-1701, the CS7000-M17 and the C62 are checked.
   await expect(page.getByTestId('radio-cs7000').getByTestId('checked-badge')).toHaveText('Checked');
+  await expect(page.getByTestId('radio-mduv3x0').getByTestId('checked-badge')).toHaveText('Checked');
+  await expect(page.getByTestId('radio-dm1701').getByTestId('checked-badge')).toHaveText('Checked');
   await expect(page.getByTestId('radio-md3x0').getByTestId('checked-badge')).toHaveText('Not checked yet');
-  await expect(cards.locator('[data-checked="yes"]')).toHaveCount(2);
+  await expect(cards.locator('[data-checked="yes"]')).toHaveCount(4);
   await expect(page.getByTestId('checked-legend')).toContainText('started OpenRTX');
 
   // Both groups carry the badge: the release's radios and the ones without a release.

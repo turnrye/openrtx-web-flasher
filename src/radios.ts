@@ -182,7 +182,8 @@ export const RADIOS: Radio[] = [
     ],
     after: 'Turn the radio off and on again.',
     manual: RADIO_TOOL,
-    verified: null,
+    // docs/verification.md, 2026-11-27: reported working; firmware, browser and system not recorded.
+    verified: { date: '2026-11-27' },
   },
   {
     id: 'md9600',
@@ -224,7 +225,8 @@ export const RADIOS: Radio[] = [
     enterUnconfirmed: true,
     after: 'Turn the radio off and on again.',
     manual: RADIO_TOOL,
-    verified: null,
+    // docs/verification.md, 2026-11-27: reported working; firmware, browser and system not recorded.
+    verified: { date: '2026-11-27' },
   },
   {
     id: 'gd77',

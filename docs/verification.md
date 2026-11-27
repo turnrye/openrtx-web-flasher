@@ -4,12 +4,14 @@ One line per flash that was checked on a real radio through this page, newest fi
 See [qa.md](qa.md) for the procedure. A radio's `verified` entry in `src/radios.ts`
 points at its latest line here.
 
-| Date       | Radio                           | Firmware                                                                                     | Site commit           | Browser, OS       | Source                             | Result                                                                                                                                                                | By        |
-| ---------- | ------------------------------- | -------------------------------------------------------------------------------------------- | --------------------- | ----------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| 2026-11-25 | Tytera MD-9600                  | Local development build 242dcee0, `_wrap.bin` (SHA-256 dbdd5017…)                            | 1cf75e7, command line | Node 26.9, macOS  | file given                         | Flashed through the TYT bootloader without `sudo`, and the radio started that build (its Info screen showed it). No backup: the radio was already running OpenRTX.    | turnrye   |
-| 2026-11-24 | Connect Systems CS7000-M17 Plus | Local development build 9951a7d1, `.dfu` (SHA-256 ce9533bc…)                                 | 12fc2f7, command line | Node 26.9, macOS  | file given                         | Flashed in robot mode through the Connect Systems bootloader (B7.06) with `sudo`, and the radio started OpenRTX with SK3. No backup: a stock radio is read-protected. | turnrye   |
-| 2026-11-21 | Connect Systems CS7000-M17      | CI build of the `release-v0.5.0` branch                                                      | not recorded          | not recorded      | `release-v0.5.0` branch build      | Flashed, and the radio started OpenRTX. No backup was taken. Reported to the maintainer second hand.                                                                  | Jim N1ADJ |
-| 2026-11-21 | Retevis C62                     | CI build of 20 Nov 2026: `zephyr.bin` (SHA-256 bbaa9c57…) and `dsp_firmware.bin` (9579b617…) | 577c8db               | Chrome 156, macOS | `openrtx-c62.zip`, given as a file | Backed up, flashed from the original firmware, and the radio started OpenRTX.                                                                                         | turnrye   |
+| Date       | Radio                           | Firmware                                                                                     | Site commit           | Browser, OS       | Source                             | Result                                                                                                                                                                | By             |
+| ---------- | ------------------------------- | -------------------------------------------------------------------------------------------- | --------------------- | ----------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 2026-11-27 | Tytera MD-UV380 / MD-UV390      | not recorded                                                                                 | not recorded          | not recorded      | not recorded                       | Flashed from the page, and it "worked without problems". No backup was reported. Reported to the maintainer.                                                          | Wolfgang DM5WK |
+| 2026-11-27 | Baofeng DM-1701                 | not recorded                                                                                 | not recorded          | not recorded      | not recorded                       | Flashed from the page, and it worked. No backup was reported. Reported to the maintainer.                                                                             | not recorded   |
+| 2026-11-25 | Tytera MD-9600                  | Local development build 242dcee0, `_wrap.bin` (SHA-256 dbdd5017…)                            | 1cf75e7, command line | Node 26.9, macOS  | file given                         | Flashed through the TYT bootloader without `sudo`, and the radio started that build (its Info screen showed it). No backup: the radio was already running OpenRTX.    | turnrye        |
+| 2026-11-24 | Connect Systems CS7000-M17 Plus | Local development build 9951a7d1, `.dfu` (SHA-256 ce9533bc…)                                 | 12fc2f7, command line | Node 26.9, macOS  | file given                         | Flashed in robot mode through the Connect Systems bootloader (B7.06) with `sudo`, and the radio started OpenRTX with SK3. No backup: a stock radio is read-protected. | turnrye        |
+| 2026-11-21 | Connect Systems CS7000-M17      | CI build of the `release-v0.5.0` branch                                                      | not recorded          | not recorded      | `release-v0.5.0` branch build      | Flashed, and the radio started OpenRTX. No backup was taken. Reported to the maintainer second hand.                                                                  | Jim N1ADJ      |
+| 2026-11-21 | Retevis C62                     | CI build of 20 Nov 2026: `zephyr.bin` (SHA-256 bbaa9c57…) and `dsp_firmware.bin` (9579b617…) | 577c8db               | Chrome 156, macOS | `openrtx-c62.zip`, given as a file | Backed up, flashed from the original firmware, and the radio started OpenRTX.                                                                                         | turnrye        |
 
 Notes on the MD-9600 line:
 
@@ -21,7 +23,20 @@ Notes on the MD-9600 line:
   OpenRTX build, not its stock firmware. The bootloader showed up as 0483:df11 "Digital
   Radio in USB mode", and the screen blinked on and off in flashing mode.
 - Not covered: flashing from the stock firmware, the backup step, Linux, and a release
-  build. The MD-380, MD-UV380 and DM-1701 use the same flasher but stay unchecked.
+  build. The MD-380, MD-UV380 and DM-1701 use the same flasher but stay unchecked with
+  the command line.
+
+Notes on the MD-UV380 / MD-UV390 and DM-1701 lines:
+
+- Both rest on reports passed on by the maintainer, not on runs the maintainer watched.
+  The firmware, the site commit, the browser and the system were not recorded, nor the
+  date of the flash: the date is the day the report was recorded. If the testers can
+  supply them, fill them in here and in `src/radios.ts`.
+- Which of the MD-UV380 and MD-UV390 it was is not recorded. They take the same firmware.
+- The backup step is not mentioned in either report, so reading these radios from the
+  page is still unchecked.
+- The key combination the page shows for the DM-1701 is still marked as unconfirmed: the
+  report does not say how the radio was put in flashing mode.
 
 Notes on the C62 line:
 

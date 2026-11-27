@@ -40,7 +40,7 @@ const FLASHED: [id: string, ext: string][] = [
 ];
 
 /** Radios marked as checked on hardware (docs/verification.md): they ask for no confirmation. */
-const CHECKED = ['cs7000'];
+const CHECKED = ['mduv3x0', 'dm1701', 'cs7000'];
 
 /** Builds in the manifest that have a file for the radio. */
 function buildsFor(id: string, ext: string): ManifestBuild[] {

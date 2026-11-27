@@ -137,7 +137,7 @@ describe('radio catalogue', () => {
 
   it('marks as checked only the radios with a line in the bench record', () => {
     // docs/verification.md has the evidence for each of these.
-    expect(RADIOS.filter((r) => r.verified).map((r) => r.id)).toEqual(['cs7000', 'c62']);
+    expect(RADIOS.filter((r) => r.verified).map((r) => r.id)).toEqual(['mduv3x0', 'dm1701', 'cs7000', 'c62']);
     // The command line's checks are a record of their own, by what was done.
     const withCommandLine = (purpose: 'flash' | 'backup') =>
       RADIOS.filter((r) => checksFor(r).commandLine[purpose]).map((r) => r.id);
