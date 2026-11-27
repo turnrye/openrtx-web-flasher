@@ -10,7 +10,7 @@ import {
   type Known,
   type RadioBackup,
 } from '../backup/types.ts';
-import { backupFor, type Radio } from '../radios.ts';
+import { backupFor, idIsPerUnit, type Radio } from '../radios.ts';
 import { flashCs7000Robot, SECOND_SLOT } from './cs7000-robot.ts';
 import { backupCsk, flashCsk, type CskModuleLoader } from './csk.ts';
 import { flashGd77 } from './gd77.ts';
@@ -99,8 +99,10 @@ const C62_FLASH_SIZE = 4 * 1024 * 1024;
  * Reads the radio for a backup, the way `backupFor(radio)` describes: everything the
  * page can read. `size` overrides how much of a C62 is read (the simulated one has a
  * small flash). `known` is asked as soon as the radio's ID is known; when it says the
- * radio is already backed up, nothing more is read. A backup of a simulated radio says
- * that it is one.
+ * radio is already backed up, nothing more is read. It is only asked where that ID is
+ * known to be the radio's own (`idIsPerUnit`): any other radio is read whatever its ID,
+ * and its backup carries the ID to be matched with earlier ones afterwards. A backup of a
+ * simulated radio says that it is one.
  */
 export async function backupDevice(
   radio: Radio,
@@ -109,7 +111,7 @@ export async function backupDevice(
   size?: number,
   known?: Known,
 ): Promise<RadioBackup | AlreadyBackedUp> {
-  const read = await readDevice(radio, picked, ctx, size, known);
+  const read = await readDevice(radio, picked, ctx, size, idIsPerUnit(radio) ? known : undefined);
   if (!isAlready(read) && isSimulated(picked.device)) read.simulated = true;
   return read;
 }

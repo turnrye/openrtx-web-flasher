@@ -30,6 +30,7 @@ import {
   backupFor,
   filesFor,
   forCommandLine,
+  idIsPerUnit,
   radioById,
   RADIOS,
   type Radio,
@@ -616,6 +617,13 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
     }
     io.say(`Saved ${path} (${formatSize(zip.length)}).`);
     io.say(`  Radio ID: ${manifest.radioId ?? 'this radio does not report one'}`);
+    const earlier = manifest.radioId && !idIsPerUnit(radio) ? known.get(manifest.radioId) : undefined;
+    if (earlier) {
+      io.say(
+        `  That is the ID of ${earlier} as well. It is not yet known whether two of these radios can ` +
+          'have the same ID, so the radio was read again.',
+      );
+    }
     if (manifest.firmware) io.say(`  Firmware on the radio: ${manifest.firmware}`);
     for (const part of manifest.parts.filter((p) => !p.complete)) {
       io.say(`  ${part.file} is incomplete${part.note ? `: ${part.note}` : '.'}`);

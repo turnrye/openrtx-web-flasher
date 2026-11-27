@@ -73,12 +73,22 @@ answers is known from other tools, and for the TYT family from one MD-9600.
   before the radio's own time per block.
 - The radio ID of a GD-77, DM-1801 or RT-4D backup is a fingerprint of its calibration
   data, not a serial number. It should be the same on a second read of the same radio.
-- The page skips the read for a radio whose ID matches a complete backup it holds. Two
-  things to confirm on real radios: that two radios of one model never report the same
-  ID (the STM32 bootloader's USB serial number is the one to watch), and that an RT-4D's
-  fingerprint does not change when its settings do. On a TYT radio the ID comes from the
-  info blocks, before program mode, so a recognised radio keeps running and does not
-  restart; on a C62 reading the chip ID ends flashing mode, as a full read does.
+- The page skips the read for a radio whose ID matches a complete backup it holds, but
+  only where the ID is known to be the radio's own (`idIsPerUnit` in `src/radios.ts`):
+  the C62's chip ID, a TYT radio's unique ID, and the USB serial number of an STM32F405
+  in DFU mode (Module 17, CS7000-M17). On a TYT radio the ID comes from the info blocks,
+  before program mode, so a recognised radio keeps running and does not restart; on a
+  C62 reading the chip ID ends flashing mode, as a full read does.
+- Open, to confirm on real radios, two of a model each: that two radios never report the
+  same ID. Until it is confirmed these are read every time, and their backups still carry
+  the ID:
+  - CS7000-M17 Plus: whether the STM32H743 bootloader's USB serial number differs
+    between radios, or is the same on all of them.
+  - RT-4D, RT-950 Pro: whether two radios can have the same calibration, and so the same
+    fingerprint; and that an RT-4D's fingerprint does not change when its settings do.
+  - Module 17, CS7000-M17: the STM32F405 bootloader derives its serial number from the
+    chip's unique ID, so the read is still skipped on a match; check it on two radios
+    all the same.
 
 ## TYT (MD-380, MD-UV380, MD-9600, DM-1701)
 

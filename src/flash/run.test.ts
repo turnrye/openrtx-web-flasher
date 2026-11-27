@@ -6,6 +6,7 @@ import { isAlready } from '../backup/types.ts';
 import { markSimulated } from '../devices.ts';
 import { radioById } from '../radios.ts';
 import { SimCsk6 } from '../sim/csk6.ts';
+import { SimRt950Stock } from '../sim/rt950-stock.ts';
 import { md5 } from '../sim/md5.ts';
 import { SimStm32Dfu } from '../sim/stm32dfu.ts';
 import type { CskModuleLoader } from './csk.ts';
@@ -21,6 +22,8 @@ import {
 import { quietContext, WrongRadioError } from './types.ts';
 
 const MOD17 = radioById('mod17')!;
+const CS7000P = radioById('cs7000p')!;
+const RT950 = radioById('rt950pro')!;
 const C62 = radioById('c62')!;
 
 /** A simulated Module 17 in flashing mode, as the device a person picked. Its USB serial number is SIM0001. */
@@ -128,5 +131,53 @@ describe('a backup of a simulated radio', () => {
     expect(read.simulated).toBeUndefined();
     const { manifest } = await makeBundle(MOD17, read, 'flashing-mode', new Date());
     expect('simulated' in manifest).toBe(false);
+  });
+});
+
+describe('a radio whose ID matches a backup that exists', () => {
+  /** A `known` that says yes to every radio, and what it was asked. */
+  function everyRadio(): { asked: string[]; known: (id: string) => boolean } {
+    const asked: string[] = [];
+    return {
+      asked,
+      known: (id) => {
+        asked.push(id);
+        return true;
+      },
+    };
+  }
+
+  it('is not read again when the ID is known to be its own: an STM32F405 by its USB serial number', async () => {
+    const { sim, picked } = mod17();
+    const { asked, known } = everyRadio();
+    const read = await backupDevice(MOD17, picked, quietContext({ sleep: sim.sleep }), undefined, known);
+    expect(read).toEqual({ known: 'SIM0001' });
+    expect(asked).toEqual(['SIM0001']);
+    expect(sim.requests).toEqual([]);
+  });
+
+  it('is read all the same when it is not yet known that the ID differs between radios: an STM32H743', async () => {
+    const sim = new SimStm32Dfu({ chip: 'h743' });
+    const picked: PickedDevice = { api: 'usb', device: sim };
+    const { asked, known } = everyRadio();
+    const read = await backupDevice(CS7000P, picked, quietContext({ sleep: sim.sleep }), undefined, known);
+    if (isAlready(read)) throw new Error('the read stopped on an ID that may not be the radio’s own');
+    expect(asked).toEqual([]);
+    // The backup still says which radio it is of, to be matched with an earlier one afterwards.
+    expect(read).toMatchObject({ radioId: 'SIM0001', idKind: 'usb-serial' });
+    expect(read.parts[0].data.length).toBe(2 * 1024 * 1024);
+  });
+
+  it('is read all the same when the ID is a fingerprint of its calibration: an RT-950 Pro', async () => {
+    const sim = new SimRt950Stock();
+    const picked: PickedDevice = { api: 'serial', device: sim };
+    const { asked, known } = everyRadio();
+    const read = await backupDevice(RT950, picked, quietContext(), undefined, known);
+    if (isAlready(read)) throw new Error('the read stopped on an ID that may not be the radio’s own');
+    expect(asked).toEqual([]);
+    expect(read.idKind).toBe('fingerprint');
+    expect(read.radioId).toMatch(/^[0-9a-f]+$/);
+    expect(read.parts[0].data.length).toBe(64 * 1024);
+    expect(sim.forbidden).toEqual([]);
   });
 });

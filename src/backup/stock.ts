@@ -17,7 +17,9 @@ export type StockDevice = USBDevice | SerialPort | HIDDevice;
 /**
  * Reads `radio` through its original firmware. Every reader only reads. `known` lets a
  * reader stop once it has recognised a radio that is already backed up; the GD-77 family
- * learns its ID only at the end of its short read, so it never stops early.
+ * learns its ID only at the end of its short read, so it never stops early. The caller
+ * decides whether a radio's ID is good enough to stop on (`idIsPerUnit`), and leaves
+ * `known` out when it is not.
  */
 export async function readStock(
   radio: Radio,

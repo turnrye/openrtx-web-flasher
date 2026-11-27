@@ -717,6 +717,26 @@ const EMPTY = {
   ],
 };
 
+describe('a radio whose ID is not known to be its own', () => {
+  it('is read again, and the tool says which earlier backup has the same ID', async () => {
+    const out = folder();
+    const first = await run(['backup', 'rt950pro', '--sim', '--out', out]);
+    expect(first.code).toBe(0);
+    expect(first.text).not.toContain('That is the ID of');
+    const [name] = readdirSync(out);
+
+    // The ID is a fingerprint of the calibration: the same radio, or one that shares it.
+    const second = await run(['backup', 'rt950pro', '--sim', '--out', out]);
+    expect(second.code).toBe(0);
+    expect(second.text).not.toContain('already has a backup');
+    expect(second.text).toContain(READ);
+    expect(second.text).toContain(
+      `That is the ID of ${name} as well. It is not yet known whether two of these radios can have the same ID, so the radio was read again.`,
+    );
+    expect(readdirSync(out).sort()).toEqual([name.replace('.zip', '-2.zip'), name].sort());
+  });
+});
+
 describe('a radio that is already backed up', () => {
   it('is not read again once the reader recognises it, unless --again says so', async () => {
     const out = folder();

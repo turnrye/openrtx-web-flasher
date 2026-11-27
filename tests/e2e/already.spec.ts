@@ -2,7 +2,8 @@
 /**
  * A radio this browser already holds a backup of is not read again. The backup step
  * starts by finding out which radio it is talking to; when its ID matches a stored,
- * complete backup, the read stops there and the page says so.
+ * complete backup, the read stops there and the page says so. That holds where the ID
+ * is known to be the radio's own; the others are read each time.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { enter, flash, pickBuild, step, turnOnExperimental } from './flow.ts';
@@ -95,7 +96,7 @@ test('md9600: recognised from its info blocks, without the long read or a restar
   await expect(page.getByTestId('enter-again')).toHaveCount(0);
 });
 
-test('rt4d: recognised from the first four blocks of its memory', async ({ page }) => {
+test('rt4d: its ID is a fingerprint not known to be its own, so it is read each time', async ({ page }) => {
   await page.goto('?sim=1#rt4d');
   await pickBuild(page);
   await turnOnExperimental(page, 'step-backup');
@@ -103,8 +104,10 @@ test('rt4d: recognised from the first four blocks of its memory', async ({ page 
 
   await page.reload();
   await pickBuild(page);
-  await expectRecognised(page, /…[0-9a-f]{8}/);
-  expect(await page.evaluate(() => window.__ortxSimStock!.reads!())).toBe(4);
+  await backUp(page);
+  await expect(page.getByTestId('backup-already')).toHaveCount(0);
+  // More than the four blocks the fingerprint is taken from: the whole read.
+  expect(await page.evaluate(() => window.__ortxSimStock!.reads!())).toBeGreaterThan(4);
 });
 
 test('mod17: recognised by its USB serial number before anything is read', async ({ page }) => {

@@ -105,9 +105,11 @@ simulated radio says so in `backup.json` and is only written to a simulated radi
 The backup step starts by finding out which radio is connected. When this browser
 already holds a complete backup of that radio, the page says so and does not read it
 again; a new one can still be taken on request. The radio is told apart by its chip ID
-(C62), its unique ID (TYT radios), its USB serial number (STM32 radios) or a fingerprint
-of its calibration (RT-4D, RT-950 Pro). The GD-77 and DM-1801 give theirs only at the end of their
-one-minute read, so they are read each time.
+(C62), its unique ID (TYT radios) or its USB serial number (Module 17, CS7000-M17). The
+others are read each time: for the CS7000-M17 Plus's serial number and the calibration
+fingerprint of the RT-4D and RT-950 Pro it is not yet confirmed that two radios never
+share one, and the GD-77 and DM-1801 give theirs only at the end of their one-minute
+read.
 
 The page calls a radio's two states flashing mode and normal mode, whatever its maker
 calls them.
@@ -163,7 +165,7 @@ nightly.link.
   through other USB, serial and HID libraries. So every other radio asks for
   `--experimental` until someone runs the bench check with it.
 - `backup` stops early when `--out` already holds a backup of the radio that is
-  connected, as the page does; `--again` reads it anyway.
+  connected, as the page does and for the same radios; `--again` reads it anyway.
 - `--sim` runs any command against the simulated radios, as `?sim=1` does on the page.
 - The C62 runs LISTENAI's own release of cskburn, the same commit the page compiles to
   WebAssembly. It is downloaded once and checked against `vendor.json`; `--cskburn`

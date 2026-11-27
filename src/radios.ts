@@ -520,6 +520,32 @@ export type Backup =
   /** The radio gives nothing up in the mode it is flashed in. */
   | { how: 'none'; text: string };
 
+/**
+ * Whether the ID a backup read finds first is known to belong to one radio only. Where it
+ * is, a read may stop as soon as the ID matches a backup that exists already. Where that
+ * has not been confirmed on radios, the radio is read each time: a second radio with the
+ * same ID would otherwise be passed over as already backed up.
+ *
+ * - C62: the chip's eFuse ID. TYT radios: the MCU's unique ID, as the firmware reports it.
+ * - STM32F405 radios in DFU mode: the ROM bootloader's USB serial number, which ST's
+ *   bootloader derives from the MCU's unique ID.
+ * - STM32H743 (CS7000-M17 Plus): not confirmed that its bootloader's serial number differs
+ *   between radios.
+ * - RT-4D, RT-950 Pro: the ID is a fingerprint of the calibration; not confirmed that two
+ *   radios never share one. GD-77, DM-1801: the fingerprint only comes at the end of the read.
+ */
+export function idIsPerUnit(radio: Radio): boolean {
+  switch (radio.method) {
+    case 'csk-serial':
+    case 'tyt-dfu':
+      return true;
+    case 'stm32-dfu':
+      return radio.chip !== 'h743';
+    default:
+      return false;
+  }
+}
+
 const MIB = 1024 * 1024;
 
 /** Where the page sends people for what a backup does not hold: docs/backup-coverage.md. */
