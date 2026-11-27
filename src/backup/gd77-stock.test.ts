@@ -160,11 +160,17 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
     );
   });
 
-  it('leaves the calibration out when the window reads as zeros', async () => {
+  it('lists the calibration as not read when the window reads as zeros', async () => {
     const { sim, seen, done } = run({ model, window: 'zeros' });
     const backup = await done;
-    expect(backup.parts.map((p) => p.file)).not.toContain('calibration.bin');
-    expect(backup.parts).toHaveLength(3);
+    expect(backup.parts).toHaveLength(4);
+    const calibration = backup.parts[3];
+    expect(calibration.file).toBe('calibration.bin');
+    expect(calibration.kind).toBe('info');
+    expect(calibration.address).toBe(GD77_CALIBRATION_ADDRESS);
+    expect(calibration.complete).toBe(false);
+    expect(calibration.data).toHaveLength(0);
+    expect(calibration.note).toMatch(/returned only empty bytes/);
     expect(backup.radioId).toBeNull();
     expect(backup.idKind).toBeNull();
     expect(backup.notes.join(' ')).toMatch(/calibration could not be read this way/);
@@ -176,10 +182,12 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
     expect(onlyRead(sim)).toBe(true);
   });
 
-  it('leaves the calibration out when the window reads as 0xFF', async () => {
+  it('lists the calibration as not read when the window reads as 0xFF', async () => {
     const { sim, done } = run({ model }, 'quick', fast, (s) => s.calibration.fill(0xff));
     const backup = await done;
-    expect(backup.parts).toHaveLength(3);
+    expect(backup.parts).toHaveLength(4);
+    expect(backup.parts[3]).toMatchObject({ file: 'calibration.bin', complete: false });
+    expect(backup.parts[3].data).toHaveLength(0);
     expect(backup.radioId).toBeNull();
     expect(backup.notes.join(' ')).toMatch(/calibration could not be read this way/);
     expect(onlyRead(sim)).toBe(true);
@@ -190,8 +198,15 @@ describe.each(MODELS)('readGd77Stock on a %s', (model) => {
     async (window) => {
       const { sim, seen, done } = run({ model, window });
       const backup = await done;
-      expect(backup.parts).toHaveLength(3);
-      expect(backup.parts.every((p) => p.complete)).toBe(true);
+      // The codeplug is whole; the calibration is listed as the part that was not read.
+      expect(backup.parts).toHaveLength(4);
+      expect(backup.parts.slice(0, 3).every((p) => p.complete)).toBe(true);
+      const calibration = backup.parts[3];
+      expect(calibration.file).toBe('calibration.bin');
+      expect(calibration.address).toBe(GD77_CALIBRATION_ADDRESS);
+      expect(calibration.complete).toBe(false);
+      expect(calibration.data).toHaveLength(0);
+      expect(calibration.note).toMatch(/the radio refused the request/);
       expect(backup.radioId).toBeNull();
       expect(backup.notes.join(' ')).toMatch(/calibration could not be read this way/);
       // One refused request is enough; the session is still ended properly.

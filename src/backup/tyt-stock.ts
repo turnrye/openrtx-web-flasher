@@ -402,7 +402,7 @@ function sizeText(bytes: number): string {
   return bytes % 0x100000 === 0 ? `${bytes / 0x100000} MB` : `${Math.round(bytes / 1024)} KB`;
 }
 
-/** The backup part for the snapshot of the internal flash. */
+/** The backup part for the snapshot of the internal flash; `data` is empty when no read passed. */
 function snapshotPart(data: Uint8Array, planned: number): BackupPart {
   const complete = data.length >= planned;
   return {
@@ -413,8 +413,11 @@ function snapshotPart(data: Uint8Array, planned: number): BackupPart {
     complete,
     note: complete
       ? 'The first 64 KB of the MCU flash less its last byte: the bootloader, then the start of the firmware.'
-      : `Only the first ${data.length} of ${planned} bytes: this computer limits the size of one USB ` +
-        'read (Linux allows 4096 bytes). Back up on Windows or macOS to save the whole bootloader.',
+      : data.length === 0
+        ? 'The start of the internal flash (the bootloader) could not be read: the radio or this ' +
+          'computer passed no read of it, at any size.'
+        : `Only the first ${data.length} of ${planned} bytes: this computer limits the size of one USB ` +
+          'read (Linux allows 4096 bytes). Back up on Windows or macOS to save the whole bootloader.',
   };
 }
 
@@ -476,17 +479,26 @@ async function readOriginal(
   const infos = new Map<number, Uint8Array>();
   const missing: string[] = [];
   for (const code of plan.info) {
+    let why = 'the radio answered with nothing';
     try {
       const data = await readInfo(g, code);
       if (data.length > 0) infos.set(code, data);
     } catch (e) {
       rethrowRefused(e);
-      ctx.log(`Info block ${hex2(code)}: ${messageOf(e)}.`);
+      why = messageOf(e);
+      ctx.log(`Info block ${hex2(code)}: ${why}.`);
       await toIdle(g).catch(() => {});
     }
     const data = infos.get(code);
-    if (data) parts.push({ file: `info-${hex2(code)}.bin`, kind: 'info', data, complete: true });
-    else missing.push(hex2(code));
+    const file = `info-${hex2(code)}.bin`;
+    if (data) {
+      parts.push({ file, kind: 'info', data, complete: true });
+    } else {
+      // Listed all the same: a backup that lacks a planned part must not look whole.
+      const note = `This info block could not be read: ${why}.`;
+      parts.push({ file, kind: 'info', data: new Uint8Array(0), complete: false, note });
+      missing.push(hex2(code));
+    }
     advance(BLOCK);
   }
   if (missing.length > 0) tell(`The radio did not give info block ${missing.join(', ')}.`);
@@ -502,11 +514,11 @@ async function readOriginal(
   }
 
   const snapshot = await readSnapshot(g, plan.snapshot, ctx);
+  const snapshotted = snapshotPart(snapshot ?? new Uint8Array(0), plan.snapshot);
+  parts.push(snapshotted);
   if (snapshot) {
-    const part = snapshotPart(snapshot, plan.snapshot);
-    parts.push(part);
     ctx.log(`Read ${snapshot.length} bytes of internal flash from ${hex32(INTERNAL_FLASH_BASE)}.`);
-    if (!part.complete && part.note) tell(`Bootloader: ${part.note}`);
+    if (!snapshotted.complete && snapshotted.note) tell(`Bootloader: ${snapshotted.note}`);
   } else {
     tell('The start of the internal flash (the bootloader) could not be read.');
   }
@@ -527,9 +539,11 @@ async function readOriginal(
     }
     let read = 0;
     for (const range of ranges) {
-      if (stopped !== null) break;
-      const r = await readSpiRange(g, range, advance);
-      if (r.data.length > 0) parts.push(spiPart(range, r, scope));
+      // Once the read has stopped, what is left is not tried. It is listed all the same,
+      // empty: a backup that lacks a planned part must not look whole.
+      const r: SpiRead =
+        stopped === null ? await readSpiRange(g, range, advance) : { data: new Uint8Array(0), stopped };
+      parts.push(spiPart(range, r, scope));
       read += r.data.length;
       stopped = r.stopped;
     }
@@ -549,7 +563,7 @@ async function readOriginal(
     tell('The radio did not restart by itself. Switch it off and on again.');
   }
 
-  if (parts.length === 0) {
+  if (parts.every((part) => part.data.length === 0)) {
     throw new FlashError(
       'Nothing could be read from the radio. Switch it off and on again, check the cable and retry.',
     );
@@ -562,7 +576,9 @@ async function readOriginal(
  * Reads a TYT-family radio through its original firmware without changing anything on
  * it: the info blocks, one snapshot of the start of the internal flash, then the SPI
  * flash (all of it, or the codeplug areas for scope 'quick'), then `91 05` so the radio
- * restarts. A part the radio refuses or cuts short is kept, marked incomplete.
+ * restarts. A part the radio refuses or cuts short is kept, marked incomplete; every
+ * planned part is in the result, one that could not be read at all as an empty part with
+ * a note that says why.
  *
  * `known` is asked once the info blocks have given the radio's ID. When it says the
  * radio is already backed up, the read ends there: program mode is never entered and

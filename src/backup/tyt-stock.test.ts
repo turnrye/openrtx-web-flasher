@@ -379,8 +379,13 @@ describe('the radio ID', () => {
     expect(sim.forbidden).toEqual([]);
     expect(backup.radioId).toBeNull();
     expect(backup.idKind).toBeNull();
-    expect(backup.parts.map((p) => p.file)).not.toContain('info-07.bin');
-    expect(backup.parts).toHaveLength(INFO_FILES.length - 1 + 2);
+    // The block is listed all the same, as a part that was not read.
+    const block = part(backup, 'info-07.bin');
+    expect(block.complete).toBe(false);
+    expect(block.data).toHaveLength(0);
+    expect(block.note).toMatch(/could not be read: The device refused DFU DNLOAD/);
+    expect(backup.parts).toHaveLength(INFO_FILES.length + 2);
+    expect(backup.parts.filter((p) => !p.complete).map((p) => p.file)).toEqual(['info-07.bin']);
     expect(backup.notes).toContain('The radio did not give info block 07.');
     expect(sameBytes(part(backup, 'info-08.bin').data, sim.infoBlock(0x08))).toBe(true);
     expect(part(backup, 'spi-flash-000000.bin').complete).toBe(true);
@@ -446,8 +451,12 @@ describe('a read that stops part-way', () => {
     expect(spi.complete).toBe(false);
     expect(sameBytes(spi.data, sim.spi.subarray(0, 0x1000 + 100))).toBe(true);
     expect(spi.note).toMatch(/the radio sent 100 bytes of a 1024-byte block/);
-    // The second area was not tried after the first one failed.
-    expect(backup.parts.map((p) => p.file)).not.toContain('spi-flash-110000.bin');
+    // The second area was not tried after the first one failed; it is listed as not read.
+    const second = part(backup, 'spi-flash-110000.bin');
+    expect(second.complete).toBe(false);
+    expect(second.data).toHaveLength(0);
+    expect(second.note).toMatch(/stopped after 0 of 589824 bytes/);
+    expect(sim.requests.some((r) => r.startsWith(`UPLOAD ${2 + 0x110000 / 1024} `))).toBe(false);
     expect(sim.restarts).toBe(1);
   });
 
@@ -456,9 +465,59 @@ describe('a read that stops part-way', () => {
     sim.stallSpiAt = 0x110000;
     const backup = await readTytStock(sim, 'dm1701', 'quick', quietContext());
     expect(part(backup, 'spi-flash-000000.bin').complete).toBe(true);
-    expect(backup.parts.map((p) => p.file)).not.toContain('spi-flash-110000.bin');
+    const second = part(backup, 'spi-flash-110000.bin');
+    expect(second.complete).toBe(false);
+    expect(second.address).toBe(0x110000);
+    expect(second.data).toHaveLength(0);
+    expect(second.note).toMatch(/stopped after 0 of 589824 bytes: The device refused DFU UPLOAD/);
     expect(backup.notes.some((n) => n.includes('stopped early, with 262144 of 851968 bytes'))).toBe(true);
     expect(sim.restarts).toBe(1);
+  });
+
+  it('lists the SPI flash as an incomplete part when not one block of it was read', async () => {
+    const sim = new SimTytStock(SMALL);
+    sim.stallSpiAt = 0;
+    const backup = await readTytStock(sim, 'mduv3x0', 'all', quietContext());
+    expect(sim.forbidden).toEqual([]);
+    const spi = part(backup, 'spi-flash.bin');
+    expect(spi.kind).toBe('spi-flash');
+    expect(spi.address).toBe(0);
+    expect(spi.complete).toBe(false);
+    expect(spi.data).toHaveLength(0);
+    expect(spi.note).toMatch(/stopped after 0 of 16777216 bytes: The device refused DFU UPLOAD/);
+    // Every planned part is there, so a backup without its memory chip never looks whole.
+    expect(backup.parts).toHaveLength(INFO_FILES.length + 2);
+    expect(backup.parts.every((p) => p.complete)).toBe(false);
+    expectInfoAndSnapshot(backup, sim);
+    expect(sim.restarts).toBe(1);
+  });
+
+  it('lists the SPI flash as an incomplete part when the radio does not enter program mode', async () => {
+    const sim = new SimTytStock(SMALL);
+    sim.refuseProgramMode = true;
+    const backup = await readTytStock(sim, 'dm1701', 'quick', quietContext());
+    expect(sim.forbidden).toEqual([]);
+    for (const file of ['spi-flash-000000.bin', 'spi-flash-110000.bin']) {
+      const spi = part(backup, file);
+      expect(spi.complete).toBe(false);
+      expect(spi.data).toHaveLength(0);
+      expect(spi.note).toMatch(/stopped after 0 of \d+ bytes: The device refused DFU DNLOAD/);
+    }
+    expectInfoAndSnapshot(backup, sim);
+  });
+
+  it('lists the bootloader snapshot as an incomplete part when no read size passes', async () => {
+    const sim = new SimTytStock({ ...SMALL, usbCap: 1024 });
+    const backup = await readTytStock(sim, 'md9600', 'quick', quietContext());
+    expect(sim.forbidden).toEqual([]);
+    const snapshot = part(backup, 'bootloader-0.bin');
+    expect(snapshot.kind).toBe('internal-flash');
+    expect(snapshot.address).toBe(0x08000000);
+    expect(snapshot.complete).toBe(false);
+    expect(snapshot.data).toHaveLength(0);
+    expect(snapshot.note).toMatch(/could not be read/);
+    expect(backup.notes).toContain('The start of the internal flash (the bootloader) could not be read.');
+    expect(part(backup, 'spi-flash-000000.bin').complete).toBe(true);
   });
 
   it('throws when nothing at all could be read, after restarting the radio', async () => {

@@ -272,8 +272,9 @@ class StockReader {
  * calibration when the radio shows it at CPS address 0x7C00. Both scopes read the
  * same; the radio gives no more in normal mode. Opens `dev` if needed (and then closes
  * it again). Sends no write command. Throws FlashError when the radio does not take
- * the handshake (it is in flashing mode, or off) or a codeplug read fails; a
- * calibration window that cannot be read only adds a note.
+ * the handshake (it is in flashing mode, or off) or a codeplug read fails. A
+ * calibration window that cannot be read does not fail the read: the calibration is
+ * then in the result as an empty part, marked incomplete, with a note that says why.
  */
 export async function readGd77Stock(
   dev: HIDDevice,
@@ -299,6 +300,8 @@ export async function readGd77Stock(
   const notes: string[] = [];
   let firmware: string;
   let calibration: Uint8Array | null = null;
+  /** Why the calibration is not in the backup, when it was asked for and did not come. */
+  let noCalibration: string | null = null;
   let done = 0;
   /** Counts bytes towards the progress bar. */
   const onBytes = (count: number): void => {
@@ -347,7 +350,7 @@ export async function readGd77Stock(
       } catch (e) {
         if (!(e instanceof FlashError)) throw e;
         ctx.log(`The calibration window did not read: ${e.message}`);
-        notes.push('The calibration could not be read this way: the radio refused the request.');
+        noCalibration = 'The calibration could not be read this way: the radio refused the request.';
       }
     }
 
@@ -369,7 +372,8 @@ export async function readGd77Stock(
   if (calibration) {
     const blocks = calibration.subarray(0, GD77_CALIBRATION_DATA_BYTES);
     if (allBytes(blocks, 0x00) || allBytes(blocks, 0xff)) {
-      notes.push('The calibration could not be read this way: the radio returned only empty bytes there.');
+      noCalibration =
+        'The calibration could not be read this way: the radio returned only empty bytes there.';
     } else {
       const marked = CALIBRATION_MARKER.every((b, i) => blocks[i] === b);
       parts.push({
@@ -388,6 +392,18 @@ export async function readGd77Stock(
           'What the radio returned in place of the calibration does not look like calibration data.',
         );
     }
+  }
+  if (noCalibration !== null) {
+    // Listed all the same, empty: a backup without the calibration must not look whole.
+    parts.push({
+      file: 'calibration.bin',
+      kind: 'info',
+      address: GD77_CALIBRATION_ADDRESS,
+      data: new Uint8Array(0),
+      complete: false,
+      note: noCalibration,
+    });
+    notes.push(noCalibration);
   }
   if (scope === 'all') {
     notes.push(

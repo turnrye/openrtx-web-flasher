@@ -118,6 +118,8 @@ export class SimTytStock extends SimUsbDevice {
   shortSpiAt: number | null = null;
   /** Info codes whose `A2 ss` command stalls. */
   stallInfo: number[] = [];
+  /** When true, `91 01` stalls: the radio does not enter program mode. */
+  refuseProgramMode = false;
 
   private readonly usbCap: number;
   private readonly version: Uint8Array;
@@ -230,6 +232,7 @@ export class SimTytStock extends SimUsbDevice {
     } else if (data[1] === 0x01) {
       // The original firmware acts on 91 01 only below program mode; the bootloader takes it once.
       if (this.programMode && this.mode === 'bootloader') this.fail('91 01 twice');
+      if (this.refuseProgramMode) this.fail('91 01 refused');
       this.modeByte = PROGRAM_MODE;
     } else {
       if (!this.programMode) this.fail('91 05 below program mode');
