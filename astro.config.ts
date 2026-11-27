@@ -62,9 +62,17 @@ export default defineConfig({
             { slug: 'flash/credits' },
           ],
         },
-        { label: 'Start here', items: [{ slug: 'user_guide' }, { slug: 'dev_status' }] },
+        // Below: the old website's pages, each one reachable as it was there.
+        {
+          label: 'Users',
+          items: [
+            { slug: 'user_guide' },
+            { slug: 'dev_status' },
+            { slug: 'accessibility' },
+            { label: 'M17', collapsed: true, items: [{ autogenerate: { directory: 'm17' } }] },
+          ],
+        },
         { label: 'Radios', collapsed: true, items: [{ autogenerate: { directory: 'hardware' } }] },
-        { label: 'M17', collapsed: true, items: [{ autogenerate: { directory: 'm17' } }] },
         {
           label: 'Developers',
           collapsed: true,
@@ -74,12 +82,26 @@ export default defineConfig({
             { slug: 'software' },
             { slug: 'binary_cps_format' },
             { slug: 'rtxlink' },
+            { slug: 'docrepository' },
+            { label: 'OpenRTX-external-docs', link: 'https://github.com/OpenRTX/OpenRTX-external-docs' },
           ],
         },
-        { label: 'News', collapsed: true, items: [{ autogenerate: { directory: 'posts' } }] },
         {
-          label: 'Community',
-          items: [{ slug: 'get_in_touch' }, { slug: 'contribute' }],
+          label: 'News',
+          collapsed: true,
+          items: [
+            { slug: 'posts', label: 'All posts' },
+            { autogenerate: { directory: 'posts' } },
+            { slug: 'hackathon', label: 'Hackathon (Jan 31, before FOSDEM)' },
+          ],
+        },
+        {
+          label: 'Project',
+          items: [
+            { slug: 'about', label: 'About OpenRTX' },
+            { slug: 'get_in_touch' },
+            { slug: 'contribute' },
+          ],
         },
       ],
     }),

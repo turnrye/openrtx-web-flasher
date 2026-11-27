@@ -47,6 +47,29 @@ test('the backups page says, from the record the flasher reads, what each backup
   await expect(page).toHaveURL(/\/flash\/backups\/#md9600$/);
 });
 
+test('every page of the old website is in the sidebar', async ({ page }) => {
+  await page.goto('../user_guide/');
+  const sidebar = page.locator('#starlight__sidebar');
+  // The old site's sidebar, its orphans, and the developers' guide's pages.
+  for (const slug of [
+    'about',
+    'get_in_touch',
+    'posts',
+    'dev_status',
+    'user_guide',
+    'developers_guide',
+    'hardware/hardware',
+    'accessibility',
+    'm17/m17',
+    'binary_cps_format',
+    'docrepository',
+    'hackathon',
+  ]) {
+    await expect(sidebar.locator(`a[href$="/${slug}/"]`), slug).toHaveCount(1);
+  }
+  await expect(sidebar.locator('a[href="https://github.com/OpenRTX/OpenRTX-external-docs"]')).toHaveCount(1);
+});
+
 test('an address of the old docsify site lands on the new page, at the heading it named', async ({
   page,
 }) => {
