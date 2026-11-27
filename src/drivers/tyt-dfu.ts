@@ -3,10 +3,16 @@
  * The TYT bootloader over WebUSB (MD-380, MD-UV380, MD-9600, DM-1701), and the read
  * through TYT's firmware in normal mode.
  */
-import { readTytStock, TYT_STOCK_PLANS, type TytStockModel } from '../backup/tyt-stock.ts';
+import { readTytStock, TYT_STOCK_PLANS, type TytStockModel, type TytStockPlan } from '../backup/tyt-stock.ts';
 import { flashTyt } from '../flash/tyt.ts';
 import { COVERAGE_DOC, DFU_FILTERS } from './shared.ts';
 import type { UsbDriver } from './types.ts';
+
+/** The reader's plan for a radio, by its id; undefined for a radio the reader has none for. */
+function planFor(id: string): TytStockPlan | undefined {
+  const plans: Partial<Record<string, TytStockPlan>> = TYT_STOCK_PLANS;
+  return plans[id];
+}
 
 /** The TYT family's driver. The reader has one plan per radio id (`TYT_STOCK_PLANS`). */
 export const tytDfu: UsbDriver = {
@@ -24,7 +30,7 @@ export const tytDfu: UsbDriver = {
     unchecked: true,
     // The reader's plan says whether its requests were measured on this model. Only the
     // MD-9600's were, which is why the first text names it.
-    caveat: (TYT_STOCK_PLANS as Partial<typeof TYT_STOCK_PLANS>)[radio.id as TytStockModel]?.checked
+    caveat: planFor(radio.id)?.checked
       ? 'What an MD-9600 answers to this read was measured with other tools. The read from this page has not been run on a real radio yet. Keep a codeplug read with the programming software as well.'
       : 'This read has been measured on the MD-9600 only, and with other tools. This model may give less; whatever it gives is kept, and the backup says what is missing. Keep a codeplug read with the programming software as well.',
     notIncluded: {

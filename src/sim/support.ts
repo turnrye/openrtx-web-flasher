@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/** What the simulated radios of more than one method are made with (src/drivers/*.sim.ts). */
+/**
+ * What more than one simulated radio is made with: the simulators here, and what the
+ * drivers build from them for `?sim=` (src/drivers/*.sim.ts).
+ */
 
 /** Deterministic, non-repeating filler for a simulated radio's memory. */
 export function fillPattern(out: Uint8Array, seed: number): void {
