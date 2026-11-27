@@ -9,7 +9,17 @@ import { expect, test, type Page } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { choose, enter, flash, openStep, pickRadio, skipBackup, step, turnOnExperimental } from './flow.ts';
+import {
+  answerRuns,
+  choose,
+  enter,
+  flash,
+  openStep,
+  pickRadio,
+  skipBackup,
+  step,
+  turnOnExperimental,
+} from './flow.ts';
 
 /** One part as backup.json describes it. */
 interface Part {
@@ -38,12 +48,17 @@ interface Downloaded {
   files: Record<string, Uint8Array>;
 }
 
-/** Opens the page on a radio with a build chosen and experimental flashing on, at the backup step. */
+/**
+ * Opens the page on a radio with a build chosen, at the backup step, and says the radio
+ * still runs its original firmware. Nothing asks for experimental flashing: the read
+ * changes nothing on the radio.
+ */
 async function toBackup(page: Page, radio: string, sim = '1'): Promise<void> {
   await choose(page, radio, sim);
   // The backup is taken in normal mode, so it comes before flashing mode.
   expect(await openStep(page)).toBe('step-backup');
-  await turnOnExperimental(page, 'step-backup');
+  await expect(page.getByTestId('needs-experimental')).toHaveCount(0);
+  await answerRuns(page, 'original');
 }
 
 /** Clicks the backup button and returns the bundle the browser was handed. */
@@ -167,6 +182,7 @@ test('a TYT radio in the wrong state is told so, for the backup and for flashing
   // In normal mode it must not be flashed: nothing is sent.
   await skipBackup(page);
   await enter(page);
+  await turnOnExperimental(page);
   await page.getByTestId('flash').click();
   await expect(page.getByTestId('flash-error')).toContainText('not in flashing mode');
 });
@@ -236,7 +252,7 @@ async function toRt950Backup(page: Page, sim = '1'): Promise<void> {
   await expect(step(page, 'step-firmware')).toHaveAttribute('data-mode', 'folded');
   // The backup is taken in normal mode, so it comes before flashing mode.
   expect(await openStep(page)).toBe('step-backup');
-  await turnOnExperimental(page, 'step-backup');
+  await answerRuns(page, 'original');
 }
 
 test('rt950pro: reads the 64 KB the programming cable reaches, then the radio is flashed', async ({

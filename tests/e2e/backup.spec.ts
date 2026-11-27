@@ -39,10 +39,14 @@ async function backUp(page: Page): Promise<Downloaded> {
   return { name: download.suggestedFilename(), zip, manifest, files };
 }
 
-/** From a chosen build to the backup step with experimental flashing on. */
+/**
+ * From a chosen build to the backup step. Nothing asks for experimental flashing on the
+ * way: reading a radio changes nothing on it.
+ */
 async function toBackup(page: Page): Promise<void> {
   await enter(page);
-  await turnOnExperimental(page, 'step-backup');
+  await expect(step(page, 'step-backup')).toHaveAttribute('data-mode', 'open');
+  await expect(page.getByTestId('needs-experimental')).toHaveCount(0);
 }
 
 /** What the simulated radio held before anything was done to it. */
@@ -198,6 +202,7 @@ test('a read-protected radio cannot be backed up, and the step can be skipped', 
   await expect(page.getByTestId('backup-error')).toContainText('read-protected');
   await expect(step(page, 'step-flash')).toHaveAttribute('data-mode', 'waiting');
   await skipBackup(page);
+  await turnOnExperimental(page);
   await expect(page.getByTestId('flash')).toBeEnabled();
 });
 

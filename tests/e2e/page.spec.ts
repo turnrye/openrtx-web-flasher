@@ -2,7 +2,8 @@
 /** The parts of the page around flashing: choosing, branch builds, settings, fallbacks. */
 import { expect, test, type Page } from '@playwright/test';
 import { zipSync } from 'fflate';
-import { enter, flash, pickBuild, skipBackup, skipToFlash, step, turnOnExperimental } from './flow.ts';
+import { createHash } from 'node:crypto';
+import { answerRuns, enter, flash, pickBuild, radioCards, skipBackup, skipToFlash, step } from './flow.ts';
 
 test('loads from a sub-path with no failed requests or console errors', async ({ page }) => {
   const problems: string[] = [];
@@ -10,30 +11,52 @@ test('loads from a sub-path with no failed requests or console errors', async ({
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()} ${r.url()}`));
   await page.goto('');
-  await expect(page.getByRole('heading', { name: 'OpenRTX Flasher' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flash your radio', level: 1 })).toBeVisible();
   await expect(page.getByTestId('radio-md3x0')).toBeVisible();
   await expect(page.getByTestId('sim-banner')).toHaveCount(0);
   expect(problems).toEqual([]);
 });
 
+test('the rest of the site loads from the same sub-path: the home page and a page of the guide', async ({
+  page,
+}) => {
+  const problems: string[] = [];
+  page.on('console', (m) => m.type() === 'error' && problems.push(m.text()));
+  page.on('pageerror', (e) => problems.push(e.message));
+  page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()} ${r.url()}`));
+  await page.goto('../');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Free firmware');
+  // The hero's first action leads to the flasher.
+  await page.getByRole('link', { name: 'Flash your radio' }).first().click();
+  await expect(page.getByTestId('radio-md3x0')).toBeVisible();
+  await page.goto('../user_guide/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  expect(problems).toEqual([]);
+});
+
 test('every radio has a drawing, and one showing how to enter flashing mode', async ({ page }) => {
   await page.goto('');
-  const cards = page.locator('.radio-card');
+  const cards = radioCards(page);
   await expect(cards).toHaveCount(13);
+  // Each card's own drawing, and the one beside it that shows the keys to hold.
+  const drawings = await cards.evaluateAll((all) =>
+    all.flatMap((card) => {
+      const shown = card.querySelector('img')!.src;
+      return [shown, shown.replace(/\.svg$/, '-enter.svg')];
+    }),
+  );
+  expect(drawings).toHaveLength(26);
   // A drawing that failed to load or parse has no natural size.
-  const broken = await page.evaluate(async () => {
-    const ids = [...document.querySelectorAll('.radio-card')].map((c) =>
-      (c as HTMLElement).dataset.testid!.replace('radio-', ''),
-    );
+  const broken = await page.evaluate(async (addresses) => {
     const bad: string[] = [];
-    for (const name of ids.flatMap((id) => [`${id}.svg`, `${id}-enter.svg`])) {
+    for (const address of addresses) {
       const image = new Image();
-      image.src = `art/${name}`;
-      await image.decode().catch(() => bad.push(name));
-      if (image.naturalWidth === 0 && !bad.includes(name)) bad.push(name);
+      image.src = address;
+      await image.decode().catch(() => bad.push(address));
+      if (image.naturalWidth === 0 && !bad.includes(address)) bad.push(address);
     }
     return bad;
-  });
+  }, drawings);
   expect(broken).toEqual([]);
 });
 
@@ -70,14 +93,17 @@ test('one step is open at a time, and later steps wait for the ones before them'
 
 test('the steps come in the order they happen for the radio', async ({ page }) => {
   const order = () =>
-    page.evaluate(() =>
-      [...document.querySelectorAll('.step')].map((s) => s.id).filter((id) => id.startsWith('step-')),
-    );
+    page.evaluate(() => [...document.querySelectorAll('[data-testid="step"]')].map((s) => s.id));
+  // The flasher is drawn after the page has loaded, so look until it is there.
   await page.goto('#md3x0');
-  expect(await order()).toEqual(['step-radio', 'step-firmware', 'step-backup', 'step-enter', 'step-flash']);
+  await expect
+    .poll(order)
+    .toEqual(['step-radio', 'step-firmware', 'step-backup', 'step-enter', 'step-flash']);
   await page.goto('#mod17');
   await page.reload();
-  expect(await order()).toEqual(['step-radio', 'step-firmware', 'step-enter', 'step-backup', 'step-flash']);
+  await expect
+    .poll(order)
+    .toEqual(['step-radio', 'step-firmware', 'step-enter', 'step-backup', 'step-flash']);
 });
 
 test('a radio link opens with that radio chosen', async ({ page }) => {
@@ -105,7 +131,6 @@ test('warnings sit where they apply', async ({ page }) => {
   await expect(page.getByTestId('flash-notes')).toContainText('second firmware slot');
   await expect(page.getByTestId('other-tool')).toHaveAttribute('open', '');
   await expect(page.getByTestId('other-tool').getByTestId('other-tools')).toContainText('Factory Tool');
-  await expect(page.locator('body')).not.toContainText('Before you start');
 });
 
 test('experimental flashing is off by default, persists once on, and can be turned off', async ({ page }) => {
@@ -138,7 +163,9 @@ test('a browser without WebUSB still gets the file and the command', async ({ pa
   await expect(page.getByTestId('flash')).toHaveCount(0);
   // The tool to use instead is open, not folded away.
   await expect(page.getByTestId('other-tool')).toHaveAttribute('open', '');
-  await expect(page.locator('pre.command')).toContainText('radio_tool -d 0 -f -i openrtx_md3x0_');
+  await expect(page.getByTestId('other-tool').getByTestId('command')).toContainText(
+    'radio_tool -d 0 -f -i openrtx_md3x0_',
+  );
   await expect(page.getByTestId('download').first()).toHaveAttribute('href', /openrtx_md3x0_.*\.bin$/);
 });
 
@@ -164,8 +191,17 @@ test('a pull request build is found, downloaded by hand and dropped in', async (
       }),
     ),
   );
+  // What the user would get from the download link: a zip with the firmware inside.
+  const firmware = new Uint8Array(40 * 1024).map((_, i) => (i * 7) & 0xff);
+  firmware.set([0x00, 0x00, 0x02, 0x20, 0x01, 0x01, 0x00, 0x08]); // plausible stack pointer and reset vector
+  const zip = Buffer.from(zipSync({ 'openrtx_mod17_fix.bin': firmware }));
+  const digest = `sha256:${createHash('sha256').update(zip).digest('hex')}`;
   await page.route(`${api}/actions/runs/77/artifacts?*`, (r) =>
-    r.fulfill(json({ artifacts: [{ id: 5, name: 'openrtx-mod17', size_in_bytes: 1234, expired: false }] })),
+    r.fulfill(
+      json({
+        artifacts: [{ id: 5, name: 'openrtx-mod17', size_in_bytes: zip.length, expired: false, digest }],
+      }),
+    ),
   );
 
   await page.goto('?sim=1#mod17');
@@ -178,11 +214,9 @@ test('a pull request build is found, downloaded by hand and dropped in', async (
     'href',
     'https://nightly.link/OpenRTX/OpenRTX/actions/runs/77/openrtx-mod17.zip',
   );
+  // The download leaves the page in a new tab: the lookup stays where it is.
+  await expect(page.getByTestId('ci-download')).toHaveAttribute('target', '_blank');
 
-  // What the user would get from that link: a zip with the firmware inside.
-  const firmware = new Uint8Array(40 * 1024).map((_, i) => (i * 7) & 0xff);
-  firmware.set([0x00, 0x00, 0x02, 0x20, 0x01, 0x01, 0x00, 0x08]); // plausible stack pointer and reset vector
-  const zip = Buffer.from(zipSync({ 'openrtx_mod17_fix.bin': firmware }));
   await page
     .getByTestId('ci-panel')
     .getByTestId('file-input')
@@ -190,6 +224,7 @@ test('a pull request build is found, downloaded by hand and dropped in', async (
 
   // The firmware step folds and its bar says what was chosen.
   await expect(step(page, 'step-firmware')).toContainText('PR #588 · change');
+  await expect(step(page, 'step-firmware').getByTestId('chosen-build')).toContainText('commit feedc0d');
   await skipToFlash(page);
   await expect(page.getByTestId('flash-step')).toContainText('PR #588 for the Module 17');
   // While the page can flash, the usual tool is folded away.
@@ -303,38 +338,66 @@ test('a file dropped anywhere on the page shows up under Other, File', async ({ 
   await expect(page.getByTestId('file-panel').getByTestId('loaded')).toContainText('openrtx_mod17_local.bin');
 });
 
-test('moving from one step to the next is animated, unless the reader asked for less motion', async ({
+test('a step folds and opens with motion, unless the reader asked for less, and folded content is out of reach', async ({
   page,
 }) => {
-  /** The animation on a step's content, and how long its content takes to fold. */
-  const motion = (id: string) =>
-    page.evaluate((step) => {
-      const body = getComputedStyle(document.querySelector(`#${step} > .step-body`)!);
-      return { opens: body.animationName, folds: body.transitionDuration.split(',')[0].trim() };
-    }, id);
+  /**
+   * Clicks an element and says whether anything of the page's steps is moving two frames
+   * later. Done inside the page, so no time passes between the click and the look.
+   */
+  const movesAfterClick = (testid: string) =>
+    page.evaluate(async (id) => {
+      document.querySelector<HTMLElement>(`[data-testid="${id}"]`)!.click();
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await frame();
+      await frame();
+      return [...document.querySelectorAll('[data-testid="step"]')].some(
+        (section) => section.getAnimations({ subtree: true }).length > 0,
+      );
+    }, testid);
+  /** The height of a step's content right now. */
+  const bodyHeight = (id: string) =>
+    page.evaluate(
+      (step) => document.querySelector(`#${step} [data-testid="step-body"]`)!.getBoundingClientRect().height,
+      id,
+    );
 
   await page.goto('');
+  await expect(page.getByTestId('radio-gd77')).toBeVisible();
   // The step that is open when the page loads is simply there.
-  expect((await motion('step-radio')).opens).toBe('none');
+  expect(
+    await page.evaluate(() => document.querySelector('#step-radio')!.getAnimations({ subtree: true }).length),
+  ).toBe(0);
 
-  await page.getByTestId('radio-gd77').click();
-  expect((await motion('step-firmware')).opens).toBe('step-open');
-  expect((await motion('step-radio')).folds).toBe('0.24s');
-  // Once folded, the radio grid is out of sight and out of reach.
+  // Choosing a radio folds the picker and opens the firmware step, in motion.
+  expect(await movesAfterClick('radio-gd77')).toBe(true);
+  await expect(step(page, 'step-radio')).toHaveAttribute('data-mode', 'folded');
+  // Once folded, the radio grid is out of sight, takes no room and is out of reach of Tab.
   await expect(page.getByTestId('radio-gd77')).toBeHidden();
+  await expect.poll(() => bodyHeight('step-radio')).toBe(0);
+  await page.getByTestId('open-step-radio').focus();
   await page.keyboard.press('Tab');
-  expect(await page.evaluate(() => document.activeElement?.closest('#step-radio .step-body'))).toBeNull();
+  expect(
+    await page.evaluate(
+      () => document.activeElement?.closest('#step-radio [data-testid="step-body"]') ?? null,
+    ),
+  ).toBeNull();
+  // Tab went on to the open step instead.
+  expect(await page.evaluate(() => !!document.activeElement?.closest('#step-firmware'))).toBe(true);
 
-  // Opening it again from its bar animates too.
-  await page.getByTestId('open-step-radio').click();
-  expect((await motion('step-radio')).opens).toBe('step-open');
+  // Opening it again from its bar moves too.
+  expect(await movesAfterClick('open-step-radio')).toBe(true);
   await expect(page.getByTestId('radio-gd77')).toBeVisible();
 
+  // With less motion asked for, the same change is there at once. The opening that is
+  // under way was started with motion, so let it end first.
+  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.getByTestId('radio-md3x0').click();
-  expect((await motion('step-firmware')).opens).toBe('none');
-  expect((await motion('step-radio')).folds).toBe('0s');
+  expect(await movesAfterClick('radio-md3x0')).toBe(false);
+  expect(await bodyHeight('step-radio')).toBe(0);
+  expect(await bodyHeight('step-firmware')).toBeGreaterThan(50);
   await expect(page.getByTestId('radio-md3x0')).toBeHidden();
+  await expect(page.getByTestId('builds')).toBeVisible();
 });
 
 test('after a flash the page asks whether it worked, and the report holds no radio ID', async ({ page }) => {
@@ -349,7 +412,6 @@ test('after a flash the page asks whether it worked, and the report holds no rad
   await pickBuild(page);
   // Take a backup first, so the radio's ID is known to the page.
   await enter(page);
-  await step(page, 'step-backup').getByTestId('turn-on-experimental').click();
   await page.getByTestId('backup').click();
   await expect(page.getByTestId('backup-done')).toContainText('Radio ID: SIM0001');
   await page.getByTestId('backup-continue').click();
@@ -403,7 +465,7 @@ test('a failed flash or backup offers to report it, with what the page logged', 
 
   await page.goto('?sim=wrongmode#md3x0');
   await pickBuild(page);
-  // Experimental flashing is still on from the flash above.
+  await answerRuns(page, 'original');
   await page.getByTestId('backup').click();
   await expect(page.getByTestId('backup-error')).toBeVisible();
   const link = step(page, 'step-backup').getByTestId('report-failed');
@@ -445,7 +507,10 @@ test('the footer leads to the licences and credits, with the licence texts', asy
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()} ${r.url()}`));
   await page.goto('');
-  await page.getByTestId('licences').click();
+  // In a new tab, like every link of the flasher: a flash is never navigated away from.
+  const link = page.getByTestId('licences');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await page.goto((await link.getAttribute('href'))!);
   await expect(page.getByRole('heading', { name: 'Licences and credits' })).toBeVisible();
   await expect(page.getByTestId('credit-radio_tool')).toContainText('GPL-3.0-or-later');
   await expect(page.getByTestId('credit-GD-77 firmware uploader')).toContainText('Roger Clark VK3KYY');
@@ -453,7 +518,7 @@ test('the footer leads to the licences and credits, with the licence texts', asy
   await expect(page.getByTestId('credit-cskburn')).toContainText('Apache-2.0');
 
   // Every licence named has its text on the page, folded until asked for.
-  const texts = page.locator('details.licence');
+  const texts = page.getByTestId('licence-text');
   await expect(texts).toHaveCount(9);
   for (const [title, words] of [
     ['GNU General Public License', 'GNU GENERAL PUBLIC LICENSE'],
@@ -467,9 +532,6 @@ test('the footer leads to the licences and credits, with the licence texts', asy
     await entry.locator('summary').click();
     await expect(entry.locator('pre')).toContainText(words);
   }
-
-  await page.getByTestId('back').click();
-  await expect(page.getByRole('heading', { name: 'OpenRTX Flasher' })).toBeVisible();
   expect(problems).toEqual([]);
 });
 
@@ -541,15 +603,15 @@ test('a file dropped again under the same name is the one that gets flashed', as
 test('a file dropped while the radio is being written changes nothing', async ({ page }) => {
   await page.goto('?sim=slow#mod17');
   await pickBuild(page);
-  const label = await step(page, 'step-firmware').locator('.state').innerText();
+  const label = await step(page, 'step-firmware').getByTestId('step-state').innerText();
   await skipToFlash(page);
   await page.getByTestId('flash').click();
-  await expect(page.getByTestId('flash').locator('.spinner')).toBeVisible();
+  await expect(page.getByTestId('flash').getByTestId('spinner')).toBeVisible();
 
   await dropFile(page, 'openrtx_mod17_other.bin', [1, 2, 3, 4]);
   await expect(page.getByTestId('done')).toBeVisible({ timeout: 60_000 });
   await expect(step(page, 'step-firmware')).not.toContainText('openrtx_mod17_other.bin');
-  expect(await step(page, 'step-firmware').locator('.state').innerText()).toBe(label);
+  expect(await step(page, 'step-firmware').getByTestId('step-state').innerText()).toBe(label);
 });
 
 test('after a failed backup in flashing mode the radio is asked for again', async ({ page }) => {
@@ -557,7 +619,6 @@ test('after a failed backup in flashing mode the radio is asked for again', asyn
   await pickBuild(page);
   await enter(page);
   const backup = step(page, 'step-backup');
-  await turnOnExperimental(page, 'step-backup');
   await backup.getByTestId('backup').click();
   await expect(backup.getByRole('alert').first()).toBeVisible();
   expect(await page.evaluate(() => window.__ortxSimPicks)).toBe(1);
