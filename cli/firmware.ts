@@ -81,7 +81,8 @@ function safe(name: string): string {
 
 /**
  * The bytes kept in the cache under `path` when `valid` accepts them, else those of
- * `url`, which are then kept. `what` names the download for the person.
+ * `url`, which are then kept if the cache can be written. `what` names the download for
+ * the person.
  */
 async function cached(
   source: Source,
@@ -106,10 +107,16 @@ async function cached(
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (!(await valid(bytes))) throw new Error(`${what} is not the file GitHub described, so it was not used.`);
   if (kept) {
-    mkdirSync(dirname(kept), { recursive: true });
-    // Write beside the target and rename, so an interrupted run leaves no half file.
-    writeFileSync(`${kept}.part`, bytes);
-    renameSync(`${kept}.part`, kept);
+    try {
+      mkdirSync(dirname(kept), { recursive: true });
+      // Write beside the target and rename, so an interrupted run leaves no half file.
+      writeFileSync(`${kept}.part`, bytes);
+      renameSync(`${kept}.part`, kept);
+    } catch (e) {
+      // The cache only saves a download next time: what arrived and checked out is used.
+      const why = e instanceof Error ? e.message : String(e);
+      source.say(`The download could not be kept in the cache (${why}); it is used all the same.`);
+    }
   }
   return bytes;
 }

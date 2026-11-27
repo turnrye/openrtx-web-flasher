@@ -247,6 +247,29 @@ describe('firmware for the command line', () => {
     expect(Buffer.compare(await fileData(released, released.files[0], source), firmware)).toBe(0);
   });
 
+  it('uses a download that arrived and checked out even when the cache cannot keep it', async () => {
+    // Where the cache should be there is a file: nothing can be written under it, by anyone.
+    const blocked = join(folder(), 'taken');
+    writeFileSync(blocked, 'not a folder');
+    const routes = {
+      [`${API}/repos/${REPO}/releases?`]: [release('v0.4.5')],
+      [`https://github.com/${REPO}/releases/download/v0.4.5/`]: firmware,
+      ...ciRoutes(),
+    };
+    const { source, said } = fakeWeb(routes, { cache: join(blocked, 'cache') });
+    const build = await resolveBuild('release', mod17, undefined, source);
+    const data = await fileData(build, fileForRadio(mod17, build)!, source);
+    expect(Buffer.compare(data, firmware)).toBe(0);
+    expect(said).toHaveLength(2);
+    expect(said[1]).toMatch(
+      /^The download could not be kept in the cache \(.*taken.*\); it is used all the same\.$/,
+    );
+
+    // A CI zip goes the same way.
+    const ci = await resolveBuild('588', c62, undefined, source);
+    expect(fileForRadio(c62, ci)!.name).toBe('zephyr.bin');
+  });
+
   it('takes a file on this computer: firmware, or a CI zip', async () => {
     const dir = folder();
     const { source, calls } = fakeWeb({});
