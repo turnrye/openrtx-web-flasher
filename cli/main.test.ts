@@ -112,7 +112,8 @@ describe('looking around', () => {
     const { code, text } = await run(['radios']);
     expect(code).toBe(0);
     for (const radio of RADIOS) expect(text).toContain(`  ${radio.id.padEnd(9)} ${radio.name}`);
-    expect(text).toContain('Read or flashed with this tool on real hardware so far: md9600, cs7000p.');
+    expect(text).toContain('Flashing was checked with this tool on real hardware for: md9600, cs7000p.');
+    expect(text).toContain('Backing up was checked with this tool on real hardware for: none of them yet.');
   });
 
   it('says what one radio needs: its second image, its flashing mode, its backup', async () => {
@@ -161,7 +162,9 @@ describe('looking around', () => {
     expect(text).toContain('2. Hold PTT and the orange button on top, then turn the radio on.');
     expect(text).not.toContain('SK1');
     expect(text).toContain('Backup: A radio with its Connect Systems firmware cannot be backed up');
-    expect(text).toContain('this tool was checked on a real one (2026-11-24); nor has the web page');
+    expect(text).toContain(
+      'this tool was checked on a real one for flashing (2026-11-24); nor has the web page',
+    );
     expect((await run(['radios'])).text).toContain('USB; backup: not possible');
     const backup = await run(['backup', 'cs7000p', '--sim']);
     expect(backup.code).toBe(1);
@@ -172,7 +175,9 @@ describe('looking around', () => {
     const { text } = await run(['radios', 'md9600']);
     expect(text).toContain('3. The screen blinks on and off with nothing on it');
     expect(text).not.toContain('stays dark');
-    expect(text).toContain('this tool was checked on a real one (2026-11-25); nor has the web page');
+    expect(text).toContain(
+      'this tool was checked on a real one for flashing (2026-11-25); nor has the web page',
+    );
     expect((await run(['radios', 'mduv3x0'])).text).toContain('this tool has not been checked on a real one');
   });
 
@@ -458,7 +463,7 @@ describe('real hardware, stood in for by fakes', () => {
     const stopped = await run(['flash', 'c62', C62_ZIP, '--yes']);
     expect(stopped.code).toBe(1);
     expect(stopped.text).toContain(
-      'Nobody has checked this command-line tool against a real Retevis C62 / C2 yet.',
+      'Nobody has checked flashing a real Retevis C62 / C2 with this command-line tool yet.',
     );
     // The page was checked on a C62; that is about the page.
     expect(stopped.text).toContain(
@@ -468,10 +473,33 @@ describe('real hardware, stood in for by fakes', () => {
 
     const refused = await run(['backup', 'mod17'], {}, [false]);
     expect(refused.code).toBe(1);
-    expect(refused.io.asked).toEqual(['I can recover my radio: go on?']);
+    expect(refused.io.asked).toEqual(['Read the radio all the same?']);
     expect(refused.text).toContain('Stopped. Nothing was sent to the radio.');
     // Neither run got as far as the `untouchable` packages.
     expect(stopped.text + refused.text).not.toContain('real device');
+  });
+
+  it('asks about what is being done: a radio checked for flashing is not thereby checked for a backup', async () => {
+    // The MD-9600 was flashed with this tool on the bench; its backup was never read with it.
+    const stopped = await run(['backup', 'md9600']);
+    expect(stopped.code).toBe(1);
+    expect(stopped.text).not.toContain('checked on a real radio:');
+    expect(stopped.text).toContain(
+      'Nobody has checked backing up a real Tytera MD-9600 with this command-line tool yet.',
+    );
+    expect(stopped.text).not.toContain('A failed flash');
+    expect(stopped.text).toContain('Flashing one was checked (2026-11-25); backing up is another path');
+    expect(stopped.text).toContain('Stopped: add --experimental to go on. Nothing was sent to the radio.');
+    expect(stopped.text).not.toContain('real device');
+
+    const asked = await run(['backup', 'md9600'], {}, [false]);
+    expect(asked.io.asked).toEqual(['Read the radio all the same?']);
+
+    // Flashing it is what was checked: that goes on without being told to, as far as the device.
+    const flash = await run(['flash', 'md9600', fileOf('openrtx_md9600_test.bin', random(4096)), '--yes']);
+    expect(flash.text).toContain('Flashing was checked on a real radio: development build 242dcee0');
+    expect(flash.text).not.toContain('Nobody has checked');
+    expect(flash.text).toContain('a test reached for a real device');
   });
 
   it('flashes a GD-77 through node-hid and asks how it went', async () => {

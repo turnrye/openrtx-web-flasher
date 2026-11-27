@@ -76,21 +76,33 @@ export interface Host {
 }
 
 /**
- * Radios this tool was checked on with real hardware, by radio id. Empty until someone
- * does it: `verified` in src/radios.ts is about the page in Chrome, which reaches the
- * radio through another USB and serial layer.
+ * What this tool was checked for on real hardware: by radio id, then by what was done,
+ * flashing or backing up. One does not stand for the other: they are different code and,
+ * on many radios, a different mode of the radio. Empty until someone does it: `verified`
+ * in src/radios.ts is about the page in Chrome, which reaches the radio through another
+ * USB and serial layer.
  */
-const CHECKED: Partial<Record<string, Verification>> = {
+const CHECKED: Partial<Record<string, Partial<Record<Purpose, Verification>>>> = {
   md9600: {
-    version: 'development build 242dcee0',
-    platform: 'Node 26.9, macOS on Apple silicon',
-    date: '2026-11-25',
+    flash: {
+      version: 'development build 242dcee0',
+      platform: 'Node 26.9, macOS on Apple silicon',
+      date: '2026-11-25',
+    },
   },
   cs7000p: {
-    version: 'development build 9951a7d1',
-    platform: 'Node 26.9, macOS on Apple silicon, robot mode',
-    date: '2026-11-24',
+    flash: {
+      version: 'development build 9951a7d1',
+      platform: 'Node 26.9, macOS on Apple silicon, robot mode',
+      date: '2026-11-24',
+    },
   },
+};
+
+/** What a purpose is called, at the start of a sentence and inside one. */
+const DOING: Record<Purpose, [string, string]> = {
+  flash: ['Flashing', 'flashing'],
+  backup: ['Backing up', 'backing up'],
 };
 
 /** The devices of one run: real ones, or the simulators. */
@@ -216,11 +228,11 @@ function sayGaps(radio: Radio, io: Io, indent: string, linked: boolean): void {
 
 /** What is known about `radio` on real hardware: this tool, and the page. */
 function checkedSummary(radio: Radio): string {
-  const here = CHECKED[radio.id];
+  const here = Object.entries(CHECKED[radio.id] ?? {}) as [Purpose, Verification][];
   const page = radio.verified;
   return [
-    here
-      ? `this tool was checked on a real one (${here.date})`
+    here.length > 0
+      ? `this tool was checked on a real one for ${here.map(([purpose, { date }]) => `${DOING[purpose][1]} (${date})`).join(' and ')}`
       : 'this tool has not been checked on a real one',
     page ? `the web page was (${page.date})` : 'nor has the web page',
   ].join('; ');
@@ -236,12 +248,12 @@ function showRadios(id: string | undefined, { io }: Host): number {
       io.say(`  ${''.padEnd(9)} ${connection(radio)}; backup: ${backupSummary(radio)}`);
     }
     io.say();
-    const checked = RADIOS.filter((radio) => CHECKED[radio.id]).map((radio) => radio.id);
-    io.say(
-      checked.length === 0
-        ? 'None of them has been read or flashed with this tool on real hardware yet.'
-        : `Read or flashed with this tool on real hardware so far: ${checked.join(', ')}.`,
-    );
+    for (const purpose of ['flash', 'backup'] as const) {
+      const checked = RADIOS.filter((radio) => CHECKED[radio.id]?.[purpose]).map((radio) => radio.id);
+      io.say(
+        `${DOING[purpose][0]} was checked with this tool on real hardware for: ${checked.join(', ') || 'none of them yet'}.`,
+      );
+    }
     io.say('"openrtx-flasher radios <radio>" says what one of them needs.');
     return 0;
   }
@@ -377,27 +389,38 @@ async function fetchFiles(radio: Radio, what: string, options: Options, host: Ho
 }
 
 /**
- * The page's experimental gate: whether to talk to `radio` at all. Yes when it is
- * simulated or this tool was checked on it; otherwise only when the person says so.
+ * The page's experimental gate: whether to talk to `radio` for `purpose` at all. Yes when
+ * it is simulated or this tool was checked on it for that; otherwise only when the person
+ * says so.
  */
-async function allowed(radio: Radio, options: Options, { io }: Host): Promise<boolean> {
+async function allowed(radio: Radio, purpose: Purpose, options: Options, { io }: Host): Promise<boolean> {
   if (options.sim !== undefined) {
     io.say('Simulator: this goes to a simulated radio. Nothing is sent to real hardware.');
     return true;
   }
-  const here = CHECKED[radio.id];
+  const here = CHECKED[radio.id]?.[purpose];
   if (here) {
     io.say(
-      `Checked on a real radio: ${[here.version, here.platform, here.date].filter(Boolean).join(', ')}.`,
+      `${DOING[purpose][0]} was checked on a real radio: ${[here.version, here.platform, here.date].filter(Boolean).join(', ')}.`,
     );
     return true;
   }
+  const other: Purpose = purpose === 'flash' ? 'backup' : 'flash';
   io.say(
-    `Nobody has checked this command-line tool against a real ${radio.name} yet. A failed flash can leave ` +
-      'the radio without working firmware until you flash it again with the usual tool.',
+    `Nobody has checked ${DOING[purpose][1]} a real ${radio.name} with this command-line tool yet. ` +
+      (purpose === 'flash'
+        ? 'A failed flash can leave the radio without working firmware until you flash it again with the usual tool.'
+        : 'Reading does not change the radio, but what an unchecked reader saves may be wrong or incomplete.'),
   );
+  const otherCheck = CHECKED[radio.id]?.[other];
+  if (otherCheck) {
+    io.say(
+      `${DOING[other][0]} one was checked (${otherCheck.date}); ${DOING[purpose][1]} is another path through this tool.`,
+    );
+  }
   if (radio.verified) io.say('The web page was checked on one; this tool reaches the radio another way.');
-  if (options.experimental || (await io.confirm('I can recover my radio: go on?'))) return true;
+  const question = purpose === 'flash' ? 'I can recover my radio: go on?' : 'Read the radio all the same?';
+  if (options.experimental || (await io.confirm(question))) return true;
   io.say(`Stopped${io.interactive ? '' : ': add --experimental to go on'}. Nothing was sent to the radio.`);
   return false;
 }
@@ -480,7 +503,7 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   const needs = options.sim === undefined ? platformNote(radio) : null;
   if (needs) io.say(needs);
   io.say();
-  if (!(await allowed(radio, options, host))) return 1;
+  if (!(await allowed(radio, 'flash', options, host))) return 1;
 
   io.say(
     `Put the radio in flashing mode${radio.enterUnconfirmed ? ' (a best guess: the OpenRTX documentation does not say)' : ''}:`,
@@ -539,7 +562,7 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
     );
   }
   const failed = { ...about, outcome: 'failed' as const, log };
-  if (asksForSuccess(CHECKED[radio.id] !== undefined)) {
+  if (asksForSuccess(CHECKED[radio.id]?.flash !== undefined)) {
     io.say(`Did the radio start OpenRTX? Your answer helps get the ${radio.name} checked with this tool.`);
     io.say(`  Yes: ${reportLink(host, { ...about, outcome: 'worked' })}`);
     io.say(
@@ -573,7 +596,7 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   if (info.notIncluded) io.say(`${info.notIncluded.text} ${info.notIncluded.url}`);
   sayGaps(radio, io, '', info.notIncluded?.url === COVERAGE_DOC_URL);
   io.say();
-  if (!(await allowed(radio, options, host))) return 1;
+  if (!(await allowed(radio, 'backup', options, host))) return 1;
   if (info.mode === 'normal') {
     io.say(
       'The radio must be in normal mode: switched on without holding any keys, with the programming cable connected.',
