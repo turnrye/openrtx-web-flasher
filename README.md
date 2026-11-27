@@ -17,12 +17,15 @@ flashing on (see [docs/qa.md](docs/qa.md)). The Retevis C62 and the Connect Syst
 CS7000-M17 are checked so far; [docs/verification.md](docs/verification.md) has the
 record.
 
-![The radio picker](docs/screenshots/1-radios.png)
+![The flasher: before you start, and the radio picker](docs/screenshots/2-radios.png)
 
-More: [choosing firmware](docs/screenshots/2-firmware.png),
-[after a backup](docs/screenshots/3-backed-up.png),
-[entering flashing mode](docs/screenshots/4-flashing-mode.png),
-[after flashing](docs/screenshots/5-flashed.png).
+More: [the site's front page](docs/screenshots/1-home.png),
+[choosing firmware](docs/screenshots/3-firmware.png),
+[the backup step, with what it will not hold](docs/screenshots/4-backup.png),
+[entering flashing mode](docs/screenshots/5-flashing-mode.png),
+[after flashing](docs/screenshots/6-flashed.png),
+[the radios table](docs/screenshots/7-radio-table.png),
+[a page of the docs](docs/screenshots/8-docs.png).
 
 ## What it does
 
