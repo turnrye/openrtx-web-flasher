@@ -22,6 +22,13 @@ export default defineConfig({
   site: process.env.SITE_URL === '' ? undefined : process.env.SITE_URL,
   base,
   trailingSlash: 'always',
+  // Addresses the old website answered with a redirect of its own; every other old
+  // address is a page here under the same name. Astro does not put the base in front of a
+  // destination, so it is written in.
+  redirects: {
+    '/md380_mods': `${base}m17/md380_mods/`,
+    '/mduv380_mods': `${base}m17/mduv380_mods/`,
+  },
   srcDir: './site',
   publicDir: './public',
   outDir: './dist',

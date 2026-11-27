@@ -103,6 +103,10 @@ test('an address of the old docsify site lands on the new page, at the heading i
   // The old folder name had capitals; addresses here do not.
   await page.goto('../#/M17/m17?id=hardware-modifications');
   await expect(page).toHaveURL(/\/m17\/m17\/#hardware-modifications$/);
+  // The old site's own redirects, to the M17 folder, still lead there.
+  await page.goto('../#/md380_mods');
+  await expect(page).toHaveURL(/\/m17\/md380_mods\/$/);
+  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
 });
 
 test('a copied page is edited where it is kept, and a page written here in this repository', async ({
