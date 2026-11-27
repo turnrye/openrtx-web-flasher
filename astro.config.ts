@@ -59,6 +59,7 @@ export default defineConfig({
             { label: 'Flash your radio', link: '/flash/' },
             { slug: 'flash/radios' },
             { slug: 'flash/backups' },
+            { slug: 'flash/credits' },
           ],
         },
         { label: 'Start here', items: [{ slug: 'user_guide' }, { slug: 'dev_status' }] },
@@ -78,7 +79,7 @@ export default defineConfig({
         { label: 'News', collapsed: true, items: [{ autogenerate: { directory: 'posts' } }] },
         {
           label: 'Community',
-          items: [{ slug: 'get_in_touch' }, { slug: 'contribute' }, { slug: 'licences' }],
+          items: [{ slug: 'get_in_touch' }, { slug: 'contribute' }],
         },
       ],
     }),

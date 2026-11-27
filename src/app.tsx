@@ -483,7 +483,7 @@ export function App() {
           Flashing firmware is at your own risk.{' '}
           <ReportLink report={{ outcome: 'suggestion' }} label="Feedback" testid="feedback" plain />
           {' · '}
-          <Out href={siteUrl('licences/')} testid="licences">
+          <Out href={siteUrl('flash/credits/')} testid="licences">
             Licences and credits
           </Out>
         </p>

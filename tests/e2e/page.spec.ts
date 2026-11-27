@@ -511,7 +511,7 @@ test('the footer leads to the licences and credits, with the licence texts', asy
   const link = page.getByTestId('licences');
   await expect(link).toHaveAttribute('target', '_blank');
   await page.goto((await link.getAttribute('href'))!);
-  await expect(page.getByRole('heading', { name: 'Licences and credits' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Flasher licences and credits' })).toBeVisible();
   await expect(page.getByTestId('credit-radio_tool')).toContainText('GPL-3.0-or-later');
   await expect(page.getByTestId('credit-GD-77 firmware uploader')).toContainText('Roger Clark VK3KYY');
   await expect(page.getByTestId('credit-GD-77 firmware uploader')).toContainText('GPL-2.0-or-later');
