@@ -115,7 +115,7 @@ test('md9600: the backup comes first, reads the original firmware, then the radi
   await expect(page.getByTestId('backup-not-included')).toContainText('security registers');
   await expect(page.getByTestId('backup-not-included').locator('a')).toHaveAttribute(
     'href',
-    /docs\/backup-coverage\.md$/,
+    /\/flasher\/backup-coverage\/$/,
   );
 
   const backup = await backUp(page);
