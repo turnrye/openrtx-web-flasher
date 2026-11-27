@@ -34,6 +34,7 @@ describe('command line arguments', () => {
       yes: false,
       experimental: false,
       again: false,
+      print: false,
     });
     const { options } = parse(['flash', 'c62', 'master', '-y', '--experimental', '--again']);
     expect(options).toMatchObject({ yes: true, experimental: true, again: true });

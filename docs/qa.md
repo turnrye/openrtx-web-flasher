@@ -114,16 +114,16 @@ it is recorded in `commandLineVerified` in `src/radios.ts`, next to the line in 
 
 ## Current state
 
-| Radio                                  | Layers 1–2 | Bench                                                               |
-| -------------------------------------- | ---------- | ------------------------------------------------------------------- |
-| Retevis C62                            | passing    | backup and flash checked, 2026-11-21; no restore                    |
-| Connect Systems CS7000-M17             | passing    | flash reported working, 2026-11-21; no backup; browser not recorded |
-| Connect Systems CS7000-M17 Plus        | passing    | command line, robot mode: flash checked, 2026-11-24; page not run   |
-| Tytera MD-9600                         | passing    | command line: flash checked, 2026-11-25; no backup; page not run    |
-| Tytera MD-UV380 / MD-UV390             | passing    | flash reported working, 2026-11-27; no backup; browser not recorded |
-| Baofeng DM-1701                        | passing    | flash reported working, 2026-11-27; no backup; browser not recorded |
-| MD-380, GD-77 family, STM32 DFU, RT-4D | passing    | not yet run                                                         |
-| Radtel RT-950 Pro                      | passing    | not yet run                                                         |
+| Radio                                  | Layers 1–2 | Bench                                                                                        |
+| -------------------------------------- | ---------- | -------------------------------------------------------------------------------------------- |
+| Retevis C62                            | passing    | backup and flash checked, 2026-11-21; no restore                                             |
+| Connect Systems CS7000-M17             | passing    | flash reported working, 2026-11-21; no backup; browser not recorded                          |
+| Connect Systems CS7000-M17 Plus        | passing    | command line, robot mode: flash checked, 2026-11-24; page not run                            |
+| Tytera MD-9600                         | passing    | command line: flash checked, 2026-11-25; no backup; page not run                             |
+| Tytera MD-UV380 / MD-UV390             | passing    | page: flash reported working, 2026-11-27; command line: flash checked, 2026-11-26; no backup |
+| Baofeng DM-1701                        | passing    | flash reported working, 2026-11-27; no backup; browser not recorded                          |
+| MD-380, GD-77 family, STM32 DFU, RT-4D | passing    | not yet run                                                                                  |
+| Radtel RT-950 Pro                      | passing    | not yet run                                                                                  |
 
 Radios on hand for the bench: MD-UV390, CS7000-M17 Plus, C62, MD-9600. GD-77, DM-1801,
 Module 17, RT-4D, MD-380, DM-1701 and CS7000-M17 need a volunteer with the radio.

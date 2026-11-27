@@ -11,6 +11,7 @@ export const USAGE = `openrtx-flasher: back up and flash radios with OpenRTX fro
   openrtx-flasher backup <radio>             read the radio into a backup zip
   openrtx-flasher flash <radio> <firmware>   write firmware, or a backup zip, to the radio
   openrtx-flasher ports                      the serial ports on this computer
+  openrtx-flasher setup                      let this computer reach radios without sudo (Linux)
 
 <radio> is a name from "radios", such as c62 or mduv3x0.
 <firmware> is one of:
@@ -30,6 +31,7 @@ Options:
   --repo <owner/repo>  where firmware comes from (default OpenRTX/OpenRTX)
   --cskburn <file>   use this cskburn for the C62 instead of the pinned download
   --sim[=<how>]      simulated radio, no hardware: fail, protected, wrongmode or slow
+  --print            "setup": print the udev rule file and change nothing
   --help, --version
 
 Listing and release files need no login. GitHub only gives CI builds to logged-in
@@ -40,7 +42,7 @@ export class UsageError extends Error {}
 
 /** What to do. */
 export type Command =
-  | { name: 'help' | 'version' | 'firmware' | 'ports' }
+  | { name: 'help' | 'version' | 'firmware' | 'ports' | 'setup' }
   | { name: 'radios'; radio?: string }
   | { name: 'backup'; radio: string }
   | { name: 'fetch' | 'flash'; radio: string; firmware: string };
@@ -56,6 +58,7 @@ export interface Options {
   yes: boolean;
   experimental: boolean;
   again: boolean;
+  print: boolean;
 }
 
 /** A parsed command line. */
@@ -69,6 +72,7 @@ const WORDS: Record<string, [number, number]> = {
   radios: [0, 1],
   firmware: [0, 0],
   ports: [0, 0],
+  setup: [0, 0],
   backup: [1, 1],
   fetch: [2, 2],
   flash: [2, 2],
@@ -92,6 +96,7 @@ export function parse(argv: string[]): Parsed {
         yes: { type: 'boolean', short: 'y', default: false },
         experimental: { type: 'boolean', default: false },
         again: { type: 'boolean', default: false },
+        print: { type: 'boolean', default: false },
         help: { type: 'boolean', short: 'h', default: false },
         version: { type: 'boolean', default: false },
       },
@@ -124,6 +129,6 @@ export function parse(argv: string[]): Parsed {
     case 'flash':
       return { command: { name, radio, firmware }, options };
     default:
-      return { command: { name: name as 'firmware' | 'ports' }, options };
+      return { command: { name: name as 'firmware' | 'ports' | 'setup' }, options };
   }
 }

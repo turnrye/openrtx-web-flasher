@@ -152,7 +152,7 @@ describe('radio catalogue', () => {
     // The command line's checks are a record of their own, by what was done.
     const withCommandLine = (purpose: 'flash' | 'backup') =>
       RADIOS.filter((r) => checksFor(r).commandLine[purpose]).map((r) => r.id);
-    expect(withCommandLine('flash')).toEqual(['md9600', 'cs7000p']);
+    expect(withCommandLine('flash')).toEqual(['mduv3x0', 'md9600', 'cs7000p']);
     expect(withCommandLine('backup')).toEqual([]);
   });
 

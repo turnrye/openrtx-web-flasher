@@ -152,6 +152,7 @@ The first run takes a little longer, because npm builds the program from the sou
 | `backup <radio>`           | reads the radio into a backup zip, the page's format |
 | `flash <radio> <firmware>` | writes firmware, or a backup zip, to the radio       |
 | `ports`                    | the serial ports, for `--port` (RT-4D, RT-950, C62)  |
+| `setup`                    | on Linux, lets you reach radios without sudo, once   |
 
 `<firmware>` is `release`, a past release (`v0.4.5`), `master` (the development build), a
 pull request number, a branch, `owner:branch` for a fork, or a file: firmware, a CI zip,
@@ -163,8 +164,8 @@ nightly.link.
 - It runs the page's flashers, readers, catalogue and backup format, and keeps its
   safeguards. It asks before it writes (`--yes` skips that), and a radio in the wrong
   mode or a file for another radio is refused before anything is sent.
-- **Checked on two real radios so far, for flashing: the CS7000-M17 Plus and the
-  MD-9600.** The radios marked as checked on the page were checked from Chrome; the
+- **Checked on three real radios so far, for flashing: the CS7000-M17 Plus, the
+  MD-9600 and the MD-UV390.** The radios marked as checked on the page were checked from Chrome; the
   command line reaches them through other USB, serial and HID libraries. So everything
   else, backing up the MD-9600 included, asks for `--experimental` until someone runs
   the bench check with it.
@@ -174,8 +175,108 @@ nightly.link.
 - The C62 runs LISTENAI's own release of cskburn, the same commit the page compiles to
   WebAssembly. It is downloaded once and checked against `vendor.json`; `--cskburn`
   names another one. There are builds for Linux and macOS (x64, arm64) and Windows x64.
-- On Windows a USB radio needs the WinUSB driver (Zadig); on Linux, udev rules that let
-  you open the device.
+- On Windows a USB radio needs the WinUSB driver (Zadig). On Linux, run `setup` once;
+  [Linux: one setup, then no sudo](#linux-one-setup-then-no-sudo) says what it does and
+  why. On macOS the CS7000-M17 Plus in robot mode needs `sudo` in front of the command,
+  because macOS keeps USB drives to itself.
+
+### Linux: one setup, then no sudo
+
+**Why anything is needed.** When a radio in flashing mode is plugged in, Linux makes a
+device file for it, such as `/dev/bus/usb/005/004`, owned by root:
+
+    $ ls -l /dev/bus/usb/005/004
+    crw-rw-r-- 1 root root 189, 515 Nov 26 07:15 /dev/bus/usb/005/004
+
+Everyone may read it (`r`), which is enough for `lsusb` to show the radio, but only root
+may write to it, and a flasher has to. Without access the tool says so: "The Connect
+Systems CS7000-M17 Plus is connected, but this user may not open it".
+
+**Two ways round it.** Run the tool as root every time (`sudo`), or tell Linux once that
+the person at the computer may use these particular devices. This tool does the second,
+as the dfu-util and hackrf packages do with the rule files they install:
+
+- It needs root once, to put one text file in place. From then on the tool runs as you.
+  With `sudo` every flash would run Node, npm and code just downloaded from GitHub as root.
+- `sudo npx …` does not work as typed anyway: `sudo` replaces `PATH` with its own, so a
+  Node installed with nvm, and `npx` with it, cannot be found; it also drops
+  `GITHUB_TOKEN`.
+
+**The rule file.** udev is the part of Linux that makes those device files, and it
+reads rules from `/etc/udev/rules.d/` to decide who gets them. `setup` writes one file,
+`/etc/udev/rules.d/70-openrtx-flasher.rules`. `setup --print` shows it; one of its lines:
+
+    SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0483", ATTR{idProduct}=="5720", TAG+="uaccess"
+
+- The left part picks the device: a USB device with vendor ID 0483 and product ID 5720,
+  the CS7000-M17 Plus in robot mode (`lsusb` shows the same pair as `0483:5720`). There is
+  one line for each bootloader the flashers talk to, made from the same list the tool
+  uses to find them. The GD-77's line matches `hidraw`, the device file of a USB HID
+  device, because node-hid opens that instead.
+- `TAG+="uaccess"` says who gets it: whoever is logged in at this computer, for as long
+  as they are. systemd gives that person access when they log in and takes it back when
+  they leave, so it is not given to other users or to someone logged in over SSH. Several
+  of these IDs are ST's and are used by other devices too; this keeps that to the person
+  at the keyboard.
+- The 70 matters. udev reads the files in order, and systemd's own
+  `73-seat-late.rules` is what turns the tag into access. A file numbered after it, such
+  as a `99-…` one, adds the tag too late and nothing happens, without a warning.
+
+**Doing it.**
+
+    npx github:turnrye/openrtx-web-flasher setup
+
+It shows the file and the three commands, and runs them when you say yes; `sudo` asks
+for your password:
+
+    sudo install -m 0644 <the file> /etc/udev/rules.d/70-openrtx-flasher.rules
+    sudo udevadm control --reload
+    sudo udevadm trigger --action=change --subsystem-match=usb --subsystem-match=hidraw
+
+`install` copies the file into place, readable by everyone and writable by root.
+`udevadm control --reload` makes udev read its rules again. `udevadm trigger` replays the
+rules for USB and HID devices already plugged in, so a radio connected now is covered
+without unplugging it. `flash` and `backup` offer the same when they meet a radio they
+may not open, and look for it again afterwards. Without a terminal to ask in, or when
+you say no, the tool prints the commands and changes nothing. To do it by hand:
+
+    npx github:turnrye/openrtx-web-flasher setup --print | sudo tee /etc/udev/rules.d/70-openrtx-flasher.rules
+    sudo udevadm control --reload
+    sudo udevadm trigger --action=change --subsystem-match=usb --subsystem-match=hidraw
+
+**Seeing that it worked.** Put the radio in flashing mode and find its device file with
+`lsusb` (bus 005, device 004 is `/dev/bus/usb/005/004`):
+
+    $ lsusb | grep 0483:5720
+    Bus 005 Device 004: ID 0483:5720 STMicroelectronics Mass Storage Device
+    $ udevadm info /dev/bus/usb/005/004 | grep CURRENT_TAGS
+    E: CURRENT_TAGS=:uaccess:
+    $ getfacl -p /dev/bus/usb/005/004 | grep '^user:'
+    user::rw-
+    user:you:rw-
+
+`uaccess` among the tags (there may be others) is the rule matching. The `user:you:rw-` line is the result: an
+access control list entry, added on top of the `root root` owner, that lets you read and
+write the device. `ls -l` hints at it with a `+` after the permissions.
+
+**Undoing it.**
+
+    sudo rm /etc/udev/rules.d/70-openrtx-flasher.rules
+    sudo udevadm control --reload
+
+Devices plugged in afterwards are root's alone again. `setup` says when the file is
+there and current, and replaces one from an older version of the tool.
+
+**When it is not enough.** Over SSH, or on a system without systemd-logind, nobody is
+"at the computer", so `uaccess` gives access to nobody. The tool then says the file is
+installed and the radio still refused, and prints the one command that does work: the
+same command under `sudo`, with the full paths of Node and of the program, so neither
+`PATH` nor nvm matters.
+
+**Radios on a serial cable** (RT-4D, RT-950 Pro, C62) need none of this. They use a
+serial port such as `/dev/ttyUSB0`, which Linux gives to the `dialout` group: if
+`ports` lists the port but opening it is refused, add yourself with
+`sudo usermod -aG dialout $USER`, then log out and back in.
 
 ## Develop
 
