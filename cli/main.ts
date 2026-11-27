@@ -9,6 +9,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { makeBundle } from '../src/backup/bundle.ts';
 import type { RadioBackup } from '../src/backup/types.ts';
+import { COVERAGE_DOC_URL, gapLine, gapsFor, openRtxLimit } from '../src/coverage.ts';
 import type { DeviceEnv } from '../src/devices.ts';
 import { asksForSuccess, reportUrl, type Report } from '../src/feedback.ts';
 import { companionsFor, fileForRadio, sha256Hex, type Build } from '../src/firmware/builds.ts';
@@ -193,6 +194,23 @@ function backupSummary(radio: Radio): string {
   return `read in ${backup.mode} mode, ${backup.time}; ${backup.restorable ? 'can be flashed back' : 'a record, cannot be written back'}`;
 }
 
+/**
+ * Says what a backup of `radio` leaves out, from the coverage record. `linked` is true
+ * when a line before this one already gave the address of the coverage document.
+ */
+function sayGaps(radio: Radio, io: Io, indent: string, linked: boolean): void {
+  const gaps = gapsFor(radio);
+  if (gaps.length === 0) {
+    io.say(`${indent}That is every memory the radio has.`);
+  } else {
+    io.say(`${indent}Not saved whole, each a critical gap:`);
+    for (const gap of gaps) io.say(`${indent}  - ${gapLine(gap)}`);
+    if (!linked) io.say(`${indent}What is lost, and how each gap can be closed: ${COVERAGE_DOC_URL}`);
+  }
+  const limit = openRtxLimit(radio);
+  if (limit) io.say(`${indent}${limit}`);
+}
+
 /** What is known about `radio` on real hardware: this tool, and the page. */
 function checkedSummary(radio: Radio): string {
   const here = CHECKED[radio.id];
@@ -249,8 +267,10 @@ function showRadios(id: string | undefined, { io }: Host): number {
     if (backup.caveat) io.say(`  ${backup.caveat}`);
     if (backup.notIncluded) io.say(`  ${backup.notIncluded.text} ${backup.notIncluded.url}`);
     if (backup.after) io.say(`  ${backup.after}`);
+    sayGaps(radio, io, '  ', backup.notIncluded?.url === COVERAGE_DOC_URL);
   } else {
     io.say(`Backup: ${backup.text}`);
+    sayGaps(radio, io, '  ', false);
   }
   io.say();
   io.say(`The usual tool: ${radio.manual.tool}, ${radio.manual.url}`);
@@ -313,8 +333,8 @@ function nothingFor(radio: Radio, build: Build): string {
   }
   if (build.backup) {
     return (
-      'This backup was read through the radio’s original firmware. It is the record of what the radio held ' +
-      'and cannot be written back.'
+      'This backup was read through the radio’s original firmware. It is a record of what could be read from ' +
+      'the radio and cannot be written back.'
     );
   }
   return (
@@ -536,6 +556,7 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   const info = backupFor(radio);
   if (info.how !== 'read') {
     io.say(info.text);
+    sayGaps(radio, io, '', false);
     return info.how === 'copy' ? 0 : 1;
   }
   // Before anything else: a read is long, and its result must have somewhere to go.
@@ -544,10 +565,11 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   io.say(
     info.restorable
       ? 'The backup is the way back to what the radio runs now: "flash" can write it back.'
-      : 'The backup cannot be written back, but it is the record of what the radio held, including what a repair would need.',
+      : 'The backup cannot be written back. It is a record of what could be read from the radio, not of everything in it.',
   );
   if (info.caveat) io.say(info.caveat);
   if (info.notIncluded) io.say(`${info.notIncluded.text} ${info.notIncluded.url}`);
+  sayGaps(radio, io, '', info.notIncluded?.url === COVERAGE_DOC_URL);
   io.say();
   if (!(await allowed(radio, options, host))) return 1;
   if (info.mode === 'normal') {

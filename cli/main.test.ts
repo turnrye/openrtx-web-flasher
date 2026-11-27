@@ -123,9 +123,37 @@ describe('looking around', () => {
     );
     expect(text).toContain('2. Hold the secondary PTT');
     expect(text).toContain('Backup: read in flashing mode, about ten minutes; can be flashed back.');
+    expect(text).toContain('That is every memory the radio has.');
+    expect(text).not.toContain('critical gap');
     expect(text).toContain('this tool has not been checked on a real one; the web page was (2026-11-21)');
     expect(text).not.toContain('{file}');
     expect((await run(['radios', 'rt4d'])).text).toContain('a best guess');
+  });
+
+  it('lists what a backup leaves out, from the coverage record', async () => {
+    const tyt = (await run(['radios', 'md9600'])).text;
+    expect(tyt).toContain('Not saved whole, each a critical gap:');
+    expect(tyt).toContain('    - program memory (STM32F405), 1 MiB: saved in part; needs a dumper');
+    expect(tyt).toContain("    - the memory chip's security registers, 768 bytes: not saved; needs a dumper");
+    expect(tyt).toContain('A radio that already runs OpenRTX cannot be backed up this way');
+    // The address of the coverage document is given once.
+    expect(tyt.split('docs/backup-coverage.md')).toHaveLength(2);
+
+    const plus = (await run(['radios', 'cs7000p'])).text;
+    expect(plus).toContain('    - memory chip, 32 MiB: not saved; needs a dumper');
+    expect(plus).toContain('docs/backup-coverage.md');
+    expect(plus).not.toContain('already runs OpenRTX');
+
+    const copy = await run(['backup', 'ttwrplus']);
+    expect(copy.code).toBe(0);
+    expect(copy.text).toContain('  - flash of the ESP32-S3, 16 MiB: saved in part; esptool reads it');
+
+    const out = folder();
+    const read = await run(['backup', 'rt4d', '--sim', '--out', out]);
+    expect(read.text).toContain('It takes about half an hour.');
+    expect(read.text).toContain('  - program memory (AT32F423), 256 KiB: not saved; needs a dumper');
+    expect(read.text).toContain('not of everything in it');
+    expect(read.text).not.toContain('repair');
   });
 
   it('gives the CS7000-M17 Plus the flashing mode the command line can reach, and no backup', async () => {
