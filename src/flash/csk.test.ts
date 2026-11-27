@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { backupCsk, flashCsk, readCsk, readCskChipId, type CskOptions } from './csk.ts';
-import { quietContext, type Progress } from './types.ts';
+import { FlashError, quietContext, type Progress } from './types.ts';
 import { SimCsk6 } from '../sim/csk6.ts';
 
 const options: CskOptions = {
@@ -15,6 +15,25 @@ const md5 = (bytes: Uint8Array) => new Uint8Array(createHash('md5').update(bytes
 function sim(extra: Partial<ConstructorParameters<typeof SimCsk6>[0]> = {}) {
   const dev = new SimCsk6({ md5, ...extra });
   return { dev, port: dev as unknown as SerialPort };
+}
+
+/** How a promise ended, or 'pending' when it has not ended after `ms`: a hang must fail a test, not stall it. */
+async function outcome(run: Promise<unknown>, ms = 8000): Promise<unknown> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const pending = new Promise<string>((resolve) => {
+    timer = setTimeout(() => resolve('pending'), ms);
+  });
+  try {
+    return await Promise.race([
+      run.then(
+        () => 'resolved',
+        (e: unknown) => e,
+      ),
+      pending,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 describe('cskburn (C62) over a simulated serial port', () => {
@@ -140,4 +159,98 @@ describe('cskburn (C62) over a simulated serial port', () => {
     expect(result.chipId).toBe('C620240900065701');
     expect(Buffer.compare(result.data, dev.flash)).toBe(0);
   });
+
+  it('fails, and does not hang, when the serial port cannot be opened', async () => {
+    const { dev, port } = sim();
+    // Another program or tab has the port.
+    dev.open = () => Promise.reject(new DOMException('Failed to open serial port.', 'NetworkError'));
+    const app = new Uint8Array(randomBytes(40 * 1024));
+    const ended = await outcome(flashCsk(port, [{ address: 0, data: app }], quietContext(), options));
+    expect(ended).toBeInstanceOf(FlashError);
+    expect((ended as Error).message).toMatch(/serial port could not be opened.*Failed to open serial port/);
+    expect(dev.trace).toEqual([]);
+  }, 20000);
+
+  it('fails, and does not hang, when the port rejects a write part-way', async () => {
+    const { dev, port } = sim();
+    // The cable is pulled: from 60 KB on, every write is rejected.
+    let sent = 0;
+    const open = dev.open.bind(dev);
+    dev.open = async (serialOptions) => {
+      await open(serialOptions);
+      const inner = dev.writable!.getWriter();
+      dev.writable = new WritableStream<Uint8Array>({
+        async write(chunk) {
+          sent += chunk.length;
+          if (sent > 60 * 1024) throw new DOMException('The device has been lost.', 'NetworkError');
+          await inner.write(chunk);
+        },
+      });
+    };
+    const lines: string[] = [];
+    const app = new Uint8Array(randomBytes(200 * 1024));
+    const ended = await outcome(
+      flashCsk(port, [{ address: 0, data: app }], quietContext({ log: (l) => lines.push(l) }), options),
+    );
+    expect(ended).toBeInstanceOf(FlashError);
+    expect((ended as Error).message).toMatch(/connection to the radio was lost.*The device has been lost/);
+    // Cut off from the radio, cskburn reports errors of its own; none of them reaches the log.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(lines.join('\n')).not.toContain('ERROR');
+  }, 20000);
+
+  /**
+   * Makes the port's `readable` fail with `error` once, when `after` chunks have been read
+   * from it and none is waiting. Like Chrome, the port then offers a fresh stream, or with
+   * `gone` none at all.
+   */
+  function failingRead(dev: SimCsk6, error: DOMException, after: number, gone = false): void {
+    const open = dev.open.bind(dev);
+    dev.open = async (serialOptions) => {
+      await open(serialOptions);
+      const inner = dev.readable!.getReader();
+      let chunks = 0;
+      let failed = false;
+      /** A stream that passes the radio's bytes on. */
+      const passOn = (): ReadableStream<Uint8Array> =>
+        new ReadableStream<Uint8Array>({
+          pull: async (controller) => {
+            if (!failed && chunks >= after) {
+              failed = true;
+              dev.readable = gone ? null : passOn();
+              controller.error(error);
+              return;
+            }
+            const { value, done } = await inner.read();
+            if (done) return controller.close();
+            chunks++;
+            controller.enqueue(value);
+          },
+          cancel: () => inner.cancel(),
+        });
+      dev.readable = passOn();
+    };
+  }
+
+  it.each(['FramingError', 'BreakError', 'BufferOverrunError', 'ParityError'])(
+    'reads on after a %s, which Web Serial does not count as fatal',
+    async (name) => {
+      const { dev, port } = sim();
+      failingRead(dev, new DOMException('A read error the port recovers from.', name), 3);
+      const app = new Uint8Array(randomBytes(40 * 1024));
+      const ended = await outcome(flashCsk(port, [{ address: 0, data: app }], quietContext(), options));
+      expect(ended).toBe('resolved');
+      expect(Buffer.compare(dev.flash.subarray(0, app.length), app)).toBe(0);
+    },
+    20000,
+  );
+
+  it('ends the run when the port is lost while reading', async () => {
+    const { dev, port } = sim();
+    failingRead(dev, new DOMException('The device has been lost.', 'NetworkError'), 3, true);
+    const app = new Uint8Array(randomBytes(40 * 1024));
+    const ended = await outcome(flashCsk(port, [{ address: 0, data: app }], quietContext(), options));
+    expect(ended).toBeInstanceOf(FlashError);
+    expect((ended as Error).message).toMatch(/connection to the radio was lost.*The device has been lost/);
+  }, 20000);
 });

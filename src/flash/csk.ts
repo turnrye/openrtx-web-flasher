@@ -43,7 +43,17 @@ export interface CskOptions {
   baud?: number;
 }
 
-/** Adapts a Web Serial port to the blocking-style calls cskburn makes. */
+/**
+ * The read errors Web Serial does not count as fatal: bytes were lost or damaged, and the
+ * port goes on working with a new `readable`.
+ */
+const NON_FATAL_READ_ERRORS = new Set(['BufferOverrunError', 'BreakError', 'FramingError', 'ParityError']);
+
+/**
+ * Adapts a Web Serial port to the blocking-style calls cskburn makes. None of them ever
+ * rejects: a rejection would leave cskburn waiting for an answer for ever. When the port
+ * fails, `onFailure` is told and cskburn is cut off from the radio.
+ */
 class WebSerialAdapter implements CskSerial {
   private rx: number[] = [];
   private wake: (() => void) | null = null;
@@ -53,13 +63,16 @@ class WebSerialAdapter implements CskSerial {
   private pump: Promise<void> = Promise.resolve();
   /** Set when the run was stopped: from then on cskburn talks to nothing and gives up. */
   private dead = false;
+  /** Why the run cannot go on, once the port could not be opened or stopped taking data. */
+  failure: FlashError | null = null;
+  /** Told of `failure` when it happens. */
+  onFailure: (() => void) | null = null;
 
   constructor(private readonly port: SerialPort) {}
 
   /** Opens at the boot ROM's 115200 baud. */
-  async open(): Promise<number> {
-    await this.reopen(115200);
-    return 0;
+  open(): Promise<number> {
+    return this.reopen(115200);
   }
 
   /** Cuts cskburn off from the radio and closes the port. Nothing more is sent. */
@@ -69,44 +82,69 @@ class WebSerialAdapter implements CskSerial {
     await this.close();
   }
 
-  /** (Re)opens the port; Web Serial cannot change baud on an open port. */
-  private async reopen(baud: number): Promise<void> {
+  /** The port failed: cuts cskburn off and reports why, in words for the person. */
+  private fail(what: string, e: unknown): void {
     if (this.dead) return;
+    this.dead = true;
+    this.wake?.();
+    this.failure = new FlashError(`${what}: ${e instanceof Error ? e.message : String(e)}`);
+    this.onFailure?.();
+  }
+
+  /** (Re)opens the port; Web Serial cannot change baud on an open port. 0, or -1 when it would not open. */
+  private async reopen(baud: number): Promise<number> {
+    if (this.dead) return 0;
     await this.close();
-    await this.port.open({ baudRate: baud, bufferSize: 64 * 1024 });
+    try {
+      await this.port.open({ baudRate: baud, bufferSize: 64 * 1024 });
+    } catch (e) {
+      this.fail('The serial port could not be opened', e);
+      return -1;
+    }
     this.baud = baud;
     this.writer = this.port.writable!.getWriter();
-    const reader = this.port.readable!.getReader();
-    this.reader = reader;
+    this.reader = this.port.readable!.getReader();
     this.pump = (async () => {
-      try {
-        for (;;) {
-          const { value, done } = await reader.read();
+      for (;;) {
+        try {
+          const { value, done } = await this.reader!.read();
+          // The stream ended: close() cancelled it.
           if (done) break;
           for (const b of value) this.rx.push(b);
           this.wake?.();
+        } catch (e) {
+          // close() is waiting for this loop to end.
+          if (!this.baud) break;
+          // After an error the port can recover from, Web Serial offers a new stream to
+          // read on with. Any other error means the port is gone.
+          const recovers = e instanceof Error && NON_FATAL_READ_ERRORS.has(e.name);
+          const next = recovers ? this.port.readable : null;
+          if (!next) {
+            this.fail('The connection to the radio was lost', e);
+            break;
+          }
+          this.reader!.releaseLock();
+          this.reader = next.getReader();
         }
-      } catch {
-        // Port closed or adapter unplugged: reads just time out from here on.
       }
     })();
+    return 0;
   }
 
-  /** Stops the reader and closes the port; safe to call twice. */
+  /** Stops the reader and closes the port; safe to call twice. A port that is gone is closed already. */
   async close(): Promise<void> {
     if (!this.baud) return;
+    this.baud = 0;
     await this.reader!.cancel().catch(() => {});
     await this.pump;
     this.reader!.releaseLock();
     this.writer!.releaseLock();
-    await this.port.close();
-    this.baud = 0;
+    await this.port.close().catch(() => {});
   }
 
   /** Changes baud by reopening the port. */
   async setBaud(baud: number): Promise<number> {
-    if (baud !== this.baud) await this.reopen(baud);
-    return 0;
+    return baud === this.baud ? 0 : this.reopen(baud);
   }
 
   /** Sets DTR or RTS; adapters without those lines are fine (C62 is entered by hand). */
@@ -139,7 +177,11 @@ class WebSerialAdapter implements CskSerial {
   /** Writes and waits until the port accepted the bytes. */
   async write(bytes: Uint8Array): Promise<void> {
     if (this.dead) return;
-    await this.writer!.write(bytes);
+    try {
+      await this.writer!.write(bytes);
+    } catch (e) {
+      this.fail('The connection to the radio was lost', e);
+    }
   }
 }
 
@@ -156,7 +198,8 @@ interface CskRun {
  * Runs one cskburn command line against `port` in a fresh module instance.
  * `onLine` gets every output line, including the `\r`-terminated progress lines. When
  * it returns true the run is stopped there: the port is closed and cskburn, cut off from
- * the radio, is left to give up by itself.
+ * the radio, is left to give up by itself. A port that cannot be opened or stops taking
+ * data ends the run the same way, with a FlashError.
  */
 async function runCskburn(
   port: SerialPort,
@@ -190,6 +233,9 @@ async function runCskburn(
   const stopped = new Promise<'stopped'>((resolve) => {
     stop = () => resolve('stopped');
   });
+  const broken = new Promise<'broken'>((resolve) => {
+    adapter.onFailure = () => resolve('broken');
+  });
   const factory = await options.loadModule();
   const mod = (await factory({ cskSerial: adapter, stdout: emit, stderr: emit })) as CskModule;
   for (const [path, data] of Object.entries(files)) mod.FS.writeFile(path, data);
@@ -201,8 +247,15 @@ async function runCskburn(
     // fail quickly when the radio is not in flashing mode.
     const probe = ['--probe-timeout', '4000', '--reset-attempts', '0'];
     mod.callMain(['-C', '6', '-s', 'webserial', '-b', String(options.baud ?? 115200), ...probe, ...args]);
-    const code = await Promise.race([exited, stopped]);
-    if (code === 'stopped') {
+    const code = await Promise.race([exited, stopped, broken]);
+    if (adapter.failure) {
+      // What cskburn goes on to say about a port it has lost helps nobody.
+      cut = true;
+      mod.stop?.();
+      await adapter.stop();
+      throw adapter.failure;
+    }
+    if (code === 'stopped' || code === 'broken') {
       mod.stop?.();
       await adapter.stop();
       return { code: 0, lines, fs: mod.FS, stopped: true };
