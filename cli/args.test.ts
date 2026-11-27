@@ -76,4 +76,12 @@ describe('command line arguments', () => {
     expect(() => parse(['flash', 'c62', 'master', '--force'])).toThrow(UsageError);
     expect(() => parse(['backup', 'c62', '--port'])).toThrow(UsageError);
   });
+
+  it('takes only its own commands for commands, not what every object has', () => {
+    for (const name of ['toString', 'constructor', '__proto__', 'hasOwnProperty', 'valueOf']) {
+      for (const words of [[name], [name, 'c62'], [name, 'c62', 'master']]) {
+        expect(() => parse(words), words.join(' ')).toThrow(new UsageError(`There is no "${name}" command.`));
+      }
+    }
+  });
 });
