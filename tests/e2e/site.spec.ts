@@ -10,7 +10,7 @@ import { answerRuns, pickBuild, step } from './flow.ts';
 test('the radios page lists every radio from the catalogue, with its checks and its backup gaps', async ({
   page,
 }) => {
-  await page.goto('../radios/');
+  await page.goto('radios/');
   const rows = page.getByTestId('radio-table').locator('tbody tr');
   await expect(rows).toHaveCount(13);
   const c62 = rows.filter({ hasText: 'Retevis C62' });

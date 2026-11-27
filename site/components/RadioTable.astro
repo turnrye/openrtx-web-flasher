@@ -25,6 +25,9 @@ const rows = RADIOS.map((radio) => {
     ),
   };
 });
+
+/** The site's top, with a slash at the end: links here work from any page that shows the table. */
+const top = import.meta.env.BASE_URL.replace(/\/?$/, '/');
 ---
 
 <table data-testid="radio-table">
@@ -43,7 +46,7 @@ const rows = RADIOS.map((radio) => {
       rows.map(({ radio, connection, gaps, commandLine }) => (
         <tr>
           <td>
-            <a href={`../flash/#${radio.id}`}>{radio.name}</a>
+            <a href={`${top}flash/#${radio.id}`}>{radio.name}</a>
             {radio.aka && <br />}
             {radio.aka && <small>{radio.aka}</small>}
           </td>
@@ -54,7 +57,7 @@ const rows = RADIOS.map((radio) => {
             {gaps.length === 0 ? (
               'Everything'
             ) : (
-              <a href="../flasher/backup-coverage/">
+              <a href={`${top}flasher/backup-coverage/`}>
                 {gaps.length === 1 ? '1 critical gap' : `${gaps.length} critical gaps`}
               </a>
             )}
