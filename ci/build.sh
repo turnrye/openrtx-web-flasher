@@ -36,6 +36,15 @@ else
   node scripts/mirror-firmware.mjs --out public --strict
 fi
 
+# Stars and contributors for the home page; offline when the mirror is skipped. It
+# falls back to its last copy and never stops the build.
+step "Contributors for the home page"
+if [ "${MIRROR:-strict}" = "skip" ]; then
+  node scripts/community.mjs --out public --offline
+else
+  node scripts/community.mjs --out public
+fi
+
 step "Unit tests"
 # With firmware mirrored, the flasher tests also parse and flash real release files.
 releases="public/firmware/v0.4.5"
