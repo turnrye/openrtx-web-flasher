@@ -51,9 +51,30 @@ export interface Companion {
   what: string;
 }
 
-/** Who makes a radio, as the picker's maker filter names them. */
-export type Maker =
-  'Tytera' | 'Baofeng' | 'Radioddity' | 'Connect Systems' | 'Retevis' | 'Radtel' | 'LILYGO' | 'M17 Project';
+/** Who makes or sells a radio, as the picker's maker filter names them. */
+export const MAKERS = [
+  'Tytera',
+  'Baofeng',
+  'Radioddity',
+  'Connect Systems',
+  'Retevis',
+  'Radtel',
+  'LILYGO',
+  'M17 Project',
+] as const;
+
+/** One of {@link MAKERS}. */
+export type Maker = (typeof MAKERS)[number];
+
+/**
+ * Every maker a radio is sold by: the one that makes it, then any that sell it under
+ * their own name. The picker's maker filter finds a radio under each.
+ * @param radio the radio
+ * @returns its makers, its own first
+ */
+export function makersOf(radio: Pick<Radio, 'maker' | 'alsoSoldBy'>): Maker[] {
+  return [radio.maker, ...(radio.alsoSoldBy ?? [])];
+}
 
 /** One supported radio. */
 export interface Radio {
@@ -63,6 +84,8 @@ export interface Radio {
   maker: Maker;
   /** Other names the same hardware is sold under. */
   aka?: string;
+  /** Makers that sell the same hardware under their own name, as `aka` names them. */
+  alsoSoldBy?: Maker[];
   method: Method;
   /** Extension of the file to flash in the browser. */
   ext: string;
@@ -164,6 +187,7 @@ export const RADIOS: Radio[] = [
     name: 'Tytera MD-380 / MD-390',
     maker: 'Tytera',
     aka: 'Retevis RT3 / RT8',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     enter: [
@@ -181,6 +205,7 @@ export const RADIOS: Radio[] = [
     name: 'Tytera MD-UV380 / MD-UV390',
     maker: 'Tytera',
     aka: 'Retevis RT3S',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     enter: [
@@ -207,6 +232,7 @@ export const RADIOS: Radio[] = [
     name: 'Tytera MD-9600',
     maker: 'Tytera',
     aka: 'Retevis RT90',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     enter: [
@@ -232,6 +258,7 @@ export const RADIOS: Radio[] = [
     name: 'Baofeng DM-1701',
     maker: 'Baofeng',
     aka: 'Retevis RT84',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     otherExts: ['wrap'],

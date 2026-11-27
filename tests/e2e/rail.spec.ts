@@ -61,6 +61,18 @@ test('"checked only" keeps the radios checked on a real radio, in both groups', 
   await expect(radioCards(page)).toHaveCount(13);
 });
 
+test('a maker also finds the radios it sells under its own name', async ({ page }) => {
+  await page.goto('?sim=1');
+  await page.getByTestId('maker-retevis').click();
+  // The C62 is Retevis's own; the TYT and Baofeng radios are sold by Retevis as the RT3, RT3S, RT90 and RT84.
+  for (const id of ['c62', 'md3x0', 'mduv3x0', 'md9600', 'dm1701']) {
+    await expect(page.getByTestId(`radio-${id}`), id).toBeVisible();
+  }
+  await expect(page.getByTestId('radio-gd77')).toHaveCount(0);
+  await page.getByTestId('maker-tytera').click();
+  await expect(page.getByTestId('radio-c62')).toHaveCount(0);
+});
+
 test('when nothing matches, the picker says so and one click shows every radio again', async ({ page }) => {
   await page.goto('?sim=1');
   await page.getByTestId('maker-radtel').click();

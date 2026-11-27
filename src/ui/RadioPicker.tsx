@@ -6,7 +6,7 @@
  * "checked only" box narrow both lists.
  */
 import { useState } from 'preact/hooks';
-import type { Maker, Radio } from '../radios.ts';
+import { makersOf, type Maker, type Radio } from '../radios.ts';
 import { RadioArt } from './RadioArt.tsx';
 
 interface Props {
@@ -33,7 +33,7 @@ const NO_FILTER: Filter = { maker: null, checkedOnly: false };
 /** True when `radio` passes `filter`. */
 function passes(radio: Radio, filter: Filter): boolean {
   return (
-    (filter.maker === null || radio.maker === filter.maker) &&
+    (filter.maker === null || makersOf(radio).includes(filter.maker)) &&
     (!filter.checkedOnly || radio.verified !== null)
   );
 }
@@ -117,7 +117,7 @@ function Filters({
 export function RadioPicker({ released, unreleased, chosen, onChoose }: Props) {
   const [unreleasedOpen, setUnreleasedOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
-  const makers = [...new Set([...released, ...unreleased].map((r) => r.maker))];
+  const makers = [...new Set([...released, ...unreleased].flatMap(makersOf))];
   const releasedShown = released.filter((r) => passes(r, filter));
   const unreleasedShown = unreleased.filter((r) => passes(r, filter));
   /** Applies a filter, and opens the folded group when it holds radios the filter keeps. */

@@ -5,10 +5,13 @@ import {
   checksFor,
   filesFor,
   forCommandLine,
+  MAKERS,
+  makersOf,
   pickFile,
   radioById,
   radioForFile,
   RADIOS,
+  type Maker,
 } from './radios.ts';
 
 const RELEASE = [
@@ -144,6 +147,19 @@ describe('radio catalogue', () => {
       }
     }
     expect(radioById('mod17')!.maker).toBe('M17 Project');
+  });
+
+  it('lists every maker an "also sold as" name names, so the maker filter finds rebadged radios', () => {
+    for (const radio of RADIOS) {
+      // Each part of `aka` ("Retevis RT3 / RT8") that starts with a maker's name.
+      const named = (radio.aka ?? '')
+        .split('/')
+        .map((part) => MAKERS.find((m) => part.trim().startsWith(`${m} `)))
+        .filter((m): m is Maker => m !== undefined);
+      expect([...new Set(named)], radio.id).toEqual(radio.alsoSoldBy ?? []);
+    }
+    expect(makersOf(radioById('mduv3x0')!)).toEqual(['Tytera', 'Retevis']);
+    expect(makersOf(radioById('c62')!)).toEqual(['Retevis']);
   });
 
   it('marks as checked only the radios with a line in the bench record', () => {
