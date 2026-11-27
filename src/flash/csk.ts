@@ -305,7 +305,26 @@ export async function readCskChipId(
 }
 
 /**
+ * Throws when two segments would be written over the same flash. cskburn writes them one
+ * after the other and checks each as it goes, so the later one would replace part of the
+ * earlier one and the run would still end as a success.
+ */
+function refuseOverlap(segments: Segment[]): void {
+  const sorted = [...segments].sort((a, b) => a.address - b.address);
+  for (let i = 1; i < sorted.length; i++) {
+    const before = sorted[i - 1];
+    if (before.address + before.data.length > sorted[i].address) {
+      throw new FlashError(
+        `The image written at 0x${before.address.toString(16)} (${before.data.length} bytes) runs into ` +
+          `the one written at 0x${sorted[i].address.toString(16)}. Nothing was sent to the radio.`,
+      );
+    }
+  }
+}
+
+/**
  * Writes each segment (app at 0x0, DSP image at 0x100000) and has the chip verify it.
+ * Segments that overlap are refused before anything is sent.
  * The radio must already be in flashing mode: off, hold the secondary PTT, power on, release.
  */
 export async function flashCsk(
@@ -314,6 +333,7 @@ export async function flashCsk(
   ctx: FlashContext,
   options: CskOptions,
 ): Promise<void> {
+  refuseOverlap(segments);
   const total = segments.reduce((n, s) => n + s.data.length, 0);
   const files: Record<string, Uint8Array> = {};
   const args = ['--verify-all'];

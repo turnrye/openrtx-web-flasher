@@ -72,6 +72,45 @@ describe('cskburn (C62) over a simulated serial port', () => {
     expect(seen.filter((p) => p.phase === 'write').length).toBeGreaterThan(50);
   });
 
+  it('refuses images that overlap before anything is sent', async () => {
+    const { dev, port } = sim();
+    // An application that has grown past 1 MiB, written after the DSP image as the page orders them.
+    const app = new Uint8Array(randomBytes(0x100000 + 4096));
+    const dsp = new Uint8Array(randomBytes(64 * 1024));
+    const attempt = flashCsk(
+      port,
+      [
+        { address: 0x100000, data: dsp },
+        { address: 0, data: app },
+      ],
+      quietContext(),
+      options,
+    );
+    await expect(attempt).rejects.toBeInstanceOf(FlashError);
+    await expect(attempt).rejects.toThrow(
+      'The image written at 0x0 (1052672 bytes) runs into the one written at 0x100000. Nothing was sent to the radio.',
+    );
+    expect(dev.opens).toEqual([]);
+    expect(dev.trace).toEqual([]);
+  });
+
+  it('writes images that only touch', async () => {
+    const { dev, port } = sim();
+    const first = new Uint8Array(randomBytes(0x2000));
+    const second = new Uint8Array(randomBytes(0x1000));
+    await flashCsk(
+      port,
+      [
+        { address: 0x2000, data: second },
+        { address: 0, data: first },
+      ],
+      quietContext(),
+      options,
+    );
+    expect(Buffer.compare(dev.flash.subarray(0, 0x2000), first)).toBe(0);
+    expect(Buffer.compare(dev.flash.subarray(0x2000, 0x3000), second)).toBe(0);
+  });
+
   it('reopens the port for a faster burn baud', async () => {
     const { dev, port } = sim();
     const app = new Uint8Array(randomBytes(40 * 1024));
