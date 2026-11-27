@@ -1,19 +1,28 @@
 ---
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Starlight's footer (edit link, pagination), then who the site belongs to and under
-// which licences its parts are: the website's text, the firmware and the flasher.
+// which licences its parts are: the website's text, the firmware and the flasher, and
+// which commit this copy was built from.
 import Default from '@astrojs/starlight/components/Footer.astro';
 
 /** The site's top, with a slash at the end. */
 const top = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+/** This project's repository on GitHub, where a build's commit can be looked up. */
+const REPO = 'https://github.com/turnrye/openrtx-web-flasher';
+
+/** The commit this copy was built from; "unknown" when built outside a git checkout. */
+const build = __BUILD_ID__;
+const isCommit = /^[0-9a-f]{7,40}$/.test(build);
 ---
 
 <Default><slot /></Default>
 <p class="licence" data-testid="site-licence">
-  © OpenRTX contributors. Website text:
-  <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Firmware:
+  © OpenRTX contributors. Website text:{' '}
+  <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license">CC BY-SA 4.0</a>. Firmware:{' '}
   <a href="https://github.com/OpenRTX/OpenRTX/blob/master/LICENSE">GPL-3.0-or-later</a>. Flasher: GPL-3.0-or-later,
-  see its <a href={`${top}flash/credits/`}>licences and credits</a>.
+  see its <a href={`${top}flash/credits/`}>licences and credits</a>.{' '}
+  <span data-testid="site-build">Build {isCommit ? <a href={`${REPO}/commit/${build}`}>{build}</a> : build}.</span>
 </p>
 
 <style>

@@ -487,14 +487,11 @@ export function App() {
             Licences and credits
           </Out>
         </p>
-        <p>
-          {manifest?.generated && (
-            <>
-              Firmware copied from {manifest.source} on {formatDateTime(manifest.generated)}.{' '}
-            </>
-          )}
-          <span data-testid="site-build">Build {__BUILD_ID__}.</span>
-        </p>
+        {manifest?.generated && (
+          <p>
+            Firmware copied from {manifest.source} on {formatDateTime(manifest.generated)}.
+          </p>
+        )}
       </footer>
     </div>
   );

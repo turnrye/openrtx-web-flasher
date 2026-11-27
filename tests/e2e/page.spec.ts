@@ -445,9 +445,8 @@ test('after a flash the page asks whether it worked, and the report holds no rad
     '**Result:** the radio started OpenRTX',
   );
 
-  // The footer has a plain way to say anything else, and says which build this is.
+  // The footer has a plain way to say anything else.
   expect((await report('feedback')).title).toBe('Feedback: ');
-  await expect(page.getByTestId('site-build')).toHaveText(/^Build [0-9a-f]{7}\.$/);
 });
 
 test('a failed flash or backup offers to report it, with what the page logged', async ({ page }) => {

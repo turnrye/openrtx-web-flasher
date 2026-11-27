@@ -47,12 +47,23 @@ test('the backups page says, from the record the flasher reads, what each backup
   await expect(page).toHaveURL(/\/flash\/backups\/#md9600$/);
 });
 
-test('every page says whose it is and under which licences', async ({ page }) => {
-  for (const address of ['../user_guide/', '../', 'backups/']) {
+test('every page says whose it is, under which licences, and which commit it was built from', async ({
+  page,
+}) => {
+  for (const address of ['../user_guide/', '../', 'backups/', '']) {
     await page.goto(address);
     const licence = page.getByTestId('site-licence');
     await expect(licence, address).toContainText('© OpenRTX contributors');
     await expect(licence.getByRole('link', { name: 'CC BY-SA 4.0' })).toHaveAttribute('rel', 'license');
+    // The commit, linked to where GitHub shows it.
+    const build = page.getByTestId('site-build');
+    await expect(build, address).toHaveCount(1);
+    await expect(build, address).toHaveText(/^Build [0-9a-f]{7}\.$/);
+    const commit = (await build.textContent())!.replace(/^Build |\.$/g, '');
+    await expect(build.getByRole('link')).toHaveAttribute(
+      'href',
+      `https://github.com/turnrye/openrtx-web-flasher/commit/${commit}`,
+    );
   }
   await page.getByTestId('site-licence').getByRole('link', { name: 'licences and credits' }).click();
   await expect(page).toHaveURL(/\/flash\/credits\/$/);
