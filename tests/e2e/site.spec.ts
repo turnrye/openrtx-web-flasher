@@ -104,3 +104,24 @@ test('every page leads back to openrtx.org and between the flasher’s pages', a
   await nav.getByRole('link', { name: 'Flash' }).click();
   await expect(page.getByTestId('radio-md3x0')).toBeVisible();
 });
+
+test('radios.json at the top of the site lists every radio, for the OpenRTX website to read', async ({
+  request,
+  baseURL,
+}) => {
+  const response = await request.get('radios.json');
+  expect(response.ok()).toBe(true);
+  expect(response.headers()['content-type']).toContain('application/json');
+  const doc = (await response.json()) as {
+    version: number;
+    flasher: string;
+    radios: { id: string; inRelease: boolean; m17: { need: string }; art: string; flash: string }[];
+  };
+  expect(doc.version).toBe(1);
+  expect(new URL(doc.flasher, baseURL).href).toBe(baseURL);
+  expect(doc.radios).toHaveLength(13);
+  const uv = doc.radios.find((r) => r.id === 'mduv3x0')!;
+  expect(uv).toMatchObject({ m17: { need: 'mod' }, art: 'art/mduv3x0.svg', flash: '#mduv3x0' });
+  // The drawing it names is there, next to it.
+  expect((await request.get(new URL(uv.art, new URL(doc.flasher, baseURL)).href)).ok()).toBe(true);
+});
