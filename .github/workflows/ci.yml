@@ -71,11 +71,16 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       # Astro writes absolute links, so the build is made for the one place it goes:
       # the site's top, or this pull request's preview folder.
+      # SITE_URL is the host, for the absolute addresses radios.json gives other sites.
       - name: Work out where this build will be served
-        run: echo "SITE_BASE=$(ci/site-base.sh)" >> "$GITHUB_ENV"
+        run: |
+          echo "SITE_BASE=$(ci/site-base.sh)" >> "$GITHUB_ENV"
+          echo "SITE_URL=$SITE_HOST" >> "$GITHUB_ENV"
         env:
-          # Set the repository variable SITE_ROOT to / once the site has its own domain.
+          # Set the repository variables SITE_ROOT to / and SITE_HOST to https://<domain>
+          # once the site has its own domain.
           SITE_ROOT: ${{ vars.SITE_ROOT }}
+          SITE_HOST: ${{ vars.SITE_HOST || format('https://{0}.github.io', github.repository_owner) }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
       - name: Vendor, check, mirror firmware, test and build
         run: ci/build.sh

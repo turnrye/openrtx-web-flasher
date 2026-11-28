@@ -118,10 +118,13 @@ test('radios.json at the top of the site lists every radio, for the OpenRTX webs
     radios: { id: string; inRelease: boolean; m17: { need: string }; art: string; flash: string }[];
   };
   expect(doc.version).toBe(1);
-  expect(new URL(doc.flasher, baseURL).href).toBe(baseURL);
+  // The flasher's top: absolute when the build knows its host (CI sets SITE_URL), else its path.
+  const top = new URL(doc.flasher, baseURL);
+  expect(top.pathname).toBe(new URL(baseURL!).pathname);
+  if (process.env.SITE_URL) expect(doc.flasher).toBe(new URL(top.pathname, process.env.SITE_URL).href);
   expect(doc.radios).toHaveLength(13);
   const uv = doc.radios.find((r) => r.id === 'mduv3x0')!;
   expect(uv).toMatchObject({ m17: { need: 'mod' }, art: 'art/mduv3x0.svg', flash: '#mduv3x0' });
-  // The drawing it names is there, next to it.
-  expect((await request.get(new URL(uv.art, new URL(doc.flasher, baseURL)).href)).ok()).toBe(true);
+  // The drawing it names is there, next to it, on the server under test.
+  expect((await request.get(new URL(uv.art, new URL(top.pathname, baseURL)).href)).ok()).toBe(true);
 });
