@@ -50,14 +50,14 @@ test('a maker narrows both groups of radios, and opens the folded one when it ho
   await expect(radioCards(page)).toHaveCount(13);
 });
 
-test('"checked only" keeps the radios checked on a real radio, in both groups', async ({ page }) => {
+test('"M17 without a hardware mod" keeps the radios that do M17 as they come', async ({ page }) => {
   await page.goto('?sim=1');
-  await page.getByTestId('checked-only').check();
-  // docs/verification.md: these four, the C62 among the radios without a release.
-  expect(await shownRadios(page)).toEqual(['c62', 'cs7000', 'dm1701', 'mduv3x0']);
-  await expect(radioCards(page).locator('[data-checked="no"]')).toHaveCount(0);
-  await expect(page.getByTestId('no-release').locator('summary')).toHaveText('No release yet (1)');
-  await page.getByTestId('checked-only').uncheck();
+  await page.getByTestId('m17-ready').check();
+  // The website's M17 page: the two CS7000s and the Module 17, all in the release.
+  expect(await shownRadios(page)).toEqual(['cs7000', 'cs7000p', 'mod17']);
+  await expect(radioCards(page).locator('[data-m17]:not([data-m17="built-in"])')).toHaveCount(0);
+  await expect(page.getByTestId('no-release')).toHaveCount(0);
+  await page.getByTestId('m17-ready').uncheck();
   await expect(radioCards(page)).toHaveCount(13);
 });
 
@@ -76,14 +76,14 @@ test('a maker also finds the radios it sells under its own name', async ({ page 
 test('when nothing matches, the picker says so and one click shows every radio again', async ({ page }) => {
   await page.goto('?sim=1');
   await page.getByTestId('maker-radtel').click();
-  await page.getByTestId('checked-only').check();
+  await page.getByTestId('m17-ready').check();
   await expect(radioCards(page)).toHaveCount(0);
   await expect(page.getByTestId('no-match')).toContainText('No radio matches.');
 
   await page.getByTestId('show-all').click();
   await expect(page.getByTestId('no-match')).toHaveCount(0);
   await expect(radioCards(page)).toHaveCount(13);
-  await expect(page.getByTestId('checked-only')).not.toBeChecked();
+  await expect(page.getByTestId('m17-ready')).not.toBeChecked();
   await expect(page.getByTestId('maker-all')).toHaveAttribute('aria-pressed', 'true');
 });
 

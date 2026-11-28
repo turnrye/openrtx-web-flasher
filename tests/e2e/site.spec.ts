@@ -173,9 +173,8 @@ test('the home page leads with a photo, the radio’s own screen and figures cou
 }) => {
   await page.goto('../');
   const hero = page.getByTestId('home-hero');
-  await expect(hero.getByRole('heading', { level: 1 })).toHaveText(
-    'Free firmware for the radio you already own',
-  );
+  await expect(hero.getByRole('heading', { level: 1 })).toHaveText('Firmware that frees your radio');
+  await expect(hero).toContainText('OpenRTX is community-built firmware for');
   await expect(hero).toContainText('Free your radio');
   // The photo and the screen both load, the screen at whole pixels.
   const screen = hero.getByTestId('screen-colour').getByRole('img');
@@ -190,16 +189,26 @@ test('the home page leads with a photo, the radio’s own screen and figures cou
   await expect(hero.getByRole('link', { name: 'Flash your radio' })).toHaveCSS('color', 'rgb(0, 0, 0)');
 });
 
-test('the home page’s radios lead to the flasher with that radio chosen, checked ones first', async ({
+test('the home page’s radios are the release’s, with what each needs for M17, and lead to the flasher', async ({
   page,
 }) => {
   await page.goto('../');
+  const section = page.getByTestId('home-runs-on');
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText('Radios that are supported today');
+  await expect(section).toContainText('These radios have a supported release.');
   const cards = page.getByTestId('home-radios').getByRole('link');
-  await expect(cards).toHaveCount(5);
-  await expect(cards.first()).toContainText('Checked');
-  await cards.filter({ hasText: 'Retevis C62' }).click();
-  await expect(page).toHaveURL(/\/flash\/#c62$/);
-  await expect(step(page, 'step-radio')).toContainText('Retevis C62');
+  // The release's radios only: the flasher's "No release yet" radios are not here.
+  await expect(cards).toHaveCount(8);
+  await expect(cards.filter({ hasText: 'Retevis C62' })).toHaveCount(0);
+  // M17 as they come first; no card says whether it was checked.
+  await expect(cards.first().getByTestId('home-m17')).toContainText('M17 built in');
+  await expect(cards.filter({ hasText: 'MD-UV380' }).getByTestId('home-m17')).toContainText(
+    'after a hardware mod',
+  );
+  await expect(section.getByText(/checked/i)).toHaveCount(0);
+  await cards.filter({ hasText: 'Module 17' }).click();
+  await expect(page).toHaveURL(/\/flash\/#mod17$/);
+  await expect(step(page, 'step-radio')).toContainText('Module 17');
 });
 
 test('the home page names the people behind OpenRTX and its newest posts', async ({ page }) => {

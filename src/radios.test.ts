@@ -5,6 +5,7 @@ import {
   checksFor,
   filesFor,
   forCommandLine,
+  m17Label,
   MAKERS,
   makersOf,
   pickFile,
@@ -160,6 +161,22 @@ describe('radio catalogue', () => {
     }
     expect(makersOf(radioById('mduv3x0')!)).toEqual(['Tytera', 'Retevis']);
     expect(makersOf(radioById('c62')!)).toEqual(['Retevis']);
+  });
+
+  it('says for every radio what it needs for M17, with a guide for each mod', () => {
+    for (const radio of RADIOS) {
+      expect(['built-in', 'mod', 'none', 'not-yet', 'unknown'], radio.id).toContain(radio.m17.need);
+      expect(Boolean(radio.m17.guide), radio.id).toBe(radio.m17.need === 'mod');
+    }
+    // The website's M17 page names these; the GD-77 family has no M17 at all.
+    const by = (need: string) => RADIOS.filter((r) => r.m17.need === need).map((r) => r.id);
+    expect(by('built-in')).toEqual(['cs7000', 'cs7000p', 'mod17']);
+    expect(by('mod')).toEqual(['md3x0', 'mduv3x0', 'dm1701']);
+    expect(by('none')).toEqual(['gd77', 'dm1801']);
+    expect(m17Label(radioById('md3x0')!)).toEqual({
+      text: 'M17 after a hardware mod (UHF; VHF models receive only)',
+      tone: 'mod',
+    });
   });
 
   it('marks as checked only the radios with a line in the bench record', () => {

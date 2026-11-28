@@ -1,26 +1,22 @@
 ---
 // SPDX-License-Identifier: GPL-3.0-or-later
-// A few of the radios the flasher knows, each leading to it: the ones checked on a real
-// radio first, then the ones in the newest release. Drawn with the flasher's drawings
-// until each radio has a photo.
-import { checksFor } from '../../../src/radios.ts';
+// The radios with firmware in the newest OpenRTX release, each leading to the flasher,
+// with what each needs for M17. Drawn with the flasher's drawings until each radio has
+// a photo.
+import { m17Label } from '../../../src/radios.ts';
 import { inRelease, radios, top } from '../../home.ts';
 
-interface Props {
-  /** How many cards to show. */
-  count?: number;
-}
-
-const { count = 5 } = Astro.props;
-const rank = (r: (typeof radios)[number]) => (r.verified ? 0 : 2) + (inRelease(r) ? 0 : 1);
-const shown = [...radios].sort((a, b) => rank(a) - rank(b)).slice(0, count);
+/** Radios that do M17 as they come first, then those that need a mod, then the rest. */
+const ORDER = { good: 0, mod: 1, none: 2 };
+const shown = radios
+  .filter((r) => inRelease(r))
+  .sort((a, b) => ORDER[m17Label(a).tone] - ORDER[m17Label(b).tone]);
 ---
 
 <ul class="not-content m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-4 p-0" data-testid="home-radios">
   {
     shown.map((radio) => {
-      const checked = Boolean(checksFor(radio).page);
-      const released = inRelease(radio);
+      const m17 = m17Label(radio);
       return (
         <li>
           <a
@@ -34,8 +30,14 @@ const shown = [...radios].sort((a, b) => rank(a) - rank(b)).slice(0, count);
             <span class="flex flex-col gap-1.5 p-4">
               <b class="text-base leading-snug text-white">{radio.name}</b>
               {radio.aka && <span class="text-sm text-gray-400">{radio.aka}</span>}
-              <span class:list={['font-mono text-xs tracking-wider uppercase', checked ? 'text-success' : released ? 'text-primary' : 'text-gray-400']}>
-                {checked ? '● Checked' : '○ Not checked yet'} · {released ? 'Release' : 'Development build'}
+              <span
+                class:list={[
+                  'font-mono text-xs tracking-wider uppercase',
+                  m17.tone === 'good' ? 'text-success' : m17.tone === 'mod' ? 'text-warning' : 'text-gray-400',
+                ]}
+                data-testid="home-m17"
+              >
+                {m17.tone === 'good' ? '●' : '○'} {m17.text}
               </span>
             </span>
           </a>

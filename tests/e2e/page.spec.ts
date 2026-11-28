@@ -25,7 +25,7 @@ test('the rest of the site loads from the same sub-path: the home page and a pag
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()} ${r.url()}`));
   await page.goto('../');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Free firmware');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Firmware that frees your radio');
   // The hero's first action leads to the flasher.
   await page.getByRole('link', { name: 'Flash your radio' }).first().click();
   await expect(page.getByTestId('radio-md3x0')).toBeVisible();
