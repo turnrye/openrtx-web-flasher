@@ -4,6 +4,13 @@
     "custom-property-empty-line-before": null,
     "declaration-empty-line-before": null,
     "comment-empty-line-before": null,
-    "no-descending-specificity": null
+    "no-descending-specificity": null,
+    "import-notation": "string",
+    "at-rule-no-unknown": [
+      true,
+      { "ignoreAtRules": ["plugin", "theme", "source", "utility", "variant", "custom-variant", "apply"] }
+    ],
+    "color-hex-length": "long",
+    "value-keyword-case": ["lower", { "ignoreProperties": ["/^--font-/"] }]
   }
 }

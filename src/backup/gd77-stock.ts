@@ -31,6 +31,7 @@
  * Only the handshake, bank selects, reads and `ENDR` are sent. The same protocol has
  * `W` and `ENDW` for writing; this file has no code that could build either.
  */
+import { fingerprint, hexSpaced } from '../bytes.ts';
 import {
   decodeGd77Frame,
   encodeGd77Frame,
@@ -40,8 +41,8 @@ import {
   type Gd77Framing,
   type Gd77Model,
 } from '../flash/gd77.ts';
-import { FlashError, type FlashContext } from '../flash/types.ts';
-import type { BackupPart, BackupScope, PartKind, RadioBackup } from './types.ts';
+import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
+import type { BackupPart, PartKind, RadioBackup } from './types.ts';
 
 /** Bytes per read request; the most the radio returns (hid.c, OpenGD77CPS). */
 const READ_BYTES = 32;
@@ -98,20 +99,9 @@ export function gd77CodeplugRanges(model: Gd77Model): Gd77Range[] {
   ];
 }
 
-/** Hex dump for log and error messages. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
-}
-
 /** True when every byte of `bytes` is `value`. */
 function allBytes(bytes: Uint8Array, value: number): boolean {
   return bytes.every((b) => b === value);
-}
-
-/** First 16 hex digits of the SHA-256 of `bytes`. */
-async function fingerprint(bytes: Uint8Array): Promise<string> {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.slice()));
-  return hex(digest.subarray(0, 8)).replaceAll(' ', '');
 }
 
 /** The printable ASCII at the start of `bytes`. */
@@ -186,7 +176,7 @@ class StockLink {
     try {
       await this.dev.sendReport(reportId, data);
     } catch (e) {
-      throw new FlashError(`USB write failed: ${e instanceof Error ? e.message : String(e)}`);
+      throw new FlashError(`USB write failed: ${messageOf(e)}`);
     }
     return this.nextReply();
   }
@@ -209,10 +199,10 @@ function notNormalMode(detail: string): FlashError {
 async function identify(link: StockLink): Promise<Uint8Array> {
   const first = await link.exchange(CMD_PRG);
   if (first === null) throw notNormalMode('no reply');
-  if (first.length !== 1 || first[0] !== CMD_ACK[0]) throw notNormalMode(`it said [${hex(first)}]`);
+  if (first.length !== 1 || first[0] !== CMD_ACK[0]) throw notNormalMode(`it said [${hexSpaced(first)}]`);
   const ident = await link.exchange(CMD_PRG2);
   if (ident?.length !== IDENT_BYTES) {
-    throw notNormalMode(ident ? `its identification is [${hex(ident)}]` : 'no identification');
+    throw notNormalMode(ident ? `its identification is [${hexSpaced(ident)}]` : 'no identification');
   }
   if (!(await link.acknowledged(CMD_ACK))) throw notNormalMode('the identification was not confirmed');
   return ident;
@@ -250,14 +240,14 @@ class StockReader {
       const reply = await this.link.exchange(request);
       if (reply?.length !== 4 + count) {
         throw new FlashError(
-          `Reading the radio failed at 0x${address.toString(16)}: ${reply ? `it answered [${hex(reply)}]` : 'no reply'}.`,
+          `Reading the radio failed at 0x${address.toString(16)}: ${reply ? `it answered [${hexSpaced(reply)}]` : 'no reply'}.`,
         );
       }
       if (!this.headerChecked) {
         // The references skip these 4 bytes without looking; worth knowing on a real radio.
         this.headerChecked = true;
         if (!request.every((b, i) => reply[i] === b)) {
-          this.log(`Note: read replies start [${hex(reply.subarray(0, 4))}], not with the request.`);
+          this.log(`Note: read replies start [${hexSpaced(reply.subarray(0, 4))}], not with the request.`);
         }
       }
       out.set(reply.subarray(4), address - start);
@@ -269,16 +259,16 @@ class StockReader {
 
 /**
  * Reads the codeplug of a GD-77 or DM-1801 that runs its original firmware, and the
- * calibration when the radio shows it at CPS address 0x7C00. Both scopes read the
- * same; the radio gives no more in normal mode. Opens `dev` if needed (and then closes
+ * calibration when the radio shows it at CPS address 0x7C00. The radio gives no more
+ * in normal mode, and the backup says so. Opens `dev` if needed (and then closes
  * it again). Sends no write command. Throws FlashError when the radio does not take
- * the handshake (it is in flashing mode, or off) or a codeplug read fails; a
- * calibration window that cannot be read only adds a note.
+ * the handshake (it is in flashing mode, or off) or a codeplug read fails. A
+ * calibration window that cannot be read does not fail the read: the calibration is
+ * then in the result as an empty part, marked incomplete, with a note that says why.
  */
 export async function readGd77Stock(
   dev: HIDDevice,
   model: Gd77Model,
-  scope: BackupScope,
   ctx: FlashContext,
   options: Gd77StockOptions = {},
 ): Promise<RadioBackup> {
@@ -299,6 +289,8 @@ export async function readGd77Stock(
   const notes: string[] = [];
   let firmware: string;
   let calibration: Uint8Array | null = null;
+  /** Why the calibration is not in the backup, when it was asked for and did not come. */
+  let noCalibration: string | null = null;
   let done = 0;
   /** Counts bytes towards the progress bar. */
   const onBytes = (count: number): void => {
@@ -347,7 +339,7 @@ export async function readGd77Stock(
       } catch (e) {
         if (!(e instanceof FlashError)) throw e;
         ctx.log(`The calibration window did not read: ${e.message}`);
-        notes.push('The calibration could not be read this way: the radio refused the request.');
+        noCalibration = 'The calibration could not be read this way: the radio refused the request.';
       }
     }
 
@@ -369,7 +361,8 @@ export async function readGd77Stock(
   if (calibration) {
     const blocks = calibration.subarray(0, GD77_CALIBRATION_DATA_BYTES);
     if (allBytes(blocks, 0x00) || allBytes(blocks, 0xff)) {
-      notes.push('The calibration could not be read this way: the radio returned only empty bytes there.');
+      noCalibration =
+        'The calibration could not be read this way: the radio returned only empty bytes there.';
     } else {
       const marked = CALIBRATION_MARKER.every((b, i) => blocks[i] === b);
       parts.push({
@@ -389,11 +382,21 @@ export async function readGd77Stock(
         );
     }
   }
-  if (scope === 'all') {
-    notes.push(
-      'The whole 1 MB memory chip of this radio can only be read in a special start-up mode that this page does not use yet. This backup holds the codeplug, which is all the radio gives in normal mode.',
-    );
+  if (noCalibration !== null) {
+    // Listed all the same, empty: a backup without the calibration must not look whole.
+    parts.push({
+      file: 'calibration.bin',
+      kind: 'info',
+      address: GD77_CALIBRATION_ADDRESS,
+      data: new Uint8Array(0),
+      complete: false,
+      note: noCalibration,
+    });
+    notes.push(noCalibration);
   }
+  notes.push(
+    'The whole 1 MB memory chip of this radio can only be read in a special start-up mode that this page does not use yet. This backup holds the codeplug, which is all the radio gives in normal mode.',
+  );
   ctx.progress({ phase: 'done', done: total, total });
   ctx.log(`Read ${parts.reduce((sum, p) => sum + p.data.length, 0)} bytes in ${parts.length} parts`);
   return { radioId, idKind: radioId === null ? null : 'fingerprint', firmware, parts, notes };

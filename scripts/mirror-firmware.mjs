@@ -221,12 +221,11 @@ writeFileSync(join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
 if (master.fresh && releases.fresh) {
   rmSync(join(cache, 'last'), { recursive: true, force: true });
   for (const build of builds) {
-    mkdirSync(join(cache, 'last', build.id), { recursive: true });
     for (const file of build.files) {
-      writeFileSync(
-        join(cache, 'last', build.id, file.name),
-        readFileSync(join(outDir, build.id, file.name)),
-      );
+      // A file can be in a folder of its build ("c62/zephyr.bin").
+      const kept = join(cache, 'last', build.id, file.name);
+      mkdirSync(dirname(kept), { recursive: true });
+      writeFileSync(kept, readFileSync(join(outDir, build.id, file.name)));
     }
   }
   save(lastPath, JSON.stringify(manifest, null, 2));

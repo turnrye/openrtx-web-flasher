@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /** The page's simulated radios (`?sim=`), for the command line's --sim. */
 import type { BundleSource } from '../src/backup/bundle.ts';
+import { same } from '../src/bytes.ts';
 import type { RadioBackup } from '../src/backup/types.ts';
 import type { DeviceEnv } from '../src/devices.ts';
 import type { Segment } from '../src/flash/types.ts';
@@ -12,12 +13,6 @@ export interface SimProbes {
   __ortxSim?: SimProbe;
   /** The last radio handed out to be read through its original firmware. */
   __ortxSimStock?: SimStockProbe;
-}
-
-/** True when `a` and `b` hold the same bytes. */
-function same(a: Uint8Array, b: Uint8Array | undefined): boolean {
-  if (b?.length !== a.length) return false;
-  return a.every((byte, i) => byte === b[i]);
 }
 
 /**

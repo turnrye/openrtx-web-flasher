@@ -1,0 +1,64 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// What a backup keeps of each radio, for the people about to flash one: straight from the
+// backup record (src/coverage.ts), as the flasher's own backup step reads it. The memory
+// map behind it stays in docs/backup-coverage.md.
+import { coverageFor, gapsFor, isComplete, OPENRTX_LIMIT, WORST_FIRST, type Closing } from '../../src/coverage.ts';
+import { radioById, RADIOS } from '../../src/radios.ts';
+
+/** The site's top, with a slash at the end. */
+const top = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+const whole = RADIOS.filter((radio) => isComplete(radio));
+/** Whether a gap can be saved another way, for a reader rather than the command line. */
+function closing(close: Closing): string {
+  switch (close.how) {
+    case 'read-more':
+      return "The flasher's own read can be made to reach it; it does not yet.";
+    case 'dumper':
+      return 'Saving it needs a dumper, a small reader loaded onto the radio for the occasion, which is not built yet.';
+    default:
+      return '';
+  }
+}
+
+const withGaps = WORST_FIRST.map((id) => radioById(id)).flatMap((radio) => (radio ? [radio] : []));
+---
+
+<h2 id="whole">Backed up whole</h2>
+<p data-testid="backups-whole">
+  {whole.map((radio, i) => (
+    <>
+      {i > 0 && (i === whole.length - 1 ? ' and ' : ', ')}
+      <a href={`${top}#${radio.id}`}>{radio.name}</a>
+    </>
+  ))}: a backup holds everything the radio keeps, and the flasher can write it back.
+</p>
+
+<h2 id="gaps">Not whole, worst first</h2>
+<p>
+  Worst first means what is lost for good, and how soon flashing loses it. Each item is a memory the backup
+  does not hold, what that costs you, and whether it can be saved some other way.
+</p>
+{
+  withGaps.map((radio) => (
+    <section data-testid={`backups-${radio.id}`}>
+      <h3 id={radio.id}>{radio.name}</h3>
+      <ul>
+        {gapsFor(radio).map((gap) => (
+          <li>
+            <strong>{gap.saved === 'none' ? 'Not saved' : 'Saved in part'}: {gap.name}.</strong> {gap.lost}{' '}
+            {gap.close.how === 'other-tool' ? (
+              <>
+                <a href={gap.close.url}>{gap.close.tool}</a> reads it today.
+              </>
+            ) : (
+              closing(gap.close)
+            )}
+          </li>
+        ))}
+      </ul>
+      {coverageFor(radio).needsOriginalFirmware && <p>{OPENRTX_LIMIT}</p>}
+    </section>
+  ))
+}

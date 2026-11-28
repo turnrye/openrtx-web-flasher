@@ -1,25 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * The "Licences and credits" page: what the published site contains that others wrote,
- * who wrote it and under which licence, with the licence texts. It is the notice the
- * MIT, BSD, Apache and font licences ask to travel with a copy.
+ * Whose work the flasher is built on: what it was ported from and what the site ships as
+ * it is. The site's licences page lists these with the licence texts; they are the
+ * notice the MIT, BSD, Apache and font licences ask to travel with a copy.
  */
-import '@fontsource/ubuntu/latin-400.css';
-import '@fontsource/ubuntu/latin-500.css';
-import { render } from 'preact';
-import apache from '../LICENSES/Apache-2.0.txt?raw';
-import bsd from '../LICENSES/BSD-3-Clause.txt?raw';
-import emscripten from '../LICENSES/Emscripten.txt?raw';
-import gpl from '../LICENSES/GPL-3.0-or-later.txt?raw';
-import radioFoundry from '../LICENSES/MIT.txt?raw';
-import musl from '../LICENSES/musl.txt?raw';
-import ubuntuFont from '../LICENSES/Ubuntu-font-1.0.txt?raw';
-import fflate from '../node_modules/fflate/LICENSE?raw';
-import preact from '../node_modules/preact/LICENSE?raw';
-import './ui/styles.css';
 
 /** One piece of other people's work. */
-interface Credit {
+export interface Credit {
   name: string;
   url: string;
   /** Who wrote it, as they name themselves. */
@@ -30,7 +17,7 @@ interface Credit {
 }
 
 /** Code this site's own script was ported from or follows. */
-const PORTED: Credit[] = [
+export const PORTED: Credit[] = [
   {
     name: 'radio_tool',
     url: 'https://github.com/v0l/radio_tool',
@@ -111,7 +98,7 @@ const PORTED: Credit[] = [
 ];
 
 /** Other people's work the site ships as it is. */
-const SHIPPED: Credit[] = [
+export const SHIPPED: Credit[] = [
   {
     name: 'cskburn',
     url: 'https://github.com/LISTENAI/cskburn',
@@ -145,7 +132,14 @@ const SHIPPED: Credit[] = [
     url: 'https://design.ubuntu.com/font',
     by: 'Copyright Canonical Ltd.',
     licence: 'Ubuntu Font Licence 1.0',
-    use: 'The typeface, as packaged by Fontsource.',
+    use: 'The typefaces Ubuntu and Ubuntu Mono, as packaged by Fontsource.',
+  },
+  {
+    name: 'VT323',
+    url: 'https://github.com/phoikoi/VT323',
+    by: 'Copyright 2011, The VT323 Project Authors (Peter Hull)',
+    licence: 'SIL Open Font License 1.1',
+    use: 'The figures in the style of a radio display, as packaged by Fontsource.',
   },
   {
     name: 'openrtx-device-mockups',
@@ -162,84 +156,3 @@ const SHIPPED: Credit[] = [
     use: 'The page icon and header.',
   },
 ];
-
-/** The licence texts, in the order the lists above name them. */
-const TEXTS: { title: string; text: string }[] = [
-  { title: 'GNU General Public License, version 3', text: gpl },
-  { title: 'Apache License 2.0 (cskburn, rt-4d-spiflash-cli, cs7000plus_flasher)', text: apache },
-  { title: 'MIT License (RadioFoundry)', text: radioFoundry },
-  { title: 'MIT License (Preact)', text: preact },
-  { title: 'MIT License (fflate)', text: fflate },
-  { title: 'MIT and NCSA licences (Emscripten)', text: emscripten },
-  { title: 'MIT License (musl libc)', text: musl },
-  { title: 'BSD 3-Clause License (dmrconfig)', text: bsd },
-  { title: 'Ubuntu Font Licence 1.0', text: ubuntuFont },
-];
-
-/** A list of credits: name, author, licence, what it is used for. */
-function Credits({ items }: { items: Credit[] }) {
-  return (
-    <ul class="credits">
-      {items.map((credit) => (
-        <li key={credit.name} data-testid={`credit-${credit.name}`}>
-          <a href={credit.url}>{credit.name}</a>
-          <span class="credit-by">
-            {credit.by}. {credit.licence}.
-          </span>
-          <span>{credit.use}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/** The whole page. */
-function Licences() {
-  return (
-    <div class="page licences">
-      <header class="topbar">
-        <img src="openrtx_logo.svg" alt="" />
-        <h1>Licences and credits</h1>
-      </header>
-
-      <p class="intro">
-        <a href="./" data-testid="back">
-          Back to the flasher
-        </a>
-      </p>
-
-      <h2>This site</h2>
-      <p>
-        The OpenRTX Flasher is free software under the GNU General Public License, version 3 or (at your
-        option) any later version. It comes with no warranty. The source, with the revision of everything it
-        builds on, is at{' '}
-        <a href="https://github.com/turnrye/openrtx-web-flasher">github.com/turnrye/openrtx-web-flasher</a>.
-      </p>
-
-      <h2>Ported from</h2>
-      <p>The flashers and backup readers are ports of, or follow, these projects.</p>
-      <Credits items={PORTED} />
-
-      <h2>Shipped with the site</h2>
-      <Credits items={SHIPPED} />
-
-      <h2>The firmware</h2>
-      <p>
-        The firmware the page offers is <a href="https://openrtx.org">OpenRTX</a>, copied unchanged from the
-        project's releases and builds. OpenRTX is free software under the GNU General Public License, version
-        3 or later; its source is at{' '}
-        <a href="https://github.com/OpenRTX/OpenRTX">github.com/OpenRTX/OpenRTX</a>.
-      </p>
-
-      <h2>Licence texts</h2>
-      {TEXTS.map(({ title, text }) => (
-        <details class="more licence" key={title}>
-          <summary>{title}</summary>
-          <pre>{text}</pre>
-        </details>
-      ))}
-    </div>
-  );
-}
-
-render(<Licences />, document.getElementById('app')!);

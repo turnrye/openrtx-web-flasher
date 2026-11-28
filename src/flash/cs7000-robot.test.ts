@@ -164,7 +164,8 @@ describe('the command line’s CS7000-M17 Plus', () => {
     await expect(flashDevice(radio, picked, buildDfuFile(0x08000000, image(4096)), ctx)).rejects.toThrow(
       /not built for the radio's second firmware slot/,
     );
-    await expect(flashDevice(radio, picked, image(4096), ctx, true)).rejects.toThrow(
+    const backup = { radioId: null, idKind: null };
+    await expect(flashDevice(radio, picked, image(4096), ctx, backup)).rejects.toThrow(
       'A backup cannot be written in this flashing mode.',
     );
     expect(sim.opened).toBe(false);

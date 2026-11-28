@@ -34,7 +34,7 @@ describe('a serial port of this computer as a Web Serial port', () => {
   it('carries the page’s RT-4D reader, and only reads', async () => {
     const sim = new SimRt4dStock();
     const { web } = portOver(sim);
-    const backup = await readRt4dStock(web, 'quick', quietContext());
+    const backup = await readRt4dStock(web, quietContext());
     expect(sim.forbidden).toEqual([]);
     const part = backup.parts[0];
     expect(part.complete).toBe(true);

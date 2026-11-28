@@ -9,7 +9,17 @@ import { expect, test, type Page } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { choose, enter, flash, openStep, pickRadio, skipBackup, step, turnOnExperimental } from './flow.ts';
+import {
+  answerRuns,
+  choose,
+  enter,
+  flash,
+  openStep,
+  pickRadio,
+  skipBackup,
+  step,
+  turnOnExperimental,
+} from './flow.ts';
 
 /** One part as backup.json describes it. */
 interface Part {
@@ -38,12 +48,17 @@ interface Downloaded {
   files: Record<string, Uint8Array>;
 }
 
-/** Opens the page on a radio with a build chosen and experimental flashing on, at the backup step. */
+/**
+ * Opens the page on a radio with a build chosen, at the backup step, and says the radio
+ * still runs its original firmware. Nothing asks for experimental flashing: the read
+ * changes nothing on the radio.
+ */
 async function toBackup(page: Page, radio: string, sim = '1'): Promise<void> {
   await choose(page, radio, sim);
   // The backup is taken in normal mode, so it comes before flashing mode.
   expect(await openStep(page)).toBe('step-backup');
-  await turnOnExperimental(page, 'step-backup');
+  await expect(page.getByTestId('needs-experimental')).toHaveCount(0);
+  await answerRuns(page, 'original');
 }
 
 /** Clicks the backup button and returns the bundle the browser was handed. */
@@ -94,7 +109,14 @@ test('md9600: the backup comes first, reads the original firmware, then the radi
   await expect(step(page, 'step-enter')).toHaveAttribute('data-mode', 'waiting');
   // The page reads everything; there is nothing to choose.
   await expect(step(page, 'step-backup').locator('input[type="radio"]')).toHaveCount(0);
-  await expect(page.getByTestId('backup-unchecked')).toHaveCount(0);
+  // The read was measured on this model with other tools, never from the page.
+  await expect(page.getByTestId('backup-unchecked')).toHaveText('Unchecked on this model');
+  // Before the read the page says what the backup will not hold.
+  await expect(page.getByTestId('backup-not-included')).toContainText('security registers');
+  await expect(page.getByTestId('backup-not-included').locator('a')).toHaveAttribute(
+    'href',
+    /\/backups\/#md9600$/,
+  );
 
   const backup = await backUp(page);
   expect(backup.name).toMatch(/^backup_md9600_[0-9a-f]{8}_\d{8}-\d{4}\.zip$/);
@@ -143,6 +165,7 @@ test('mduv3x0: says once, before the read, that the method is unchecked on this 
   await expect(page.getByTestId('backup-done')).not.toContainText('MD-9600');
   await expect(page.getByTestId('backup-notes')).toBeHidden();
   await page.getByTestId('backup-about').locator('summary').click();
+  await expect(page.getByTestId('backup-about')).toContainText('not of everything in it');
   await expect(page.getByTestId('backup-notes')).toContainText('MD-9600 only');
 });
 
@@ -159,6 +182,7 @@ test('a TYT radio in the wrong state is told so, for the backup and for flashing
   // In normal mode it must not be flashed: nothing is sent.
   await skipBackup(page);
   await enter(page);
+  await turnOnExperimental(page);
   await page.getByTestId('flash').click();
   await expect(page.getByTestId('flash-error')).toContainText('not in flashing mode');
 });
@@ -187,13 +211,22 @@ for (const radio of ['gd77', 'dm1801']) {
   });
 }
 
-test('rt4d: reads the first 4 MB of the memory chip, and the same radio gets the same ID twice', async ({
+test('rt4d: reads the whole 16 MB memory chip, and the same radio gets the same ID twice', async ({
   page,
 }) => {
   await toBackup(page, 'rt4d');
+  await expect(step(page, 'step-backup')).toContainText('about half an hour');
+  await expect(page.getByTestId('backup-not-included')).toContainText(
+    'program memory (256 KB) cannot be read',
+  );
   const first = await backUp(page);
   expect(first.manifest.parts).toHaveLength(1);
-  expect(first.manifest.parts[0]).toMatchObject({ kind: 'spi-flash', address: 0, size: 4 * 1024 * 1024 });
+  expect(first.manifest.parts[0]).toMatchObject({
+    kind: 'spi-flash',
+    address: 0,
+    size: 16 * 1024 * 1024,
+    complete: true,
+  });
   await expectFaithful(page, first);
 
   const second = await backUp(page);
@@ -219,7 +252,7 @@ async function toRt950Backup(page: Page, sim = '1'): Promise<void> {
   await expect(step(page, 'step-firmware')).toHaveAttribute('data-mode', 'folded');
   // The backup is taken in normal mode, so it comes before flashing mode.
   expect(await openStep(page)).toBe('step-backup');
-  await turnOnExperimental(page, 'step-backup');
+  await answerRuns(page, 'original');
 }
 
 test('rt950pro: reads the 64 KB the programming cable reaches, then the radio is flashed', async ({

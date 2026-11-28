@@ -110,8 +110,9 @@ export function parse(argv: string[]): Parsed {
     return { command: { name: 'help' }, options };
   if (version) return { command: { name: 'version' }, options };
 
+  // Its own entries only: "toString" and "constructor" are in every object, and are no commands.
+  if (!Object.hasOwn(WORDS, name)) throw new UsageError(`There is no "${name}" command.`);
   const takes = WORDS[name];
-  if (!takes) throw new UsageError(`There is no "${name}" command.`);
   if (rest.length < takes[0]) {
     throw new UsageError(
       name === 'backup' ? '"backup" needs a radio.' : `"${name}" needs a radio and a firmware.`,

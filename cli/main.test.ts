@@ -118,8 +118,9 @@ describe('looking around', () => {
     expect(code).toBe(0);
     for (const radio of RADIOS) expect(text).toContain(`  ${radio.id.padEnd(9)} ${radio.name}`);
     expect(text).toContain(
-      'Read or flashed with this tool on real hardware so far: mduv3x0, md9600, cs7000p.',
+      'Flashing was checked with this tool on real hardware for: mduv3x0, md9600, cs7000p.',
     );
+    expect(text).toContain('Backing up was checked with this tool on real hardware for: none of them yet.');
   });
 
   it('says what one radio needs: its second image, its flashing mode, its backup', async () => {
@@ -130,9 +131,37 @@ describe('looking around', () => {
     );
     expect(text).toContain('2. Hold the secondary PTT');
     expect(text).toContain('Backup: read in flashing mode, about ten minutes; can be flashed back.');
+    expect(text).toContain('That is every memory the radio has.');
+    expect(text).not.toContain('critical gap');
     expect(text).toContain('this tool has not been checked on a real one; the web page was (2026-11-21)');
     expect(text).not.toContain('{file}');
     expect((await run(['radios', 'rt4d'])).text).toContain('a best guess');
+  });
+
+  it('lists what a backup leaves out, from the coverage record', async () => {
+    const tyt = (await run(['radios', 'md9600'])).text;
+    expect(tyt).toContain('Not saved whole, each a critical gap:');
+    expect(tyt).toContain('    - program memory (STM32F405), 1 MiB: saved in part; needs a dumper');
+    expect(tyt).toContain("    - the memory chip's security registers, 768 bytes: not saved; needs a dumper");
+    expect(tyt).toContain('A radio that already runs OpenRTX cannot be backed up this way');
+    // The address of the coverage document is given once.
+    expect(tyt.split('docs/backup-coverage.md')).toHaveLength(2);
+
+    const plus = (await run(['radios', 'cs7000p'])).text;
+    expect(plus).toContain('    - memory chip, 32 MiB: not saved; needs a dumper');
+    expect(plus).toContain('docs/backup-coverage.md');
+    expect(plus).not.toContain('already runs OpenRTX');
+
+    const copy = await run(['backup', 'ttwrplus']);
+    expect(copy.code).toBe(0);
+    expect(copy.text).toContain('  - flash of the ESP32-S3, 16 MiB: saved in part; esptool reads it');
+
+    const out = folder();
+    const read = await run(['backup', 'rt4d', '--sim', '--out', out]);
+    expect(read.text).toContain('It takes about half an hour.');
+    expect(read.text).toContain('  - program memory (AT32F423), 256 KiB: not saved; needs a dumper');
+    expect(read.text).toContain('not of everything in it');
+    expect(read.text).not.toContain('repair');
   });
 
   it('gives the CS7000-M17 Plus the flashing mode the command line can reach, and no backup', async () => {
@@ -140,7 +169,9 @@ describe('looking around', () => {
     expect(text).toContain('2. Hold PTT and the orange button on top, then turn the radio on.');
     expect(text).not.toContain('SK1');
     expect(text).toContain('Backup: A radio with its Connect Systems firmware cannot be backed up');
-    expect(text).toContain('this tool was checked on a real one (2026-11-24); nor has the web page');
+    expect(text).toContain(
+      'this tool was checked on a real one for flashing (2026-11-24); nor has the web page',
+    );
     expect((await run(['radios'])).text).toContain('USB; backup: not possible');
     const backup = await run(['backup', 'cs7000p', '--sim']);
     expect(backup.code).toBe(1);
@@ -151,10 +182,12 @@ describe('looking around', () => {
     const { text } = await run(['radios', 'md9600']);
     expect(text).toContain('3. The screen blinks on and off with nothing on it');
     expect(text).not.toContain('stays dark');
-    expect(text).toContain('this tool was checked on a real one (2026-11-25); nor has the web page');
+    expect(text).toContain(
+      'this tool was checked on a real one for flashing (2026-11-25); nor has the web page',
+    );
     expect((await run(['radios', 'md3x0'])).text).toContain('this tool has not been checked on a real one');
     expect((await run(['radios', 'mduv3x0'])).text).toContain(
-      'this tool was checked on a real one (2026-11-26)',
+      'this tool was checked on a real one for flashing (2026-11-26)',
     );
   });
 
@@ -219,7 +252,7 @@ describe('simulated radios (--sim)', () => {
     expect(backup.text).toContain(READ);
     const saved = await backupIn(out);
     expect(saved.manifest).toMatchObject({ radio: 'rt4d', source: 'original-firmware' });
-    expect(saved.parts[0].data.length).toBe(4 * 1024 * 1024);
+    expect(saved.parts[0].data.length).toBe(16 * 1024 * 1024);
 
     const flash = await run(['flash', 'rt4d', RT4D_BIN, '--sim', '--yes']);
     expect(flash.code).toBe(0);
@@ -240,7 +273,13 @@ describe('simulated radios (--sim)', () => {
     expect(backup.text).toContain('Put the radio in flashing mode again before you flash it.');
     expect(backup.text).toContain(READ);
     const saved = await backupIn(out);
-    expect(saved.manifest).toMatchObject({ radio: 'c62', radioId: 'C620240900065701', idKind: 'chip-id' });
+    expect(saved.manifest).toMatchObject({
+      radio: 'c62',
+      radioId: 'C620240900065701',
+      idKind: 'chip-id',
+      // The backup says where it came from: it is never written to a real radio.
+      simulated: true,
+    });
 
     const flash = await run(['flash', 'c62', C62_ZIP, '--sim', '--yes']);
     expect(flash.code).toBe(0);
@@ -254,6 +293,8 @@ describe('simulated radios (--sim)', () => {
 
     const restore = await run(['flash', 'c62', saved.path, '--sim', '--yes']);
     expect(restore.code).toBe(0);
+    // The simulated chip is asked who it is before the backup is written back to it.
+    expect(restore.text).toContain('chip-id: C620240900065701');
     expect(restore.text).toContain('Burning partition 1/1');
     expect(restore.text).toContain(WRITTEN);
   }, 60_000);
@@ -331,6 +372,43 @@ describe('simulated radios (--sim)', () => {
     expect(other.text).toBe('This backup is of a Module 17, not a Connect Systems CS7000-M17.');
   });
 
+  it('says at once that a backup cannot be written in the flashing mode it uses', async () => {
+    // A backup of a CS7000-M17 Plus as the page makes it, in DFU mode; here the radio is flashed in robot mode.
+    const made = await makeBundle(
+      { id: 'cs7000p', name: 'Connect Systems CS7000-M17 Plus' },
+      {
+        radioId: '3657345F3233',
+        idKind: 'usb-serial',
+        notes: [],
+        parts: [
+          {
+            file: 'internal-flash.bin',
+            kind: 'internal-flash',
+            address: 0x08000000,
+            data: random(64 * 1024),
+            complete: true,
+          },
+        ],
+      },
+      'flashing-mode',
+      new Date('2026-11-20T10:00:00'),
+    );
+    const path = fileOf(made.name, made.zip);
+    // With a terminal to ask on and with --sim: no instructions, no question, nothing picked.
+    for (const argv of [
+      ['flash', 'cs7000p', path],
+      ['flash', 'cs7000p', path, '--sim', '--yes'],
+    ]) {
+      const refused = await run(argv, {}, [true, true]);
+      expect(refused.code).toBe(1);
+      expect(refused.io.asked).toEqual([]);
+      expect(refused.text).toBe(
+        'This is a backup of the whole flash. The flashing mode this tool uses for the Connect Systems ' +
+          'CS7000-M17 Plus cannot write one. Nothing was sent to the radio.',
+      );
+    }
+  });
+
   it('does not restore a backup onto a radio that says it is another one', async () => {
     const out = folder();
     await run(['backup', 'mod17', '--sim', '--out', out]);
@@ -396,7 +474,7 @@ describe('real hardware, stood in for by fakes', () => {
     const stopped = await run(['flash', 'c62', C62_ZIP, '--yes']);
     expect(stopped.code).toBe(1);
     expect(stopped.text).toContain(
-      'Nobody has checked this command-line tool against a real Retevis C62 / C2 yet.',
+      'Nobody has checked flashing a real Retevis C62 / C2 with this command-line tool yet.',
     );
     // The page was checked on a C62; that is about the page.
     expect(stopped.text).toContain(
@@ -406,10 +484,33 @@ describe('real hardware, stood in for by fakes', () => {
 
     const refused = await run(['backup', 'mod17'], {}, [false]);
     expect(refused.code).toBe(1);
-    expect(refused.io.asked).toEqual(['I can recover my radio: go on?']);
+    expect(refused.io.asked).toEqual(['Read the radio all the same?']);
     expect(refused.text).toContain('Stopped. Nothing was sent to the radio.');
     // Neither run got as far as the `untouchable` packages.
     expect(stopped.text + refused.text).not.toContain('real device');
+  });
+
+  it('asks about what is being done: a radio checked for flashing is not thereby checked for a backup', async () => {
+    // The MD-9600 was flashed with this tool on the bench; its backup was never read with it.
+    const stopped = await run(['backup', 'md9600']);
+    expect(stopped.code).toBe(1);
+    expect(stopped.text).not.toContain('checked on a real radio:');
+    expect(stopped.text).toContain(
+      'Nobody has checked backing up a real Tytera MD-9600 with this command-line tool yet.',
+    );
+    expect(stopped.text).not.toContain('A failed flash');
+    expect(stopped.text).toContain('Flashing one was checked (2026-11-25); backing up is another path');
+    expect(stopped.text).toContain('Stopped: add --experimental to go on. Nothing was sent to the radio.');
+    expect(stopped.text).not.toContain('real device');
+
+    const asked = await run(['backup', 'md9600'], {}, [false]);
+    expect(asked.io.asked).toEqual(['Read the radio all the same?']);
+
+    // Flashing it is what was checked: that goes on without being told to, as far as the device.
+    const flash = await run(['flash', 'md9600', fileOf('openrtx_md9600_test.bin', random(4096)), '--yes']);
+    expect(flash.text).toContain('Flashing was checked on a real radio: development build 242dcee0');
+    expect(flash.text).not.toContain('Nobody has checked');
+    expect(flash.text).toContain('a test reached for a real device');
   });
 
   it('flashes a GD-77 through node-hid and asks how it went', async () => {
@@ -506,6 +607,84 @@ describe('real hardware, stood in for by fakes', () => {
     expect(none.text).toContain('--cskburn');
   });
 
+  it('does not write the backup of a simulated radio to a real one, and says so first', async () => {
+    const out = folder();
+    expect((await run(['backup', 'c62', '--sim', '--out', out])).code).toBe(0);
+    const simulated = await backupIn(out);
+    expect(simulated.manifest.simulated).toBe(true);
+
+    const dir = folder();
+    const serial = serialOver(new SimRt4d());
+    const modules: NodeModules = {
+      usb: untouchable,
+      hid: untouchable,
+      serial: () => Promise.resolve(serial),
+    };
+    const argv = ['flash', 'c62', simulated.path, '--yes', '--experimental', '--port', '/dev/tty.fake'];
+    const { code, text } = await run([...argv, '--cskburn', standInCskburn(dir)], { modules });
+    expect(code).toBe(1);
+    // Nothing else is said: no walk through flashing mode for a write that will not happen.
+    expect(text).toBe(
+      'This backup was read from a simulated radio, not a real one, so it cannot be written to a real radio. ' +
+        'Nothing was sent to the radio.',
+    );
+    expect(existsSync(join(dir, 'record.json'))).toBe(false);
+  }, 60_000);
+
+  it('restores a C62 backup only onto the chip it was read from', async () => {
+    const serial = serialOver(new SimRt4d());
+    const modules: NodeModules = {
+      usb: untouchable,
+      hid: untouchable,
+      serial: () => Promise.resolve(serial),
+    };
+    const image = random(64 * 1024);
+    /** A backup of the C62 whose chip has this ID, as a file. */
+    const backupOf = async (radioId: string) => {
+      const made = await makeBundle(
+        { id: 'c62', name: 'Retevis C62 / C2' },
+        {
+          radioId,
+          idKind: 'chip-id',
+          notes: [],
+          parts: [{ file: 'flash.bin', kind: 'internal-flash', address: 0, data: image, complete: true }],
+        },
+        'flashing-mode',
+        new Date('2026-11-20T10:00:00'),
+      );
+      return fileOf(made.name, made.zip);
+    };
+    const options = ['--yes', '--experimental', '--port', '/dev/tty.fake', '--cskburn'];
+
+    // The radio that is connected (the stand-in cskburn answers for it) is another one.
+    const other = folder();
+    const refused = await run(
+      ['flash', 'c62', await backupOf('C620240900065701'), ...options, standInCskburn(other)],
+      { modules },
+    );
+    expect(refused.code).toBe(1);
+    expect(refused.text).toContain(
+      'This backup is of another radio (ID ending 00065701); the one connected ends 89ABCDEF. Nothing was written to it.',
+    );
+    // Not a failed flash: nothing to try again, nothing to report.
+    expect(refused.text).not.toContain('Failed:');
+    expect(refused.text).not.toContain('To report this');
+    expect(refused.text).not.toContain('Burning partition');
+    expect(existsSync(join(other, 'record.json'))).toBe(false);
+
+    // The radio the backup was read from.
+    const same = folder();
+    const written = await run(
+      ['flash', 'c62', await backupOf(STAND_IN_CHIP_ID), ...options, standInCskburn(same)],
+      { modules },
+    );
+    expect(written.code).toBe(0);
+    const record = JSON.parse(readFileSync(join(same, 'record.json'), 'utf8')) as CskburnRecord;
+    expect(record.args).toContain('--chip-id');
+    expect(record.parts).toEqual({ '0x0': sha256(image) });
+    expect(written.text).toContain('Burning partition 1/1');
+  });
+
   it('gives the page’s message when the C62 is not in flashing mode', async () => {
     const serial = serialOver(new SimRt4d());
     const modules: NodeModules = {
@@ -576,6 +755,26 @@ const EMPTY = {
     },
   ],
 };
+
+describe('a radio whose ID is not known to be its own', () => {
+  it('is read again, and the tool says which earlier backup has the same ID', async () => {
+    const out = folder();
+    const first = await run(['backup', 'rt950pro', '--sim', '--out', out]);
+    expect(first.code).toBe(0);
+    expect(first.text).not.toContain('That is the ID of');
+    const [name] = readdirSync(out);
+
+    // The ID is a fingerprint of the calibration: the same radio, or one that shares it.
+    const second = await run(['backup', 'rt950pro', '--sim', '--out', out]);
+    expect(second.code).toBe(0);
+    expect(second.text).not.toContain('already has a backup');
+    expect(second.text).toContain(READ);
+    expect(second.text).toContain(
+      `That is the ID of ${name} as well. It is not yet known whether two of these radios can have the same ID, so the radio was read again.`,
+    );
+    expect(readdirSync(out).sort()).toEqual([name.replace('.zip', '-2.zip'), name].sort());
+  });
+});
 
 describe('a radio that is already backed up', () => {
   it('is not read again once the reader recognises it, unless --again says so', async () => {

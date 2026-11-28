@@ -120,12 +120,39 @@ interface ModuleShape {
  * removed as soon as its run is over, and whatever is left when the process ends.
  */
 const folders = new Set<string>();
+/** What ends each cskburn program that is still running: none may outlive this one. */
+const programs = new Set<() => void>();
 let watchingExit = false;
+
+/** The signals that tell this program to stop, and their numbers: it then exits with 128 + the number. */
+const STOP_SIGNALS = { SIGHUP: 1, SIGINT: 2, SIGTERM: 15 } as const;
+
+/** Ends the programs still running and removes the folders of their runs. */
+function cleanUp(): void {
+  programs.forEach((end) => end());
+  folders.forEach(dropFolder);
+}
+
+/**
+ * Has `cleanUp` run when this program ends, also when it is interrupted (Ctrl+C), told
+ * to end or loses its terminal: Node tells no 'exit' listener about those unless they
+ * are listened for, and cskburn would go on with a radio's flash left in the folder.
+ */
+function watchExit(): void {
+  if (watchingExit) return;
+  watchingExit = true;
+  process.once('exit', cleanUp);
+  for (const [signal, number] of Object.entries(STOP_SIGNALS)) {
+    process.once(signal, () => {
+      cleanUp();
+      process.exit(128 + number);
+    });
+  }
+}
 
 /** A new private folder for one cskburn run. */
 function runFolder(): string {
-  if (!watchingExit) process.once('exit', () => folders.forEach(dropFolder));
-  watchingExit = true;
+  watchExit();
   const dir = mkdtempSync(join(tmpdir(), 'cskburn-'));
   folders.add(dir);
   return dir;
@@ -149,6 +176,16 @@ function print(to: ModuleOptions['stdout'], text: Uint8Array | string): void {
 }
 
 /**
+ * What cskburn is asked to read between giving the chip's ID and writing, when csk.ts
+ * asks for both in one run (a backup being restored): 16 KiB from the start of the flash.
+ * The real program does not wait for csk.ts to read what it printed, so without this it
+ * would have begun to erase before a run for the wrong radio could be ended. The read
+ * changes nothing and takes over a second at 115200 baud; ending the program takes
+ * milliseconds.
+ */
+const GUARD_READ = ['--read', '0x0:0x4000:guard.bin'];
+
+/**
  * A cskburn "module" that runs the program at `binary` on the serial port `port`.
  *
  * It stands where the WebAssembly module stands: csk.ts writes the images into its file
@@ -162,14 +199,19 @@ export function nativeCskburn(binary: string, port: string): CskModuleLoader {
       const dir = runFolder();
       /** A path in the module's file system ("/part0.bin") as a file in the folder. */
       const local = (path: string) => join(dir, path.replace(/^\/+/, ''));
+      /** The images csk.ts put in the file system, to be written to the radio. */
+      const images = new Set<string>();
       /** Ends the program if it is still running; set while it runs. */
       let kill: (() => void) | null = null;
       const module: ModuleShape = {
-        // A run stopped early (the radio is already backed up) must not leave cskburn
-        // reading on, holding the port.
+        // A run stopped early (the radio is already backed up, or is not the one a backup
+        // is of) must not leave cskburn going on, holding the port.
         stop: () => kill?.(),
         FS: {
-          writeFile: (path, data) => writeFileSync(local(path), data),
+          writeFile: (path, data) => {
+            images.add(path);
+            writeFileSync(local(path), data);
+          },
           // What a read left behind is the last thing csk.ts wants from a run.
           readFile: (path) => {
             const data = new Uint8Array(readFileSync(local(path)));
@@ -180,21 +222,24 @@ export function nativeCskburn(binary: string, port: string): CskModuleLoader {
         callMain(args) {
           // cskburn runs in the folder, so file names need no path: "0x0:0x400000:read.bin"
           // stays free of the colon a Windows path would bring.
-          const argv = args.map((arg, i) =>
+          // A write that csk.ts may have to stop once it has seen the chip's ID.
+          const guarded = args.includes('--chip-id') && args.some((arg) => images.has(arg));
+          const argv = args.flatMap((arg, i) => [
             args[i - 1] === '-s' ? port : arg.replace(/(^|:)\/([^/:]+)$/, '$1$2'),
-          );
+            ...(guarded && arg === '--chip-id' ? GUARD_READ : []),
+          ]);
           const child = spawn(binary, argv, { cwd: dir, stdio: ['ignore', 'pipe', 'pipe'] });
           let ended = false;
-          kill = () => child.kill();
+          const endProgram = () => void child.kill();
+          kill = endProgram;
           // Nor may it outlive this program.
-          const atExit = () => child.kill();
-          process.once('exit', atExit);
+          programs.add(endProgram);
           /** Passes the exit code on, once. Only a read that worked leaves something to fetch. */
           const end = (code: number) => {
             if (ended) return;
             ended = true;
             kill = null;
-            process.off('exit', atExit);
+            programs.delete(endProgram);
             if (code !== 0 || !args.includes('--read')) dropFolder(dir);
             module.onExit?.(code);
           };

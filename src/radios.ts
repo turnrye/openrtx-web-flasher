@@ -5,17 +5,11 @@
  * `id` is the OpenRTX target name: CI names its files `openrtx_<id>_<version>.<ext>` and
  * its per-radio artifacts `openrtx-<id>`.
  */
+import { DRIVERS, driverFor } from './drivers/index.ts';
+import type { Purpose } from './flash/run.ts';
 
-/** How the bytes get into the radio. */
-export type Method =
-  | 'tyt-dfu'
-  | 'stm32-dfu'
-  | 'cs7000-robot'
-  | 'gd77-hid'
-  | 'rt4d-serial'
-  | 'rt950-serial'
-  | 'csk-serial'
-  | 'uf2-copy';
+/** How the bytes get into the radio: the name of a driver (src/drivers/index.ts). */
+export type Method = keyof typeof DRIVERS;
 
 /** A flash that was checked on a real radio. Empty until someone does it. */
 export interface Verification {
@@ -71,6 +65,11 @@ export interface Radio {
   /** Other extensions worth offering for download (for the manual tool). */
   otherExts?: string[];
   /**
+   * The CI artifact with every radio of this radio's build system, for a build that has
+   * no artifact of the radio's own. Left out for the usual one, `release-bins`.
+   */
+  ciArtifact?: string;
+  /**
    * Files of the same build that must be written as well, each at its own address. The
    * firmware does not start without them.
    */
@@ -79,6 +78,11 @@ export interface Radio {
   address?: number;
   /** MCU of radios flashed over STM32 DFU, when it is not the STM32F405: decides the flash size. */
   chip?: 'f405' | 'h743';
+  /**
+   * Megabytes of the memory chip beside the processor, on the STM32 radios that have one.
+   * A backup in flashing mode does not reach it, and says so.
+   */
+  memoryChipMb?: number;
   /** GD-77 family model string for the HID bootloader. */
   hidModel?: 'GD-77' | 'DM-1801';
   /** True when the radio's "enter" drawing (public/art/<id>-enter.svg) shows the keys to hold in gold. */
@@ -104,6 +108,27 @@ export interface Radio {
   commandLine?: Pick<Radio, 'method' | 'enter' | 'after' | 'flashNotes' | 'manual'>;
   /** Null until a flash through this page was checked on real hardware. */
   verified: Verification | null;
+  /**
+   * What the command line was checked for on real hardware, by what was done: flashing
+   * or backing up. One does not stand for the other: they are different code and, on many
+   * radios, a different mode of the radio. Nor does `verified` stand for either: that is
+   * the page in Chrome, which reaches the radio through another USB and serial layer.
+   * Left out until someone does it.
+   */
+  commandLineVerified?: Partial<Record<Purpose, Verification>>;
+}
+
+/** What is known about a radio on real hardware, whichever tool it was checked with. */
+export interface HardwareChecks {
+  /** A flash through the page; null when there has been none. */
+  page: Verification | null;
+  /** The command line, by what was done; empty when nothing was. */
+  commandLine: Partial<Record<Purpose, Verification>>;
+}
+
+/** The hardware checks on record for `radio`: the page's and the command line's. */
+export function checksFor(radio: Pick<Radio, 'verified' | 'commandLineVerified'>): HardwareChecks {
+  return { page: radio.verified, commandLine: radio.commandLineVerified ?? {} };
 }
 
 /** `radio` as the command line flashes it. */
@@ -157,7 +182,16 @@ export const RADIOS: Radio[] = [
     ],
     after: 'Turn the radio off and on again.',
     manual: RADIO_TOOL,
-    verified: null,
+    // docs/verification.md, 2026-11-27: reported working; firmware, browser and system not recorded.
+    verified: { date: '2026-11-27' },
+    // docs/verification.md, 2026-11-26.
+    commandLineVerified: {
+      flash: {
+        version: 'development build a787a6d8',
+        platform: 'Node 24.22, Ubuntu 26.04 on x86_64',
+        date: '2026-11-26',
+      },
+    },
   },
   {
     id: 'md9600',
@@ -174,6 +208,14 @@ export const RADIOS: Radio[] = [
     after: 'Remove power and apply it again.',
     manual: RADIO_TOOL,
     verified: null,
+    // docs/verification.md, 2026-11-25.
+    commandLineVerified: {
+      flash: {
+        version: 'development build 242dcee0',
+        platform: 'Node 26.9, macOS on Apple silicon',
+        date: '2026-11-25',
+      },
+    },
   },
   {
     id: 'dm1701',
@@ -191,7 +233,8 @@ export const RADIOS: Radio[] = [
     enterUnconfirmed: true,
     after: 'Turn the radio off and on again.',
     manual: RADIO_TOOL,
-    verified: null,
+    // docs/verification.md, 2026-11-27: reported working; firmware, browser and system not recorded.
+    verified: { date: '2026-11-27' },
   },
   {
     id: 'gd77',
@@ -227,6 +270,7 @@ export const RADIOS: Radio[] = [
   },
   {
     id: 'cs7000',
+    memoryChipMb: 16,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17',
     method: 'stm32-dfu',
@@ -251,6 +295,7 @@ export const RADIOS: Radio[] = [
   {
     id: 'cs7000p',
     chip: 'h743',
+    memoryChipMb: 32,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17 Plus',
     method: 'stm32-dfu',
@@ -318,6 +363,14 @@ export const RADIOS: Radio[] = [
       },
     },
     verified: null,
+    // docs/verification.md, 2026-11-24: in robot mode, the command line's own way in.
+    commandLineVerified: {
+      flash: {
+        version: 'development build 9951a7d1',
+        platform: 'Node 26.9, macOS on Apple silicon, robot mode',
+        date: '2026-11-24',
+      },
+    },
   },
   {
     id: 'rt4d',
@@ -388,6 +441,7 @@ export const RADIOS: Radio[] = [
     name: 'Lilygo T-TWR Plus',
     method: 'uf2-copy',
     ext: 'uf2',
+    ciArtifact: 'zephyr-release-bins',
     enter: [
       'Connect the USB-C cable.',
       'Turn the radio on and press BOOT (Volume −) right after.',
@@ -468,20 +522,7 @@ export function radioForFile(fileName: string): Radio | undefined {
 
 /** Web API a flashing method needs. */
 export function apiFor(method: Method): 'usb' | 'serial' | 'hid' | null {
-  switch (method) {
-    case 'tyt-dfu':
-    case 'stm32-dfu':
-    case 'cs7000-robot':
-      return 'usb';
-    case 'gd77-hid':
-      return 'hid';
-    case 'rt4d-serial':
-    case 'rt950-serial':
-    case 'csk-serial':
-      return 'serial';
-    case 'uf2-copy':
-      return null;
-  }
+  return DRIVERS[method].api;
 }
 
 /** How what a radio holds now can be saved before it is replaced. */
@@ -501,11 +542,14 @@ export type Backup =
       after?: string;
       /** True when reading ends flashing mode, so the radio must be put in it again to flash. */
       endsFlashingMode?: boolean;
-      /** True when this way of reading has not been measured on this model. */
+      /** True when this page has not run this read on a real radio of this model (docs/bench-notes.md). */
       unchecked?: boolean;
       /** Something the user should know before relying on it. */
       caveat?: string;
-      /** What the backup cannot hold, and where to get it instead; said before the read. */
+      /**
+       * What the backup does not hold, said before the read. The link is where to get it
+       * instead, or else the coverage table (docs/backup-coverage.md).
+       */
       notIncluded?: { text: string; label: string; url: string };
       /** Whether this page can write the backup back to the radio. */
       restorable: boolean;
@@ -517,93 +561,28 @@ export type Backup =
   /** The radio gives nothing up in the mode it is flashed in. */
   | { how: 'none'; text: string };
 
-const MIB = 1024 * 1024;
+/**
+ * Whether the ID a backup read finds first is known to belong to one radio only. Where it
+ * is, a read may stop as soon as the ID matches a backup that exists already. Where that
+ * has not been confirmed on radios, the radio is read each time: a second radio with the
+ * same ID would otherwise be passed over as already backed up.
+ *
+ * - C62: the chip's eFuse ID. TYT radios: the MCU's unique ID, as the firmware reports it.
+ * - STM32F405 radios in DFU mode: the ROM bootloader's USB serial number, which ST's
+ *   bootloader derives from the MCU's unique ID.
+ * - STM32H743 (CS7000-M17 Plus): not confirmed that its bootloader's serial number differs
+ *   between radios.
+ * - RT-4D, RT-950 Pro: the ID is a fingerprint of the calibration; not confirmed that two
+ *   radios never share one. GD-77, DM-1801: the fingerprint only comes at the end of the read.
+ */
+export function idIsPerUnit(radio: Radio): boolean {
+  return driverFor(radio).idIsPerUnit?.(radio) ?? false;
+}
 
-/** What backing up `radio` involves. The page always reads everything it can. */
+/**
+ * What backing up `radio` involves. The page always reads everything it can, and says
+ * what it cannot: src/coverage.ts has the same facts memory by memory.
+ */
 export function backupFor(radio: Radio): Backup {
-  switch (radio.method) {
-    case 'csk-serial':
-      return {
-        how: 'read',
-        mode: 'flashing',
-        time: 'about ten minutes',
-        holds: 'the whole flash: firmware, calibration, channels and settings',
-        endsFlashingMode: true,
-        restorable: true,
-        command:
-          'cskburn -C 6 -b 115200 -s <serial port> --chip-id --verify-all --read 0x0:0x400000:backup.bin',
-      };
-    case 'stm32-dfu': {
-      const size = radio.chip === 'h743' ? 2 * MIB : MIB;
-      return {
-        how: 'read',
-        mode: 'flashing',
-        time: 'under a minute',
-        holds: 'the whole program memory, bootloader included',
-        restorable: true,
-        command: `dfu-util -d 0483:df11 -a 0 -s 0x08000000:${size} -U backup.bin`,
-      };
-    }
-    case 'tyt-dfu':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'up to six minutes',
-        holds:
-          'the factory data, the bootloader and the whole memory chip that holds your channels and settings',
-        after: 'The radio restarts by itself when the read is done.',
-        unchecked: radio.id !== 'md9600',
-        caveat:
-          radio.id === 'md9600'
-            ? undefined
-            : 'This read has been measured on the MD-9600 only. This model may give less; whatever it gives is kept, and the backup says what is missing. Keep a codeplug read with the programming software as well.',
-        restorable: false,
-      };
-    case 'gd77-hid':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'about a minute',
-        holds: 'your channels and settings and, where the firmware allows it, the factory calibration',
-        caveat:
-          'Not every firmware version lets the calibration be read this way. The backup says if it could not.',
-        restorable: false,
-      };
-    case 'rt4d-serial':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'about seven minutes',
-        holds:
-          'the first 4 MB of the memory chip: calibration, settings, channels, zones, contacts, the logo, fonts and voices',
-        restorable: false,
-      };
-    case 'rt950-serial':
-      return {
-        how: 'read',
-        mode: 'normal',
-        time: 'under a minute',
-        holds:
-          'your channels and settings and the factory calibration: the first 64 KB of the memory chip, which is as far as the programming cable reaches',
-        unchecked: true,
-        caveat:
-          'This read has not been run on a real RT-950 Pro yet. It follows the programming protocol as others worked it out; if your radio answers differently, the page says so and saves nothing.',
-        notIncluded: {
-          text: "The original firmware is not part of the backup, because the radio's bootloader cannot be read. Download the version your radio runs before you flash:",
-          label: "Radtel's downloads",
-          url: 'https://www.radtels.com/pages/software-download',
-        },
-        restorable: false,
-      };
-    case 'cs7000-robot':
-      return {
-        how: 'none',
-        text: 'A radio with its Connect Systems firmware cannot be backed up: that firmware read-protects the chip, and the flashing mode has no way to read. Flashing OpenRTX leaves the bootloader and the DMR firmware in place, and Connect Systems publishes both.',
-      };
-    case 'uf2-copy':
-      return {
-        how: 'copy',
-        text: 'The drive holds what the radio runs now as CURRENT.UF2. Copy that file to your computer before you copy the new one over.',
-      };
-  }
+  return driverFor(radio).backup(radio);
 }

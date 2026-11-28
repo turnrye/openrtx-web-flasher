@@ -8,7 +8,8 @@
  * interface names WebUSB does not always expose, and the grammar of the DfuSe
  * memory-layout string.
  */
-import { FlashError, type FlashContext } from './types.ts';
+import { bytesOf } from '../bytes.ts';
+import { FlashError, messageOf, type FlashContext } from './types.ts';
 
 /** DFU class requests (bRequest). */
 export const DfuRequest = {
@@ -247,12 +248,6 @@ function parseConfigurationDescriptor(raw: Uint8Array, interfaceNumber: number):
   return out;
 }
 
-/** Copies a BufferSource-like view into a plain Uint8Array. */
-function bytesOf(view: DataView | undefined): Uint8Array {
-  if (!view) return new Uint8Array(0);
-  return new Uint8Array(view.buffer, view.byteOffset, view.byteLength).slice();
-}
-
 /** A claimed DFU interface and the requests it understands. */
 export class DfuDevice {
   /** DFU functional descriptor, or null when it could not be read. */
@@ -482,11 +477,6 @@ export function dfuseCommandBytes(command: number, address: number): Uint8Array 
     (address >>> 16) & 0xff,
     (address >>> 24) & 0xff,
   );
-}
-
-/** Text of a thrown value. */
-function messageOf(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 /** Standard GET_DESCRIPTOR to the device; null when the device refuses. */

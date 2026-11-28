@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["w3c-web-usb", "w3c-web-serial", "w3c-web-hid", "node", "vite/client"],
+    "types": ["w3c-web-usb", "w3c-web-serial", "w3c-web-hid", "node", "vite/client", "astro/client"],
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "strict": true,
@@ -16,5 +16,14 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "cli", "tests", "vite.config.ts", "playwright.config.ts"]
+  "include": [
+    "src",
+    "tests",
+    "cli",
+    "site",
+    ".astro/types.d.ts",
+    "astro.config.ts",
+    "vite.config.ts",
+    "playwright.config.ts"
+  ]
 }

@@ -10,7 +10,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { makeBundle } from '../src/backup/bundle.ts';
 import type { RadioBackup } from '../src/backup/types.ts';
+import { COVERAGE_DOC_URL, gapLine, gapsFor, openRtxLimit } from '../src/coverage.ts';
 import type { DeviceEnv } from '../src/devices.ts';
+import { driverFor } from '../src/drivers/index.ts';
 import { asksForSuccess, reportUrl, type Report } from '../src/feedback.ts';
 import { companionsFor, fileForRadio, sha256Hex, type Build } from '../src/firmware/builds.ts';
 import type { Fetcher } from '../src/firmware/github.ts';
@@ -18,16 +20,20 @@ import type { CskModuleLoader } from '../src/flash/csk.ts';
 import {
   flashDevice,
   pickDevice,
+  restoreRefusal,
   setCskburnLoader,
+  SIMULATED_BACKUP,
   type PickedDevice,
   type Purpose,
 } from '../src/flash/run.ts';
-import type { FlashContext, Segment } from '../src/flash/types.ts';
+import { messageOf, WrongRadioError, type FlashContext, type Segment } from '../src/flash/types.ts';
 import {
   apiFor,
   backupFor,
+  checksFor,
   filesFor,
   forCommandLine,
+  idIsPerUnit,
   radioById,
   RADIOS,
   type Radio,
@@ -81,27 +87,10 @@ export interface Host {
   asRoot: string;
 }
 
-/**
- * Radios this tool was checked on with real hardware, by radio id. Empty until someone
- * does it: `verified` in src/radios.ts is about the page in Chrome, which reaches the
- * radio through another USB and serial layer.
- */
-const CHECKED: Partial<Record<string, Verification>> = {
-  md9600: {
-    version: 'development build 242dcee0',
-    platform: 'Node 26.9, macOS on Apple silicon',
-    date: '2026-11-25',
-  },
-  mduv3x0: {
-    version: 'development build a787a6d8',
-    platform: 'Node 24.22, Ubuntu 26.04 on x86_64',
-    date: '2026-11-26',
-  },
-  cs7000p: {
-    version: 'development build 9951a7d1',
-    platform: 'Node 26.9, macOS on Apple silicon, robot mode',
-    date: '2026-11-24',
-  },
+/** What a purpose is called, at the start of a sentence and inside one. */
+const DOING: Record<Purpose, [string, string]> = {
+  flash: ['Flashing', 'flashing'],
+  backup: ['Backing up', 'backing up'],
 };
 
 /** The devices of one run: real ones, or the simulators. */
@@ -116,11 +105,6 @@ interface Devices {
 /** An environment variable's value; an empty one counts as not set. */
 function setting(value: string | undefined): string | undefined {
   return value === '' ? undefined : value;
-}
-
-/** Text of a thrown value. */
-function messageOf(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 /** "2026-10-04" from an ISO date; empty for none. */
@@ -216,7 +200,8 @@ async function pick(
   for (let attempt = 0; ; attempt++) {
     try {
       const picked = await pickDevice(radio, devices.env, purpose);
-      if (picked.api === 'serial' && radio.method === 'csk-serial') {
+      const driver = driverFor(radio);
+      if (picked.api === 'serial' && driver.api === 'serial' && driver.cskburn) {
         setCskburnLoader(await devices.cskburn(picked.device));
       }
       return picked;
@@ -242,7 +227,8 @@ function radioNamed(id: string): Radio {
 
 /** What this computer needs before it can reach `radio`, when that is something. */
 function platformNote(radio: Radio): string | null {
-  if (radio.method === 'cs7000-robot') {
+  const driver = driverFor(radio);
+  if (driver.api === 'usb' && driver.massStorage) {
     if (process.platform === 'win32') {
       return 'Windows keeps this kind of USB device to itself. Use the Connect Systems Factory Tool with the .bin file instead.';
     }
@@ -251,7 +237,7 @@ function platformNote(radio: Radio): string | null {
     }
     return null;
   }
-  return process.platform === 'win32' && apiFor(radio.method) === 'usb'
+  return process.platform === 'win32' && driver.api === 'usb'
     ? 'On Windows the radio needs the WinUSB driver. Install it once with Zadig while the radio is in flashing mode.'
     : null;
 }
@@ -275,13 +261,30 @@ function backupSummary(radio: Radio): string {
   return `read in ${backup.mode} mode, ${backup.time}; ${backup.restorable ? 'can be flashed back' : 'a record, cannot be written back'}`;
 }
 
+/**
+ * Says what a backup of `radio` leaves out, from the coverage record. `linked` is true
+ * when a line before this one already gave the address of the coverage document.
+ */
+function sayGaps(radio: Radio, io: Io, indent: string, linked: boolean): void {
+  const gaps = gapsFor(radio);
+  if (gaps.length === 0) {
+    io.say(`${indent}That is every memory the radio has.`);
+  } else {
+    io.say(`${indent}Not saved whole, each a critical gap:`);
+    for (const gap of gaps) io.say(`${indent}  - ${gapLine(gap)}`);
+    if (!linked) io.say(`${indent}What is lost, and how each gap can be closed: ${COVERAGE_DOC_URL}`);
+  }
+  const limit = openRtxLimit(radio);
+  if (limit) io.say(`${indent}${limit}`);
+}
+
 /** What is known about `radio` on real hardware: this tool, and the page. */
 function checkedSummary(radio: Radio): string {
-  const here = CHECKED[radio.id];
-  const page = radio.verified;
+  const { page, commandLine } = checksFor(radio);
+  const here = Object.entries(commandLine) as [Purpose, Verification][];
   return [
-    here
-      ? `this tool was checked on a real one (${here.date})`
+    here.length > 0
+      ? `this tool was checked on a real one for ${here.map(([purpose, { date }]) => `${DOING[purpose][1]} (${date})`).join(' and ')}`
       : 'this tool has not been checked on a real one',
     page ? `the web page was (${page.date})` : 'nor has the web page',
   ].join('; ');
@@ -297,12 +300,14 @@ function showRadios(id: string | undefined, { io }: Host): number {
       io.say(`  ${''.padEnd(9)} ${connection(radio)}; backup: ${backupSummary(radio)}`);
     }
     io.say();
-    const checked = RADIOS.filter((radio) => CHECKED[radio.id]).map((radio) => radio.id);
-    io.say(
-      checked.length === 0
-        ? 'None of them has been read or flashed with this tool on real hardware yet.'
-        : `Read or flashed with this tool on real hardware so far: ${checked.join(', ')}.`,
-    );
+    for (const purpose of ['flash', 'backup'] as const) {
+      const checked = RADIOS.filter((radio) => checksFor(radio).commandLine[purpose]).map(
+        (radio) => radio.id,
+      );
+      io.say(
+        `${DOING[purpose][0]} was checked with this tool on real hardware for: ${checked.join(', ') || 'none of them yet'}.`,
+      );
+    }
     io.say('"openrtx-flasher radios <radio>" says what one of them needs.');
     return 0;
   }
@@ -331,8 +336,10 @@ function showRadios(id: string | undefined, { io }: Host): number {
     if (backup.caveat) io.say(`  ${backup.caveat}`);
     if (backup.notIncluded) io.say(`  ${backup.notIncluded.text} ${backup.notIncluded.url}`);
     if (backup.after) io.say(`  ${backup.after}`);
+    sayGaps(radio, io, '  ', backup.notIncluded?.url === COVERAGE_DOC_URL);
   } else {
     io.say(`Backup: ${backup.text}`);
+    sayGaps(radio, io, '  ', false);
   }
   io.say();
   io.say(`The usual tool: ${radio.manual.tool}, ${radio.manual.url}`);
@@ -395,8 +402,8 @@ function nothingFor(radio: Radio, build: Build): string {
   }
   if (build.backup) {
     return (
-      'This backup was read through the radio’s original firmware. It is the record of what the radio held ' +
-      'and cannot be written back.'
+      'This backup was read through the radio’s original firmware. It is a record of what could be read from ' +
+      'the radio and cannot be written back.'
     );
   }
   return (
@@ -436,27 +443,39 @@ async function fetchFiles(radio: Radio, what: string, options: Options, host: Ho
 }
 
 /**
- * The page's experimental gate: whether to talk to `radio` at all. Yes when it is
- * simulated or this tool was checked on it; otherwise only when the person says so.
+ * The page's experimental gate: whether to talk to `radio` for `purpose` at all. Yes when
+ * it is simulated or this tool was checked on it for that; otherwise only when the person
+ * says so.
  */
-async function allowed(radio: Radio, options: Options, { io }: Host): Promise<boolean> {
+async function allowed(radio: Radio, purpose: Purpose, options: Options, { io }: Host): Promise<boolean> {
   if (options.sim !== undefined) {
     io.say('Simulator: this goes to a simulated radio. Nothing is sent to real hardware.');
     return true;
   }
-  const here = CHECKED[radio.id];
+  const { commandLine, page } = checksFor(radio);
+  const here = commandLine[purpose];
   if (here) {
     io.say(
-      `Checked on a real radio: ${[here.version, here.platform, here.date].filter(Boolean).join(', ')}.`,
+      `${DOING[purpose][0]} was checked on a real radio: ${[here.version, here.platform, here.date].filter(Boolean).join(', ')}.`,
     );
     return true;
   }
+  const other: Purpose = purpose === 'flash' ? 'backup' : 'flash';
   io.say(
-    `Nobody has checked this command-line tool against a real ${radio.name} yet. A failed flash can leave ` +
-      'the radio without working firmware until you flash it again with the usual tool.',
+    `Nobody has checked ${DOING[purpose][1]} a real ${radio.name} with this command-line tool yet. ` +
+      (purpose === 'flash'
+        ? 'A failed flash can leave the radio without working firmware until you flash it again with the usual tool.'
+        : 'Reading does not change the radio, but what an unchecked reader saves may be wrong or incomplete.'),
   );
-  if (radio.verified) io.say('The web page was checked on one; this tool reaches the radio another way.');
-  if (options.experimental || (await io.confirm('I can recover my radio: go on?'))) return true;
+  const otherCheck = commandLine[other];
+  if (otherCheck) {
+    io.say(
+      `${DOING[other][0]} one was checked (${otherCheck.date}); ${DOING[purpose][1]} is another path through this tool.`,
+    );
+  }
+  if (page) io.say('The web page was checked on one; this tool reaches the radio another way.');
+  const question = purpose === 'flash' ? 'I can recover my radio: go on?' : 'Read the radio all the same?';
+  if (options.experimental || (await io.confirm(question))) return true;
   io.say(`Stopped${io.interactive ? '' : ': add --experimental to go on'}. Nothing was sent to the radio.`);
   return false;
 }
@@ -482,22 +501,6 @@ function contextFor(devices: Devices, io: Io, log: string[]): FlashContext {
   };
 }
 
-/**
- * Why a backup must not be restored onto the radio that was found: it says it is another
- * one. Null when it does not. Only the STM32 radios say who they are before anything is
- * sent: their USB serial number is the ID in the backup.
- */
-function otherRadio(build: Build, picked: PickedDevice): string | null {
-  const backup = build.backup;
-  if (backup?.idKind !== 'usb-serial' || !backup.radioId || picked.api !== 'usb') return null;
-  const serial = picked.device.serialNumber?.trim();
-  if (!serial || serial === backup.radioId) return null;
-  return (
-    `This backup is of another radio (ID ending ${backup.radioId.slice(-8)}); the one connected ends ` +
-    `${serial.slice(-8)}. Nothing was sent to it.`
-  );
-}
-
 /** Says how a simulated radio compares with what was done to it; the exit code is 1 when it differs. */
 function simVerdict(io: Io, problems: string[], good: string): number {
   problems.forEach((problem) => io.say(`Simulator: ${problem}.`));
@@ -508,7 +511,7 @@ function simVerdict(io: Io, problems: string[], good: string): number {
 /** `flash`: writes a build, or a backup, to the radio. */
 async function flash(radio: Radio, what: string, options: Options, host: Host): Promise<number> {
   const { io } = host;
-  if (radio.method === 'uf2-copy') {
+  if (apiFor(radio.method) === null) {
     io.say(`The ${radio.name} is flashed by copying a file onto its USB drive:`);
     radio.enter.forEach((step, i) => io.say(`  ${i + 1}. ${step}`));
     io.say(`Get the file with "openrtx-flasher fetch ${radio.id} ${what}" and copy it onto the drive.`);
@@ -518,6 +521,15 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   const build = await resolveBuild(what, radio, options.repo, source);
   const file = fileForRadio(radio, build);
   if (!file) throw new Error(nothingFor(radio, build));
+  // Said before anything else: no walk through flashing mode for a write that will not happen.
+  const way = backupFor(radio);
+  if (build.backup && !(way.how === 'read' && way.restorable)) {
+    throw new Error(
+      `This is a backup of the whole flash. The flashing mode this tool uses for the ${radio.name} ` +
+        'cannot write one. Nothing was sent to the radio.',
+    );
+  }
+  if (build.backup?.simulated && options.sim === undefined) throw new Error(SIMULATED_BACKUP);
   const data = await fileData(build, file, source);
   const hash = file.sha256 ?? (await sha256Hex(data));
   const companions = companionsFor(radio, build);
@@ -546,7 +558,7 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   const needs = options.sim === undefined ? platformNote(radio) : null;
   if (needs) io.say(needs);
   io.say();
-  if (!(await allowed(radio, options, host))) return 1;
+  if (!(await allowed(radio, 'flash', options, host))) return 1;
 
   io.say(
     `Put the radio in flashing mode${radio.enterUnconfirmed ? ' (a best guess: the OpenRTX documentation does not say)' : ''}:`,
@@ -573,7 +585,8 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   };
   const picked = await pick(radio, devices, 'flash', host, options);
   if (!picked) return 1;
-  const other = otherRadio(build, picked);
+  // A radio that says who it is before anything is sent: flashDevice would refuse it too.
+  const other = build.backup ? restoreRefusal(build.backup, picked) : null;
   if (other) {
     io.say(other);
     return 1;
@@ -581,9 +594,14 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
   try {
     ctx.log(`Flashing ${file.name} (${data.length} bytes) to ${radio.name}`);
     io.say('Do not unplug or switch off the radio.');
-    await flashDevice(radio, picked, data, ctx, !!build.backup, also);
+    await flashDevice(radio, picked, data, ctx, build.backup ?? null, also);
   } catch (e) {
     const message = messageOf(e);
+    // The backup is of another radio: nothing was written, and nothing went wrong to report.
+    if (e instanceof WrongRadioError) {
+      io.say(message);
+      return 1;
+    }
     io.say(`Failed: ${message} Put the radio back in flashing mode and try again.`);
     if (!devices.probes) {
       io.say(`To report this: ${reportLink(host, { ...about, outcome: 'failed', error: message, log })}`);
@@ -599,7 +617,7 @@ async function flash(radio: Radio, what: string, options: Options, host: Host): 
     );
   }
   const failed = { ...about, outcome: 'failed' as const, log };
-  if (asksForSuccess(CHECKED[radio.id] !== undefined)) {
+  if (asksForSuccess(checksFor(radio).commandLine.flash !== undefined)) {
     io.say(`Did the radio start OpenRTX? Your answer helps get the ${radio.name} checked with this tool.`);
     io.say(`  Yes: ${reportLink(host, { ...about, outcome: 'worked' })}`);
     io.say(
@@ -618,6 +636,7 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   const info = backupFor(radio);
   if (info.how !== 'read') {
     io.say(info.text);
+    sayGaps(radio, io, '', false);
     return info.how === 'copy' ? 0 : 1;
   }
   // Before anything else: a read is long, and its result must have somewhere to go.
@@ -626,12 +645,13 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
   io.say(
     info.restorable
       ? 'The backup is the way back to what the radio runs now: "flash" can write it back.'
-      : 'The backup cannot be written back, but it is the record of what the radio held, including what a repair would need.',
+      : 'The backup cannot be written back. It is a record of what could be read from the radio, not of everything in it.',
   );
   if (info.caveat) io.say(info.caveat);
   if (info.notIncluded) io.say(`${info.notIncluded.text} ${info.notIncluded.url}`);
+  sayGaps(radio, io, '', info.notIncluded?.url === COVERAGE_DOC_URL);
   io.say();
-  if (!(await allowed(radio, options, host))) return 1;
+  if (!(await allowed(radio, 'backup', options, host))) return 1;
   if (info.mode === 'normal') {
     io.say(
       'The radio must be in normal mode: switched on without holding any keys, with the programming cable connected.',
@@ -675,6 +695,13 @@ async function backup(radio: Radio, options: Options, host: Host): Promise<numbe
     }
     io.say(`Saved ${path} (${formatSize(zip.length)}).`);
     io.say(`  Radio ID: ${manifest.radioId ?? 'this radio does not report one'}`);
+    const earlier = manifest.radioId && !idIsPerUnit(radio) ? known.get(manifest.radioId) : undefined;
+    if (earlier) {
+      io.say(
+        `  That is the ID of ${earlier} as well. It is not yet known whether two of these radios can ` +
+          'have the same ID, so the radio was read again.',
+      );
+    }
     if (manifest.firmware) io.say(`  Firmware on the radio: ${manifest.firmware}`);
     for (const part of manifest.parts.filter((p) => !p.complete)) {
       io.say(`  ${part.file} is incomplete${part.note ? `: ${part.note}` : '.'}`);

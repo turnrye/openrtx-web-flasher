@@ -1,0 +1,34 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// What the flasher is built on, and the licence texts that have to travel with it.
+import Licences from '../components/Licences.astro';
+import Page from '../layouts/Page.astro';
+---
+
+<Page
+  title="Flasher licences and credits"
+  description="What the flasher is built on, and under which licences."
+  current="credits"
+>
+  <article class="prose prose-invert max-w-3xl prose-a:text-primary">
+    <h2>The flasher</h2>
+    <p>
+      The flasher is free software under the GNU General Public License, version 3 or (at your option) any later
+      version. It comes with no warranty. The source, with the revision of everything it builds on, is at{' '}
+      <a href="https://github.com/turnrye/openrtx-web-flasher">github.com/turnrye/openrtx-web-flasher</a>.
+    </p>
+    <h2>Ported from</h2>
+    <p>The flashers and backup readers are ports of, or follow, these projects.</p>
+    <Licences show="ported" />
+    <h2>Shipped with the site</h2>
+    <Licences show="shipped" />
+    <h2>The firmware</h2>
+    <p>
+      The firmware the flasher offers is OpenRTX, copied unchanged from the project's releases and builds. OpenRTX is
+      free software under the GNU General Public License, version 3 or later; its source is at{' '}
+      <a href="https://github.com/OpenRTX/OpenRTX">github.com/OpenRTX/OpenRTX</a>.
+    </p>
+    <h2>Licence texts</h2>
+    <Licences show="texts" />
+  </article>
+</Page>

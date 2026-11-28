@@ -29,7 +29,8 @@ import {
   type CiRun,
   type Fetcher,
 } from '../src/firmware/github.ts';
-import type { Radio } from '../src/radios.ts';
+import { messageOf } from '../src/flash/types.ts';
+import { RADIOS, type Radio } from '../src/radios.ts';
 
 /** Where firmware comes from unless --repo says otherwise. */
 export const DEFAULT_REPO = 'OpenRTX/OpenRTX';
@@ -56,8 +57,13 @@ interface ApiRelease {
   assets: { name: string; size: number; browser_download_url: string; digest?: string | null }[];
 }
 
-/** Firmware files as OpenRTX names them, minus the emulator: the rule of scripts/mirror-firmware.mjs. */
+/**
+ * Firmware files as OpenRTX names them, minus the emulator: the rule of
+ * scripts/mirror-firmware.mjs. And the files a radio of the catalogue needs written
+ * beside its firmware (`alsoWrites`), which go by a plain name such as dsp_firmware.bin.
+ */
 function isFirmware(name: string): boolean {
+  if (RADIOS.some((radio) => radio.alsoWrites?.some((companion) => companion.file === name))) return true;
   return /^openrtx_[a-z0-9]+[_.]/i.test(name) && !/^openrtx_linux/i.test(name);
 }
 
@@ -81,7 +87,8 @@ function safe(name: string): string {
 
 /**
  * The bytes kept in the cache under `path` when `valid` accepts them, else those of
- * `url`, which are then kept. `what` names the download for the person.
+ * `url`, which are then kept if the cache can be written. `what` names the download for
+ * the person.
  */
 async function cached(
   source: Source,
@@ -106,10 +113,16 @@ async function cached(
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (!(await valid(bytes))) throw new Error(`${what} is not the file GitHub described, so it was not used.`);
   if (kept) {
-    mkdirSync(dirname(kept), { recursive: true });
-    // Write beside the target and rename, so an interrupted run leaves no half file.
-    writeFileSync(`${kept}.part`, bytes);
-    renameSync(`${kept}.part`, kept);
+    try {
+      mkdirSync(dirname(kept), { recursive: true });
+      // Write beside the target and rename, so an interrupted run leaves no half file.
+      writeFileSync(`${kept}.part`, bytes);
+      renameSync(`${kept}.part`, kept);
+    } catch (e) {
+      // The cache only saves a download next time: what arrived and checked out is used.
+      const why = messageOf(e);
+      source.say(`The download could not be kept in the cache (${why}); it is used all the same.`);
+    }
   }
   return bytes;
 }

@@ -24,8 +24,8 @@ test('a backup shows that it is busy, how far along it is, and a console that fi
 
   await page.getByTestId('backup').click();
   // Busy at once, before the radio has given any progress.
-  await expect(page.getByTestId('backup').locator('.spinner')).toBeVisible();
-  await expect(backup.getByTestId('meter')).toHaveClass(/active/);
+  await expect(page.getByTestId('backup').getByTestId('spinner')).toBeVisible();
+  await expect(backup.getByTestId('meter')).toHaveAttribute('data-state', 'active');
   await expect(backup.getByTestId('activity')).toContainText('elapsed');
 
   // Then amounts, not only a percentage, and the radio's last message.
@@ -40,8 +40,8 @@ test('a backup shows that it is busy, how far along it is, and a console that fi
   await expect(page.getByTestId('backup-done')).toBeVisible({ timeout: 60_000 });
   // Afterwards the status line is gone, the bar is still, and the console stays.
   await expect(backup.getByTestId('activity')).toHaveCount(0);
-  await expect(page.getByTestId('backup').locator('.spinner')).toHaveCount(0);
-  await expect(backup.getByTestId('meter')).not.toHaveClass(/active/);
+  await expect(page.getByTestId('backup').getByTestId('spinner')).toHaveCount(0);
+  await expect(backup.getByTestId('meter')).toHaveAttribute('data-state', 'still');
   await expect(backup.getByTestId('console')).toContainText(/Console \(\d+ lines\)/);
 });
 
@@ -51,15 +51,15 @@ test('a flash shows each stage as it happens, and keeps its console', async ({ p
   await enter(page);
   await skipBackup(page);
   const flash = step(page, 'step-flash');
-  await turnOnExperimental(page, 'step-flash');
+  await turnOnExperimental(page);
 
   await page.getByTestId('flash').click();
-  await expect(page.getByTestId('flash').locator('.spinner')).toBeVisible();
+  await expect(page.getByTestId('flash').getByTestId('spinner')).toBeVisible();
   await expect(flash.getByTestId('activity')).toContainText('elapsed');
   await expect(flash.getByTestId('activity')).toContainText(/Writing · [\d.]+ (KB|MB) of [\d.]+ (KB|MB)/, {
     timeout: 30_000,
   });
-  await expect(flash.getByTestId('meter')).toHaveClass(/active/);
+  await expect(flash.getByTestId('meter')).toHaveAttribute('data-state', 'active');
 
   await expect(page.getByTestId('done')).toBeVisible({ timeout: 60_000 });
   await expect(flash.getByTestId('activity')).toHaveCount(0);
@@ -73,12 +73,11 @@ test('a failed flash keeps its console, so what happened can be seen', async ({ 
   await pickBuild(page);
   await enter(page);
   await skipBackup(page);
-  await turnOnExperimental(page, 'step-flash');
+  await turnOnExperimental(page);
   const flash = step(page, 'step-flash');
   await page.getByTestId('flash').click();
   await expect(page.getByTestId('flash-error')).toBeVisible();
-  await expect(flash.getByTestId('meter')).toHaveClass(/error/);
-  await expect(flash.getByTestId('meter')).not.toHaveClass(/active/);
+  await expect(flash.getByTestId('meter')).toHaveAttribute('data-state', 'failed');
   await flash.getByTestId('console').locator('summary').click();
   await expect(flash.getByTestId('log')).toContainText('Failed:');
 });

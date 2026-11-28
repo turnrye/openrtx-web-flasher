@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { zipSync } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { artifactFor, buildFromRun, findRun, GithubError, parseQuery, type Fetcher } from './github.ts';
+import {
+  api,
+  artifactFor,
+  buildFromRun,
+  checkZip,
+  findRun,
+  GithubError,
+  parseQuery,
+  type Artifact,
+  type Fetcher,
+} from './github.ts';
 
 const REPO = 'OpenRTX/OpenRTX';
 
@@ -123,6 +133,131 @@ describe('findRun', () => {
     await expect(findRun({ repo: REPO, branch: 'x' }, fakeApi({}).fetcher)).rejects.toThrow(GithubError);
     const empty = fakeApi({ '/repos/OpenRTX/OpenRTX/actions/runs?branch=x': { workflow_runs: [] } });
     await expect(findRun({ repo: REPO, branch: 'x' }, empty.fetcher)).rejects.toThrow(/No finished builds/);
+  });
+});
+
+describe('what a failed lookup says', () => {
+  /** A run as the API lists it, with a status and a conclusion. */
+  const listed = (id: number, status: string, conclusion: string | null) => ({
+    ...run(id),
+    status,
+    conclusion,
+  });
+
+  it('names the repository when a pull request or the repository itself is not there', async () => {
+    await expect(findRun({ repo: REPO, pr: 99999 }, fakeApi({}).fetcher)).rejects.toThrow(
+      'GitHub does not know pull request #99999 in OpenRTX/OpenRTX.',
+    );
+    await expect(findRun({ repo: 'nobody/nothing' }, fakeApi({}).fetcher)).rejects.toThrow(
+      'GitHub does not know the repository nobody/nothing.',
+    );
+    await expect(findRun({ repo: 'nobody/nothing', branch: 'x' }, fakeApi({}).fetcher)).rejects.toThrow(
+      'GitHub does not know the repository nobody/nothing.',
+    );
+  });
+
+  it('tells a build that is still running from one that failed and from none at all', async () => {
+    const runs = '/repos/OpenRTX/OpenRTX/actions/runs?branch=x&event=push';
+    const running = fakeApi({
+      [`${runs}&status=completed`]: { workflow_runs: [] },
+      [`${runs}&per_page=5`]: { workflow_runs: [listed(4, 'in_progress', null)] },
+    });
+    await expect(findRun({ repo: REPO, branch: 'x' }, running.fetcher)).rejects.toThrow(
+      'The build for x in OpenRTX/OpenRTX is still running. Try again when it has finished: ' +
+        'https://github.com/OpenRTX/OpenRTX/actions/runs/4',
+    );
+    // The reason costs one more request, and only after the lookup came up empty.
+    expect(running.calls).toHaveLength(2);
+
+    const failedRun = listed(5, 'completed', 'failure');
+    const failed = fakeApi({
+      [runs]: { workflow_runs: [failedRun] },
+      '/repos/OpenRTX/OpenRTX/actions/runs/5/artifacts': { artifacts: [] },
+    });
+    await expect(findRun({ repo: REPO, branch: 'x' }, failed.fetcher)).rejects.toThrow(
+      /The newest build for x in OpenRTX\/OpenRTX did not succeed \(failure\).*actions\/runs\/5$/,
+    );
+
+    const noFirmware = fakeApi({
+      [runs]: { workflow_runs: [run(6)] },
+      '/repos/OpenRTX/OpenRTX/actions/runs/6/artifacts': {
+        artifacts: [{ id: 1, name: 'coverage-report', size_in_bytes: 1, expired: false }],
+      },
+    });
+    await expect(findRun({ repo: REPO, branch: 'x' }, noFirmware.fetcher)).rejects.toThrow(
+      'The finished builds for x in OpenRTX/OpenRTX have no firmware files.',
+    );
+
+    const none = fakeApi({ [runs]: { workflow_runs: [] } });
+    await expect(findRun({ repo: REPO, branch: 'x' }, none.fetcher)).rejects.toThrow(
+      /^No finished builds found for x\. Looked in OpenRTX\/OpenRTX: check the name/,
+    );
+  });
+
+  it('says when the hourly limit starts again, and does not blame the limit for another refusal', async () => {
+    const refusal =
+      (headers: Record<string, string>): Fetcher =>
+      async () =>
+        new Response('{}', { status: 403, headers });
+    const reset = Math.floor(Date.UTC(2026, 10, 27, 14, 32) / 1000);
+    const at = new Date(reset * 1000).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    await expect(
+      api('/x', refusal({ 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(reset) })),
+    ).rejects.toThrow(
+      `GitHub allows 60 lookups an hour from one address and they are used up. They come back at ${at}.`,
+    );
+    await expect(api('/x', refusal({}))).rejects.toThrow(/they are used up\. Try again later\.$/);
+    await expect(api('/x', refusal({ 'x-ratelimit-remaining': '41' }))).rejects.toThrow(
+      'GitHub refused the lookup (HTTP 403).',
+    );
+  });
+});
+
+describe('checkZip', () => {
+  /** An artifact with the digest GitHub would list for `zip`, or with none. */
+  const artifact = async (zip?: Uint8Array): Promise<Artifact> => {
+    const digest = zip && new Uint8Array(await crypto.subtle.digest('SHA-256', zip as BufferSource));
+    return {
+      id: 1,
+      name: 'openrtx-md3x0',
+      size: 3,
+      expired: false,
+      downloadUrl: 'https://nightly.link/x.zip',
+      sha256: digest && Array.from(digest, (b) => b.toString(16).padStart(2, '0')).join(''),
+    };
+  };
+
+  it('takes the zip GitHub lists, refuses another, and says when there is nothing to compare with', async () => {
+    const right = zipSync({ 'openrtx_md3x0_fix.bin': new Uint8Array([1, 2, 3]) });
+    const other = zipSync({ 'openrtx_md3x0_fix.bin': new Uint8Array([1, 2, 4]) });
+    expect(await checkZip(await artifact(right), right)).toBe('match');
+    expect(await checkZip(await artifact(right), other)).toBe('mismatch');
+    expect(await checkZip(await artifact(), other)).toBe('unknown');
+  });
+
+  it('reads the digest of each artifact from the API, in either case, and ignores other kinds', async () => {
+    const { fetcher } = fakeApi({
+      '/repos/OpenRTX/OpenRTX/actions/runs?branch=master': { workflow_runs: [run(9)] },
+      '/repos/OpenRTX/OpenRTX/actions/runs/9/artifacts': {
+        artifacts: [
+          {
+            id: 1,
+            name: 'openrtx-md3x0',
+            size_in_bytes: 5,
+            expired: false,
+            digest: `sha256:${'AB'.repeat(32)}`,
+          },
+          { id: 2, name: 'openrtx-gd77', size_in_bytes: 5, expired: false, digest: null },
+          { id: 3, name: 'openrtx-mod17', size_in_bytes: 5, expired: false, digest: 'md5:abcdef' },
+          { id: 4, name: 'openrtx-dm1701', size_in_bytes: 5, expired: false },
+        ],
+      },
+    });
+    const found = await findRun({ repo: REPO, branch: 'master' }, fetcher);
+    expect(artifactFor(found, 'md3x0')?.sha256).toBe('ab'.repeat(32));
+    expect(artifactFor(found, 'gd77')?.sha256).toBeUndefined();
+    expect(artifactFor(found, 'mod17')?.sha256).toBeUndefined();
+    expect(artifactFor(found, 'dm1701')?.sha256).toBeUndefined();
   });
 });
 

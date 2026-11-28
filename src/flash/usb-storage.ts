@@ -14,7 +14,8 @@
  * for their own driver, so this only works from the command line, with a USB library
  * that can take the interface over.
  */
-import { FlashError } from './types.ts';
+import { bytesOf } from '../bytes.ts';
+import { FlashError, messageOf } from './types.ts';
 
 const MASS_STORAGE_CLASS = 0x08;
 const SCSI_SUBCLASS = 0x06;
@@ -37,17 +38,6 @@ const CSW_FAILED = 1;
 
 /** REQUEST SENSE for the 18 bytes of fixed-format sense data. */
 const REQUEST_SENSE = Uint8Array.of(0x03, 0, 0, 0, 18, 0);
-
-/** Text of a thrown value. */
-function messageOf(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-/** Copies a DataView's bytes into a plain Uint8Array. */
-function bytesOf(view: DataView | undefined): Uint8Array {
-  if (!view) return new Uint8Array(0);
-  return new Uint8Array(view.buffer, view.byteOffset, view.byteLength).slice();
-}
 
 /** Builds a command block wrapper. */
 export function commandBlockWrapper(

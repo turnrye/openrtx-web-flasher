@@ -15,7 +15,8 @@
  * vendor bootloader, USB 15a2:0073, a HID device. The firmware stays encrypted as it
  * is in the .sgl file; only the header is decoded, to get the length and the key.
  */
-import { FlashError, type FlashContext } from './types.ts';
+import { hexSpaced } from '../bytes.ts';
+import { FlashError, messageOf, type FlashContext } from './types.ts';
 
 /** Radios this flasher knows the handshake for. */
 export type Gd77Model = 'GD-77' | 'DM-1801';
@@ -112,11 +113,6 @@ function ascii(text: string, length = text.length, fill = 0xff): Uint8Array {
   const out = new Uint8Array(length).fill(fill);
   for (let i = 0; i < text.length; i++) out[i] = text.charCodeAt(i);
   return out;
-}
-
-/** Hex dump for log and error messages. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
 }
 
 /**
@@ -312,12 +308,12 @@ class Gd77Link {
     try {
       await this.dev.sendReport(reportId, data);
     } catch (e) {
-      throw new FlashError(`USB write failed while ${what}: ${e instanceof Error ? e.message : String(e)}`);
+      throw new FlashError(`USB write failed while ${what}: ${messageOf(e)}`);
     }
     const response = await this.nextResponse(what);
     if (!responseMatches(response, expected)) {
       throw new FlashError(
-        `Unexpected response from the radio while ${what}: got [${hex(response)}], expected [${hex(expected)}].`,
+        `Unexpected response from the radio while ${what}: got [${hexSpaced(response)}], expected [${hexSpaced(expected)}].`,
       );
     }
   }

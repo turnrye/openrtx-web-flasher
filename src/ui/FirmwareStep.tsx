@@ -5,12 +5,22 @@
  * release, a CI build of any branch, pull request or fork, or a file from this
  * computer.
  */
+import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { buildFromLocalFile, fileForRadio, isZip, type Build, type Manifest } from '../firmware/builds.ts';
-import { artifactFor, buildFromRun, findRun, parseQuery, type CiRun } from '../firmware/github.ts';
+import {
+  artifactFor,
+  buildFromRun,
+  checkZip,
+  findRun,
+  parseQuery,
+  type CiRun,
+  type ZipCheck,
+} from '../firmware/github.ts';
 import type { Radio } from '../radios.ts';
-import { lastRepo } from '../settings.ts';
-import { DropZone, formatDate, formatSize } from './common.tsx';
+import { lastFlashed, lastRepo } from '../settings.ts';
+import { BuildFacts, shortCommit } from './BuildFacts.tsx';
+import { DropZone, formatDate, formatDateTime, formatSize, Notice, Out } from './common.tsx';
 
 const DEFAULT_REPO = 'OpenRTX/OpenRTX';
 
@@ -36,34 +46,47 @@ function problemWith(radio: Radio, build: Build): string {
     return `This is a backup of a ${build.backup.model}, not of the ${radio.name}.`;
   }
   return build.backup.source === 'original-firmware'
-    ? 'This backup was read through the radio’s original firmware. It is the record of what the radio held (channels, settings, factory data); this page cannot write it back.'
+    ? 'This backup was read through the radio’s original firmware. It is a record of what the page could read from the radio; this page cannot write it back.'
     : 'This backup is incomplete, so the page will not write it back.';
 }
 
 /** What was loaded from a file or a CI build, with a way to choose again. */
-function Loaded({ radio, build, onAgain }: { radio: Radio; build: Build; onAgain: () => void }) {
+function Loaded(props: { radio: Radio; build: Build; onAgain: () => void; children?: ComponentChildren }) {
+  const { radio, build } = props;
   const file = fileForRadio(radio, build);
   const problem = problemWith(radio, build);
   const inside = file && file.name !== build.label ? `${file.name} · ` : '';
   return (
     <>
-      <div class={`loaded${problem ? ' bad' : ''}`} role="status" data-testid="loaded">
-        <span class={problem ? 'error' : 'ok-text'}>{problem ? 'Not usable' : 'Loaded'}</span>
-        <code>{build.label}</code>
+      <div
+        class={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-box border p-3 ${problem ? 'border-warning' : 'border-success'}`}
+        role="status"
+        data-testid="loaded"
+      >
+        <span class={`badge badge-sm ${problem ? 'badge-warning' : 'badge-success'}`}>
+          {problem ? 'Not usable' : 'Loaded'}
+        </span>
+        <code class="break-all">{build.label}</code>
         {file && (
-          <span class="muted small">
+          <span class="text-sm break-all text-base-content/80">
             {inside}
             {formatSize(file.size)}
           </span>
         )}
-        <button class="linkish" type="button" data-testid="choose-another" onClick={onAgain}>
+        <button
+          class="btn btn-ghost btn-sm ms-auto"
+          type="button"
+          data-testid="choose-another"
+          onClick={props.onAgain}
+        >
           Choose another
         </button>
+        {props.children}
       </div>
       {problem && (
-        <p class="error" role="alert" data-testid={build.backup ? 'backup-not-flashable' : 'no-file'}>
+        <Notice tone="warning" role="alert" testid={build.backup ? 'backup-not-flashable' : 'no-file'}>
           {problem}
-        </p>
+        </Notice>
       )}
     </>
   );
@@ -76,6 +99,8 @@ function CiPane({ radio, build, onBuild }: Props) {
   const [run, setRun] = useState<CiRun | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  /** How the zip that was dropped compares with the one GitHub lists for the build. */
+  const [check, setCheck] = useState<ZipCheck | null>(null);
   const artifact = run ? artifactFor(run, radio.id) : undefined;
   const loaded = build?.kind === 'ci' ? build : null;
 
@@ -87,6 +112,7 @@ function CiPane({ radio, build, onBuild }: Props) {
     const query = parseQuery(repo, ref, DEFAULT_REPO);
     setError('');
     setRun(null);
+    setCheck(null);
     onBuild(null);
     if (!query) return setError('Write the repository as owner/name, for example OpenRTX/OpenRTX.');
     setBusy(true);
@@ -100,28 +126,39 @@ function CiPane({ radio, build, onBuild }: Props) {
     }
   };
 
-  /** Takes the zip the user downloaded from nightly.link. */
+  /**
+   * Takes the zip the user downloaded from nightly.link. It must be the one that was
+   * looked up: a zip of another build would be flashed under this build's name.
+   */
   const takeZip = async (file: File) => {
     const bytes = new Uint8Array(await file.arrayBuffer());
-    if (!run || !isZip(bytes)) {
+    if (!run || !artifact || !isZip(bytes)) {
       return setError(`${file.name} is not the build zip. Download it with the link above first.`);
     }
+    const verdict = await checkZip(artifact, bytes);
+    if (verdict === 'mismatch') {
+      return setError(
+        `${file.name} is not the zip of ${run.label}: its SHA-256 is not the one GitHub lists for ${artifact.name}.zip of that build. It was not loaded. Download the zip again with the link above, and drop that one.`,
+      );
+    }
     setError('');
+    setCheck(verdict);
     onBuild(buildFromRun(run, bytes));
   };
 
   return (
-    <div data-testid="ci-panel">
+    <div class="flex flex-col gap-4" data-testid="ci-panel">
       <form
-        class="fields"
+        class="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           void find();
         }}
       >
-        <label class="field">
+        <label class="flex min-w-0 flex-1 basis-56 flex-col gap-1 text-sm">
           Repository
           <input
+            class="input w-full"
             value={repo}
             placeholder={DEFAULT_REPO}
             spellcheck={false}
@@ -130,9 +167,10 @@ function CiPane({ radio, build, onBuild }: Props) {
             onInput={(e) => setRepo(e.currentTarget.value)}
           />
         </label>
-        <label class="field">
+        <label class="flex min-w-0 flex-1 basis-56 flex-col gap-1 text-sm">
           Branch or pull request
           <input
+            class="input w-full"
             value={ref}
             placeholder="my-branch, #588 or a GitHub link"
             spellcheck={false}
@@ -141,39 +179,47 @@ function CiPane({ radio, build, onBuild }: Props) {
             onInput={(e) => setRef(e.currentTarget.value)}
           />
         </label>
-        <button class="btn" type="submit" disabled={busy} data-testid="ci-find">
+        <button class="btn btn-primary" type="submit" disabled={busy} data-testid="ci-find">
+          {busy && <span class="loading loading-spinner loading-sm" />}
           {busy ? 'Looking…' : 'Find build'}
         </button>
       </form>
-      <p class="muted small">
+      <p class="text-sm text-muted">
         Leave the repository empty for OpenRTX itself, or name a fork that builds with the project’s GitHub
         workflow.
       </p>
       {run && (
-        <div data-testid="ci-result">
+        <div class="flex flex-col gap-3" data-testid="ci-result">
           <p>
-            Found <a href={run.url}>{run.label}</a>{' '}
-            <span class="muted">
-              · {run.sha.slice(0, 7)} · {formatDate(run.date)}
+            Found <Out href={run.url}>{run.label}</Out>{' '}
+            <span class="text-base-content/80">
+              · commit <code>{shortCommit(run.sha)}</code> · built {formatDateTime(run.date)}
             </span>
           </p>
-          {!artifact && <p class="error">This build has no file for the {radio.name}.</p>}
+          {!artifact && (
+            <Notice tone="warning" role="alert">
+              This build has no file for the {radio.name}.
+            </Notice>
+          )}
           {artifact?.expired && (
-            <p class="error">GitHub has deleted this build’s files. Re-run the workflow.</p>
+            <Notice tone="warning" role="alert" testid="ci-expired">
+              GitHub keeps a build’s files for a limited time and has deleted these. Push to the branch again
+              or re-run the workflow to get new ones.
+            </Notice>
           )}
           {artifact && !artifact.expired && !loaded && (
             <>
-              <p class="small">
+              <p class="text-sm">
                 Browsers cannot fetch GitHub build files for a page, so there are two steps:
               </p>
-              <ol class="small">
+              <ol class="flex list-decimal flex-col gap-1 ps-5 text-sm">
                 <li>
-                  <a href={artifact.downloadUrl} data-testid="ci-download">
+                  <Out href={artifact.downloadUrl} testid="ci-download">
                     Download {artifact.name}.zip
-                  </a>{' '}
-                  <span class="muted">({formatSize(artifact.size)})</span>
+                  </Out>{' '}
+                  <span class="text-muted">({formatSize(artifact.size)}, opens in a new tab)</span>
                 </li>
-                <li>Drop it here.</li>
+                <li>Drop it here. The page checks that it is the zip of this build.</li>
               </ol>
               <DropZone onFile={(f) => void takeZip(f)} accept=".zip">
                 Drop {artifact.name}.zip here
@@ -182,11 +228,25 @@ function CiPane({ radio, build, onBuild }: Props) {
           )}
         </div>
       )}
-      {loaded && <Loaded radio={radio} build={loaded} onAgain={() => onBuild(null)} />}
+      {loaded && (
+        <Loaded radio={radio} build={loaded} onAgain={() => onBuild(null)}>
+          {check === 'match' && (
+            <span class="basis-full text-sm text-success" data-testid="ci-checked">
+              Checked: this is the zip GitHub lists for the build (SHA-256).
+            </span>
+          )}
+          {check === 'unknown' && (
+            <span class="basis-full text-sm text-warning" data-testid="ci-unchecked">
+              Could not be checked: GitHub lists no SHA-256 for this build’s zip, so the page cannot tell
+              whether this is it.
+            </span>
+          )}
+        </Loaded>
+      )}
       {error && (
-        <p class="error" role="alert" data-testid="ci-error">
+        <Notice tone="warning" role="alert" testid="ci-error">
           {error}
-        </p>
+        </Notice>
       )}
     </div>
   );
@@ -209,17 +269,69 @@ function FilePane({ radio, build, onBuild }: Props) {
   };
 
   return (
-    <div data-testid="file-panel">
+    <div class="flex flex-col gap-4" data-testid="file-panel">
       {loaded ? (
         <Loaded radio={radio} build={loaded} onAgain={() => onBuild(null)} />
       ) : (
         <DropZone onFile={(f) => void take(f)}>Drop a firmware file, a build zip or a backup here</DropZone>
       )}
       {error && (
-        <p class="error" role="alert" data-testid="file-error">
+        <Notice tone="warning" role="alert" testid="file-error">
           {error}
-        </p>
+        </Notice>
       )}
+    </div>
+  );
+}
+
+/**
+ * One of the three choices: a card with the choice as its one button, which fills the
+ * card, and a link laid over the button's foot (a link cannot sit inside a button).
+ */
+function Tile(props: {
+  name: string;
+  what: string;
+  more: string;
+  pressed: boolean;
+  disabled?: boolean;
+  testid: string;
+  onClick: () => void;
+  /** A word on the card's corner, such as "Recommended". */
+  badge?: string;
+  /** Under the button: a link to the build's page. */
+  children?: ComponentChildren;
+  /** For the card that opens a panel: the panel's id and whether it is open. */
+  controls?: string;
+}) {
+  const { pressed, disabled } = props;
+  return (
+    <div
+      class={`card card-border relative motion-safe:transition-colors ${
+        pressed
+          ? 'border-secondary bg-secondary/15 ring-1 ring-secondary'
+          : disabled
+            ? 'border-separator opacity-60'
+            : 'border-base-300 bg-base-200/50 hover:bg-base-200'
+      }`}
+    >
+      <button
+        class={`card-body gap-1 rounded-box p-4 text-start enabled:cursor-pointer ${props.children ? 'pb-11' : ''}`}
+        type="button"
+        disabled={disabled}
+        aria-pressed={pressed}
+        aria-expanded={props.controls ? pressed : undefined}
+        aria-controls={props.controls}
+        data-testid={props.testid}
+        onClick={props.onClick}
+      >
+        <span class="flex flex-wrap items-center gap-2">
+          <span class="card-title text-base font-medium">{props.name}</span>
+          {props.badge && <span class="badge badge-primary badge-sm">{props.badge}</span>}
+        </span>
+        <span class="text-lg break-all text-primary">{props.what}</span>
+        <span class="text-sm text-base-content/80">{props.more}</span>
+      </button>
+      {props.children && <div class="absolute start-4 bottom-3 text-sm">{props.children}</div>}
     </div>
   );
 }
@@ -265,136 +377,138 @@ export function FirmwareStep({ radio, manifest, build, onBuild }: Props) {
 
   const chosen = build && fileForRadio(radio, build);
   const waiting = manifest === null ? 'Loading…' : 'Not bundled with this copy of the site';
+  const pastChosen = build?.kind === 'release' && !onTile(build) ? build : null;
+  const flashed = lastFlashed.get(radio.id);
+  /** One of the three ways under "Other", as a button of the group. */
+  const paneButton = (id: Pane, testid: string, label: string) => (
+    <button
+      class={`btn join-item ${pane === id ? 'btn-active border-secondary' : ''}`}
+      type="button"
+      aria-pressed={pane === id}
+      data-testid={testid}
+      onClick={() => switchPane(id)}
+    >
+      {label}
+    </button>
+  );
 
   return (
     <>
-      <div class="tiles" data-testid="builds">
-        <button
-          class="tile"
-          type="button"
+      {flashed && (
+        <p class="text-sm text-base-content/80" data-testid="last-flashed">
+          Last flashed here onto a {radio.name}: {flashed.label}
+          {flashed.sha ? ` (${shortCommit(flashed.sha)})` : ''}, {formatDate(flashed.at)}.
+        </p>
+      )}
+      <div class="grid gap-3 sm:grid-cols-3" data-testid="builds">
+        <Tile
+          name="Current release"
+          badge={currentFile ? 'Recommended' : undefined}
+          what={currentFile ? current!.label : current ? 'None for this radio yet' : waiting}
+          more={
+            currentFile
+              ? `${formatDate(current!.date)} · ${formatSize(currentFile.size)}`
+              : current && devFile
+                ? 'Use the development build'
+                : ''
+          }
           disabled={!currentFile}
-          aria-pressed={!otherOpen && !!current && build?.id === current.id}
-          data-testid={current ? `build-${current.id}` : 'build-none'}
+          pressed={!otherOpen && !!current && build?.id === current.id}
+          testid={current ? `build-${current.id}` : 'build-none'}
           onClick={() => {
             setOtherOpen(false);
             onBuild(current!);
           }}
         >
-          <span class="name">Current release</span>
-          <span class="what">
-            {currentFile ? current!.label : current ? 'None for this radio yet' : waiting}
-          </span>
-          <span class="more">
-            {currentFile
-              ? `${formatDate(current!.date)} · ${formatSize(currentFile.size)}`
-              : current && devFile
-                ? 'Use the development build'
-                : ''}
-          </span>
-        </button>
-        <button
-          class="tile"
-          type="button"
+          {currentFile && current?.url && (
+            <Out href={current.url} testid="release-notes">
+              Release notes
+            </Out>
+          )}
+        </Tile>
+        <Tile
+          name="Development build"
+          what={
+            devFile
+              ? `${dev!.label}${dev!.sha ? ` · ${shortCommit(dev!.sha)}` : ''}`
+              : dev
+                ? 'Not built for this radio'
+                : waiting
+          }
+          more={devFile ? `${formatDateTime(dev!.date)} · newest changes, less tested` : ''}
           disabled={!devFile}
-          aria-pressed={!otherOpen && !!dev && build?.id === dev.id}
-          data-testid={dev ? `build-${dev.id}` : 'build-nodev'}
+          pressed={!otherOpen && !!dev && build?.id === dev.id}
+          testid={dev ? `build-${dev.id}` : 'build-nodev'}
           onClick={() => {
             setOtherOpen(false);
             onBuild(dev!);
           }}
         >
-          <span class="name">Development build</span>
-          <span class="what">
-            {devFile
-              ? `${dev!.label}${dev!.sha ? ` · ${dev!.sha.slice(0, 7)}` : ''}`
-              : dev
-                ? 'Not built for this radio'
-                : waiting}
-          </span>
-          <span class="more">{devFile ? `${formatDate(dev!.date)} · newest changes, less tested` : ''}</span>
-        </button>
-        <button
-          class="tile"
-          type="button"
-          aria-pressed={otherOpen}
-          aria-expanded={otherOpen}
-          aria-controls="firmware-other"
-          data-testid="open-other"
+          {devFile && dev?.url && <Out href={dev.url}>CI run</Out>}
+        </Tile>
+        <Tile
+          name="Other"
+          what={otherOpen && chosen ? build.label : 'Choose…'}
+          more="A past release, a branch, a pull request, a fork, or a file"
+          pressed={otherOpen}
+          controls="firmware-other"
+          testid="open-other"
           onClick={openOther}
-        >
-          <span class="name">Other</span>
-          <span class="what">{otherOpen && chosen ? build.label : 'Choose…'}</span>
-          <span class="more">A past release, a branch, a pull request, a fork, or a file</span>
-        </button>
+        />
       </div>
 
       {otherOpen && (
-        <div class="panel" id="firmware-other" data-testid="other-panel">
-          <div class="seg" role="group" aria-label="Where the firmware comes from">
-            <button
-              type="button"
-              aria-pressed={pane === 'past'}
-              data-testid="open-past"
-              onClick={() => switchPane('past')}
-            >
-              Past release
-            </button>
-            <button
-              type="button"
-              aria-pressed={pane === 'ci'}
-              data-testid="open-ci"
-              onClick={() => switchPane('ci')}
-            >
-              Branch or pull request
-            </button>
-            <button
-              type="button"
-              aria-pressed={pane === 'file'}
-              data-testid="open-local"
-              onClick={() => switchPane('file')}
-            >
-              File
-            </button>
+        <div
+          class="flex flex-col gap-4 rounded-box border border-base-300 p-4"
+          id="firmware-other"
+          data-testid="other-panel"
+        >
+          <div class="join max-sm:join-vertical" role="group" aria-label="Where the firmware comes from">
+            {paneButton('past', 'open-past', 'Past release')}
+            {paneButton('ci', 'open-ci', 'Branch or pull request')}
+            {paneButton('file', 'open-local', 'File')}
           </div>
 
-          <div class="pane">
-            {pane === 'past' &&
-              (pastWithFile.length > 0 ? (
-                <div class="fields">
-                  <label class="field">
-                    Release
-                    <select
-                      data-testid="past-release"
-                      value={build?.kind === 'release' && !onTile(build) ? build.id : ''}
-                      onChange={(e) => onBuild(past.find((b) => b.id === e.currentTarget.value) ?? null)}
-                    >
-                      <option value="">Choose a release…</option>
-                      {past.map((b) => (
-                        <option key={b.id} value={b.id} disabled={!fileForRadio(radio, b)}>
-                          {b.label} · {formatDate(b.date)}
-                          {fileForRadio(radio, b) ? '' : ' · not built for this radio'}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              ) : (
-                <p class="muted" data-testid="no-past">
-                  No earlier release has a build for the {radio.name}.
-                </p>
-              ))}
-            {pane === 'ci' && <CiPane radio={radio} manifest={manifest} build={build} onBuild={onBuild} />}
-            {pane === 'file' && (
-              <FilePane radio={radio} manifest={manifest} build={build} onBuild={onBuild} />
-            )}
-          </div>
+          {pane === 'past' &&
+            (pastWithFile.length > 0 ? (
+              <div class="flex flex-col gap-2">
+                <label class="flex max-w-md flex-col gap-1 text-sm">
+                  Release
+                  <select
+                    class="select w-full"
+                    data-testid="past-release"
+                    value={pastChosen?.id ?? ''}
+                    onChange={(e) => onBuild(past.find((b) => b.id === e.currentTarget.value) ?? null)}
+                  >
+                    <option value="">Choose a release…</option>
+                    {past.map((b) => (
+                      <option key={b.id} value={b.id} disabled={!fileForRadio(radio, b)}>
+                        {b.label} · {formatDate(b.date)}
+                        {fileForRadio(radio, b) ? '' : ' · not built for this radio'}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {pastChosen && (
+                  <p class="text-sm text-base-content/80">
+                    <BuildFacts build={pastChosen} />
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p class="text-muted" data-testid="no-past">
+                No earlier release has a build for the {radio.name}.
+              </p>
+            ))}
+          {pane === 'ci' && <CiPane radio={radio} manifest={manifest} build={build} onBuild={onBuild} />}
+          {pane === 'file' && <FilePane radio={radio} manifest={manifest} build={build} onBuild={onBuild} />}
         </div>
       )}
 
       {build && !chosen && !(otherOpen && build.kind !== 'release') && (
-        <p class="panel error" role="alert" data-testid={build.backup ? 'backup-not-flashable' : 'no-file'}>
+        <Notice tone="warning" role="alert" testid={build.backup ? 'backup-not-flashable' : 'no-file'}>
           {problemWith(radio, build)}
-        </p>
+        </Notice>
       )}
     </>
   );
