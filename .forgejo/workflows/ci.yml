@@ -87,8 +87,11 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       # Astro writes absolute links, so the build is made for the one place it goes:
       # the site's top (the path of PAGES_URL), or this pull request's preview folder.
+      # SITE_URL is the host of PAGES_URL, for the absolute addresses radios.json gives other sites.
       - name: Work out where this build will be served
-        run: echo "SITE_BASE=$(ci/site-base.sh)" >> "$GITHUB_ENV"
+        run: |
+          echo "SITE_BASE=$(ci/site-base.sh)" >> "$GITHUB_ENV"
+          echo "SITE_URL=$(printf '%s' "$PAGES_URL" | sed -E 's#^(https?://[^/]+).*#\1#')" >> "$GITHUB_ENV"
         env:
           PAGES_URL: ${{ vars.PAGES_URL }}
           PR_NUMBER: ${{ forgejo.event.pull_request.number }}
