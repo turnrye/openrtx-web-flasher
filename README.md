@@ -1,9 +1,14 @@
 # OpenRTX web flasher
 
-A web page that puts [OpenRTX](https://openrtx.org) on a radio: pick the radio, pick a
-firmware build, follow the steps. Where the browser can talk to the radio it flashes it
-directly; everywhere else it hands over the right file and the command for the usual
-tool.
+A page that puts [OpenRTX](https://openrtx.org) on a radio: pick the radio, pick a
+firmware build, follow the steps. Where the browser can talk to the radio it backs it up
+and flashes it directly; everywhere else it hands over the right file and the command
+for the usual tool. It has a command-line twin, and three pages of its own: the radios
+it knows, what a backup keeps, and its licences and credits.
+
+The OpenRTX website, with the users' guide and the hardware pages, is its own project:
+[OpenRTX/openrtx.github.io](https://github.com/OpenRTX/openrtx.github.io). It reads the
+flasher's radios from `radios.json` (see [For other sites](#for-other-sites-radiosjson)).
 
 This is a community prototype, not an official OpenRTX release. Before the page talks
 to a radio model nobody has checked on real hardware, it asks once to turn experimental
@@ -11,12 +16,13 @@ flashing on (see [docs/qa.md](docs/qa.md)). The Retevis C62 and the Connect Syst
 CS7000-M17 are checked so far; [docs/verification.md](docs/verification.md) has the
 record.
 
-![The radio picker](docs/screenshots/1-radios.png)
+![The flasher: before you start, and the radio picker](docs/screenshots/1-radios.png)
 
 More: [choosing firmware](docs/screenshots/2-firmware.png),
-[after a backup](docs/screenshots/3-backed-up.png),
+[the backup step, with what it will not hold](docs/screenshots/3-backup.png),
 [entering flashing mode](docs/screenshots/4-flashing-mode.png),
-[after flashing](docs/screenshots/5-flashed.png).
+[after flashing](docs/screenshots/5-flashed.png),
+[the radios table](docs/screenshots/6-radio-table.png).
 
 ## What it does
 
@@ -49,18 +55,37 @@ Firmware is one of three choices:
   workflow (the page finds the CI build and links the zip, you download it and drop it
   on the page); or a file from your computer.
 
-The backup step reads everything the page can read from the radio, or is skipped:
+The backup step reads what the page can read from the radio, or is skipped. Only the C62
+and Module 17 are backed up whole. On every other radio at least one memory is not
+saved, or only in part. Each of those is a critical gap, and the step names it before the
+read. [docs/backup-coverage.md](docs/backup-coverage.md) has every radio memory by
+memory, and [docs/dumper.md](docs/dumper.md) the plan for closing the gaps.
 
-- **C62, Module 17, CS7000, CS7000 Plus**: in flashing mode the page reads the whole
-  flash. That backup can be flashed back from the page.
-- **MD-380, MD-UV380, MD-9600, DM-1701, GD-77, DM-1801, RT-4D, RT-950 Pro**: their bootloaders
-  cannot be read, so the page reads the radio through its original firmware, in normal
-  mode, before you put it in flashing mode: channels, settings and the factory data a
-  repair would need. It only reads. The page cannot write this backup back; it is the
-  record of what the radio held. The firmware itself comes back with the manufacturer's
-  file. For the RT-950 Pro the read is the first 64 KB of the memory chip, which is as
-  far as its programming cable reaches, and the step links Radtel's firmware downloads.
-- **T-TWR Plus**: the drive holds a copy as `CURRENT.UF2`.
+- **C62, Module 17**: in flashing mode the page reads the whole flash. That backup can be
+  flashed back from the page.
+- **CS7000, CS7000 Plus**: in flashing mode the page reads the whole program memory, and
+  can flash it back. The memory chip beside the processor is not read. It holds the
+  factory calibration, and OpenRTX erases a part of that chip the first time it starts.
+  A CS7000 Plus with its Connect Systems firmware refuses the read altogether.
+- **MD-380, MD-UV380, MD-9600, DM-1701, GD-77, DM-1801, RT-4D, RT-950 Pro**: their
+  bootloaders cannot be read, so the page reads the radio through its original firmware,
+  in normal mode, before you put it in flashing mode. It only reads, and the page cannot
+  write this backup back. A radio that already runs OpenRTX cannot be read this way at
+  all. What the read gives:
+  - MD-380, MD-UV380, MD-9600, DM-1701: the factory info blocks, the first 64 KB of the
+    program memory (the bootloader; 4 KB on Linux) and the whole 16 MB memory chip. Not
+    the firmware, which is the other 960 KB, and not the chip's security registers,
+    where the calibration is stored; the backup has the firmware's own copy of it.
+  - GD-77, DM-1801: most of the 64 KB EEPROM and about 60 KB of the 1 MB memory chip,
+    which is the codeplug, and the calibration where the firmware gives it. Nothing of
+    the program memory.
+  - RT-4D: the whole 16 MB memory chip, in about half an hour. Nothing of the program
+    memory.
+  - RT-950 Pro: the first 64 KB of the 4 MB memory chip, which is as far as its
+    programming cable reaches. Nothing of the program memory; the step links Radtel's
+    firmware downloads. A full backup is in progress on a branch.
+- **T-TWR Plus**: the drive holds the firmware as `CURRENT.UF2`, for you to copy. That
+  is the firmware only: not the bootloader, the settings area or the rest of the flash.
 
 The C62 takes two images from a build: the application (`zephyr.bin`) and the DSP image
 (`dsp_firmware.bin`, written at 0x100000). The page writes both in one run. A build with
@@ -73,13 +98,18 @@ SHA-256. The page downloads it and keeps a second copy in the browser; the Backu
 section at the bottom lists them for every model, to save again, restore or forget. The
 copy in the browser is a convenience: it goes when site data is cleared and does not
 follow you to another computer. A backup is specific to one radio; keep it private.
+Where the radio can say who it is before it is written (the chip ID of a C62, the USB
+serial number of an STM32 radio), a backup of another radio is refused. A backup of a
+simulated radio says so in `backup.json` and is only written to a simulated radio.
 
 The backup step starts by finding out which radio is connected. When this browser
 already holds a complete backup of that radio, the page says so and does not read it
 again; a new one can still be taken on request. The radio is told apart by its chip ID
-(C62), its unique ID (TYT radios), its USB serial number (STM32 radios) or a fingerprint
-of its calibration (RT-4D, RT-950 Pro). The GD-77 and DM-1801 give theirs only at the end of their
-one-minute read, so they are read each time.
+(C62), its unique ID (TYT radios) or its USB serial number (Module 17, CS7000-M17). The
+others are read each time: for the CS7000-M17 Plus's serial number and the calibration
+fingerprint of the RT-4D and RT-950 Pro it is not yet confirmed that two radios never
+share one, and the GD-77 and DM-1801 give theirs only at the end of their one-minute
+read.
 
 The page calls a radio's two states flashing mode and normal mode, whatever its maker
 calls them.
@@ -131,12 +161,13 @@ nightly.link.
 - It runs the page's flashers, readers, catalogue and backup format, and keeps its
   safeguards. It asks before it writes (`--yes` skips that), and a radio in the wrong
   mode or a file for another radio is refused before anything is sent.
-- **Checked on three real radios so far: the CS7000-M17 Plus, the MD-9600 and the MD-UV390.** The radios
-  marked as checked on the page were checked from Chrome; the command line reaches them
-  through other USB, serial and HID libraries. So every other radio asks for
-  `--experimental` until someone runs the bench check with it.
+- **Checked on three real radios so far, for flashing: the CS7000-M17 Plus, the
+  MD-9600 and the MD-UV390.** The radios marked as checked on the page were checked from Chrome; the
+  command line reaches them through other USB, serial and HID libraries. So everything
+  else, backing up the MD-9600 included, asks for `--experimental` until someone runs
+  the bench check with it.
 - `backup` stops early when `--out` already holds a backup of the radio that is
-  connected, as the page does; `--again` reads it anyway.
+  connected, as the page does and for the same radios; `--again` reads it anyway.
 - `--sim` runs any command against the simulated radios, as `?sim=1` does on the page.
 - The C62 runs LISTENAI's own release of cskburn, the same commit the page compiles to
   WebAssembly. It is downloaded once and checked against `vendor.json`; `--cskburn`
@@ -249,10 +280,17 @@ serial port such as `/dev/ttyUSB0`, which Linux gives to the `dialout` group: if
     npm ci
     npm run vendor      # fetch and build the pinned third-party parts (see below)
     npm run mirror      # copy firmware from GitHub into public/firmware (optional)
-    npm run dev         # http://localhost:5173, add ?sim=1 for simulated radios
+    npm run dev         # http://localhost:4321; add ?sim=1 for simulated radios
     npm run check       # format, lint, types and unit tests: what CI enforces
-    npm run build && npm run e2e    # browser tests against the built site
+    SITE_BASE=/sub/path/ npm run build && npm run e2e    # browser tests against the built site
     npm run cli -- radios           # the command line, as `npm ci` last built it
+
+The pages are built by [Astro](https://astro.build) (`astro.config.ts`, `site/pages/`);
+the flasher is a Preact app on the first of them. Components come from
+[daisyUI](https://daisyui.com) on Tailwind CSS, themed once in `site/styles/theme.css`
+with the OpenRTX palette, the same look as the OpenRTX website. Astro writes absolute
+links, so a build is made for the path it will be served under (`SITE_BASE`;
+[docs/hosting.md](docs/hosting.md)).
 
 `?sim=1` swaps real devices for simulated ones, so the whole flow can be tried without
 a radio. `?sim=fail` simulates radios that do not answer, `?sim=protected` STM32 radios
@@ -297,26 +335,42 @@ change it and run `npm run vendor -- --update`.
 
 ## Layout
 
-    src/radios.ts        the radios: files, flashing mode, backup, fallback tool
+    src/radios.ts        the radios: files, flashing mode, fallback tool, and which flashing method
+    src/drivers/         one driver per flashing method: device, backup, flasher, reader, simulated radio
+    src/coverage.ts      what a backup holds of each radio, memory by memory, and the gaps
     src/firmware/        builds: bundled manifest, GitHub lookup, zips
     src/flash/           one flasher per bootloader protocol
     src/backup/          readers through the original firmware, the backup zip, the browser store
     src/feedback.ts      the report a user can send
     src/sim/             simulated radios, used by tests and ?sim=1
-    src/ui/              the page
+    src/ui/              the flasher's page
+    src/radios-json.ts   radios.json, the radios for other sites
+    astro.config.ts      the site: its base path
+    site/pages/          the flasher, the radios, what a backup keeps, credits, radios.json
+    site/layouts/        the header and footer every page has
+    site/components/     the radios table, the backup gaps, the licences tables
+    site/styles/         the one stylesheet: Tailwind, daisyUI and the OpenRTX palette
     cli/                 the command line: devices, firmware and cskburn for Node
     tests/e2e/           browser tests against the simulated radios
     scripts/             vendor step, drawings, firmware mirror, screenshots
     ci/                  build, test and publish scripts shared by both forges
     tools/cskburn-wasm/  the serial layer cskburn is compiled with
-    docs/                hosting, QA, bench notes, the bench record
+    docs/                hosting, QA, bench notes, the bench record, backup coverage, photo plans
     vendor.json          what comes from elsewhere, and at which version
 
 ## Hosting
 
-The build is a folder of static files with relative URLs. See
+The build is a folder of static files, made for the path it is served under. See
 [docs/hosting.md](docs/hosting.md) for GitHub Pages, Forgejo with git-pages, and any
 other static host.
+
+## For other sites: radios.json
+
+Every build writes `radios.json` at the top of the site: each radio the flasher knows,
+in catalogue order, with its names and makers, whether the newest release has firmware
+for it (`inRelease`), what it needs for M17, and where its drawing and its flasher link
+are, relative to `flasher`. The OpenRTX website builds its list of supported radios from
+it. `src/radios-json.ts` has the shape; a change that breaks a reader raises `version`.
 
 ## Credits and licences
 
@@ -357,5 +411,6 @@ Ported from or built on other people's work:
   (GPL-3.0).
 - Radio drawings: [openrtx-device-mockups](https://github.com/ranguli/openrtx-device-mockups)
   by Joshua Murphy (GPL-3.0) for the CS7000 and MD-380; the rest follow his style.
-- Ubuntu font (Ubuntu Font Licence 1.0). OpenRTX logo from the OpenRTX website.
+- Ubuntu and Ubuntu Mono fonts (Ubuntu Font Licence 1.0), VT323 (SIL Open Font
+  License 1.1). OpenRTX logo from the OpenRTX website.
 - Colours from the OpenRTX UI toolkit's Standard theme.
