@@ -12,6 +12,15 @@
  * tells the two apart. The memory map is Dual Tachyon's Flash-Layout wiki page,
  * https://github.com/DualTachyon/rt-4d-wiki/wiki/Flash-Layout (CC-BY-4.0).
  *
+ * The chip is 16 MiB: that page puts the address book at 0x400000 to 0xFFFFFF, and
+ * OpenRTX's driver table for this radio (platform/drivers/NVM/nvmem_rt4d.c) gives the
+ * same size. The tool stops after 4096 blocks, the first 4 MiB, and leaves the address
+ * book out. This reader goes on to block 16383. The 16-bit block index reaches that far,
+ * and the RT-890 firmware named below serves any index without a bound; that the
+ * RT-4D's original firmware does the same has not been measured on a radio. So a read
+ * that stops above 4 MiB keeps what it has and is marked incomplete, and one whose
+ * upper part only repeats the first 4 MiB is cut back to them.
+ *
  * That tool also sends `34 00 00 10 cs` ("notify") before the bulk read and
  * `34 52 05 EE 79` ("close") after a complete read or write. Neither is sent here: the
  * tool itself reads block 0 before the notify and ignores the notify's result, so
@@ -27,16 +36,18 @@
  * Only `52` reads are ever sent. The same serial protocol accepts region writes
  * (first byte 0x40 or 0x90-0xA5); this file has no code that could build one.
  */
+import { fingerprintUnlessBlank, hexSpaced } from '../bytes.ts';
 import { RT4D_BAUD_RATE } from '../flash/rt4d.ts';
-import { FlashError, type FlashContext } from '../flash/types.ts';
-import type { AlreadyBackedUp, BackupPart, BackupScope, Known, RadioBackup } from './types.ts';
+import { withSerial, type SerialReader } from '../flash/serial.ts';
+import { FlashError, messageOf, type FlashContext } from '../flash/types.ts';
+import type { AlreadyBackedUp, BackupPart, Known, RadioBackup } from './types.ts';
 
 /** Bytes per block of the read command. */
 export const RT4D_SPI_BLOCK_SIZE = 0x400;
-/** Scope 'quick': calibration, settings, channels, zones, contacts and the other user data. */
-export const RT4D_QUICK_BYTES = 0x100000;
-/** Scope 'all': the 4 MiB the reference tool dumps (4096 blocks). */
-export const RT4D_ALL_BYTES = 0x400000;
+/** What is read: the whole 16 MiB chip (16384 blocks). */
+export const RT4D_ALL_BYTES = 0x1000000;
+/** What the reference tool dumps (4096 blocks): everything below the address book. */
+export const RT4D_REFERENCE_BYTES = 0x400000;
 /** The calibration area, whose checksum stands in for a serial number. */
 export const RT4D_CALIBRATION_BYTES = 0x1000;
 
@@ -65,80 +76,9 @@ export function rt4dStockChecksum(bytes: Uint8Array): number {
   return sum & 0xff;
 }
 
-/** Hex dump for log and error messages. */
-function hex(bytes: Uint8Array): string {
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(' ');
-}
-
 /** Address as 0x%06X. */
 function address(value: number): string {
   return `0x${value.toString(16).toUpperCase().padStart(6, '0')}`;
-}
-
-/**
- * First 16 hex digits of the SHA-256 of `bytes`, or null when they are all 0xFF or
- * all 0x00 and so say nothing about the radio.
- */
-async function fingerprint(bytes: Uint8Array): Promise<string | null> {
-  if (bytes.every((b) => b === 0xff) || bytes.every((b) => b === 0x00)) return null;
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.slice()));
-  return hex(digest.subarray(0, 8)).replaceAll(' ', '');
-}
-
-/** Reads with a timeout over a stream reader, whole chunks at a time. */
-class SerialInput {
-  private chunk: Uint8Array = new Uint8Array(0);
-  private at = 0;
-  /** A read that outlived its timeout; the next call picks it up, so no bytes are lost. */
-  private pending: Promise<ReadableStreamReadResult<Uint8Array>> | null = null;
-
-  /** Wraps `reader`; the caller keeps ownership of the lock. */
-  constructor(private readonly reader: ReadableStreamDefaultReader<Uint8Array>) {}
-
-  /** Waits for input when none is buffered; false when none arrives within `timeoutMs`. */
-  private async fill(timeoutMs: number): Promise<boolean> {
-    while (this.at >= this.chunk.length) {
-      this.pending ??= this.reader.read();
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const timeout = new Promise<null>((resolve) => {
-        timer = setTimeout(() => resolve(null), timeoutMs);
-      });
-      const result = await Promise.race([this.pending, timeout]);
-      clearTimeout(timer);
-      if (result === null) return false;
-      this.pending = null;
-      if (result.done) throw new FlashError('The serial port closed while reading the radio.');
-      this.chunk = result.value;
-      this.at = 0;
-    }
-    return true;
-  }
-
-  /**
-   * Fills `out` from offset `from`; returns how many bytes of `out` are filled when
-   * the radio stops sending for `timeoutMs`.
-   */
-  async read(out: Uint8Array, from: number, timeoutMs: number): Promise<number> {
-    let got = from;
-    while (got < out.length) {
-      if (!(await this.fill(timeoutMs))) break;
-      const take = Math.min(out.length - got, this.chunk.length - this.at);
-      out.set(this.chunk.subarray(this.at, this.at + take), got);
-      this.at += take;
-      got += take;
-    }
-    return got;
-  }
-
-  /** Discards input until the line has been quiet for `quietMs`, or `limit` bytes went by. */
-  async drain(quietMs: number, limit: number): Promise<number> {
-    let dropped = 0;
-    while (dropped < limit && (await this.fill(quietMs))) {
-      dropped += this.chunk.length - this.at;
-      this.at = this.chunk.length;
-    }
-    return dropped;
-  }
 }
 
 /** Why one request for a block failed. */
@@ -154,7 +94,7 @@ interface BlockFailure {
  * FF, checksum), plus the header. Returns the 1024 data bytes or the reason it failed.
  */
 async function readBlock(
-  input: SerialInput,
+  input: SerialReader,
   output: WritableStreamDefaultWriter<Uint8Array>,
   block: number,
   timeoutMs: number,
@@ -177,7 +117,7 @@ async function readBlock(
   if (reply[0] !== request[0] || reply[1] !== request[1] || reply[2] !== request[2]) {
     return {
       kind: 'garbled',
-      detail: `the answer starts with ${hex(reply.subarray(0, 3))}, not ${hex(request.subarray(0, 3))}`,
+      detail: `the answer starts with ${hexSpaced(reply.subarray(0, 3))}, not ${hexSpaced(request.subarray(0, 3))}`,
     };
   }
   return reply.slice(3, 3 + RT4D_SPI_BLOCK_SIZE);
@@ -202,9 +142,22 @@ function noFirstBlock(failures: BlockFailure[]): FlashError {
 }
 
 /**
- * Reads the start of the RT-4D's SPI flash while the radio runs its original firmware:
- * the first 1 MiB for 'quick', the first 4 MiB for 'all'. Takes a closed port, opens it
- * at 115200 baud and closes it again whatever happens. Sends nothing but block reads.
+ * True when the radio answered the blocks above the first 4 MiB with those 4 MiB over
+ * again: its firmware looks at fewer bits of the block index than were sent. The
+ * calibration at the start of the chip is what makes a repeat unmistakable.
+ */
+function repeatsFirst(data: Uint8Array): boolean {
+  if (data.length < 2 * RT4D_REFERENCE_BYTES) return false;
+  const first = data.subarray(0, RT4D_REFERENCE_BYTES);
+  if (first.every((b) => b === first[0])) return false;
+  const second = data.subarray(RT4D_REFERENCE_BYTES, 2 * RT4D_REFERENCE_BYTES);
+  return first.every((b, i) => b === second[i]);
+}
+
+/**
+ * Reads the RT-4D's SPI flash while the radio runs its original firmware, all 16 MiB of
+ * it. Takes a closed port, opens it at 115200 baud and closes it again whatever happens.
+ * Sends nothing but block reads.
  * Throws FlashError when not even the first block can be read; a read that fails later
  * returns what was read so far, marked incomplete.
  *
@@ -213,20 +166,17 @@ function noFirstBlock(failures: BlockFailure[]): FlashError {
  */
 export async function readRt4dStock(
   port: SerialPort,
-  scope: BackupScope,
   ctx: FlashContext,
   options?: Rt4dStockOptions,
 ): Promise<RadioBackup>;
 export async function readRt4dStock(
   port: SerialPort,
-  scope: BackupScope,
   ctx: FlashContext,
   options: Rt4dStockOptions | undefined,
   known: Known | undefined,
 ): Promise<RadioBackup | AlreadyBackedUp>;
 export async function readRt4dStock(
   port: SerialPort,
-  scope: BackupScope,
   ctx: FlashContext,
   options: Rt4dStockOptions = {},
   known?: Known,
@@ -234,35 +184,17 @@ export async function readRt4dStock(
   const responseTimeoutMs = options.responseTimeoutMs ?? 2000;
   const quietMs = options.quietMs ?? 100;
   const attempts = Math.max(1, options.attempts ?? 3);
-  const total = scope === 'quick' ? RT4D_QUICK_BYTES : RT4D_ALL_BYTES;
+  const total = RT4D_ALL_BYTES;
   const data = new Uint8Array(total);
   let done = 0;
-  let stopped: string | null = null;
+  let stopped = null as string | null;
   /** Set when the radio turned out to be one that is already backed up. */
-  let recognised: string | null = null;
+  let recognised = null as string | null;
 
   ctx.progress({ phase: 'connect', done: 0, total });
-  try {
-    await port.open({
-      baudRate: RT4D_BAUD_RATE,
-      dataBits: 8,
-      stopBits: 1,
-      parity: 'none',
-      flowControl: 'none',
-    });
-  } catch (e) {
-    throw new FlashError(`Could not open the serial port: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  let writer: WritableStreamDefaultWriter<Uint8Array> | undefined;
-  try {
-    if (!port.readable || !port.writable) throw new FlashError('The serial port has no data streams.');
-    reader = port.readable.getReader();
-    writer = port.writable.getWriter();
-    const input = new SerialInput(reader);
-
-    await input.drain(quietMs, 4096);
+  const session = { baudRate: RT4D_BAUD_RATE, closed: 'The serial port closed while reading the radio.' };
+  await withSerial(port, session, async (input, writer) => {
+    await input.drainChunks(quietMs, 4096);
     for (let block = 0; done < total; block++) {
       const failures: BlockFailure[] = [];
       let found: Uint8Array | null = null;
@@ -275,12 +207,12 @@ export async function readRt4dStock(
             failures.push(result);
             ctx.log(`Block ${block} at ${address(done)}: ${result.detail} (try ${failures.length})`);
             // Whatever is left of a broken answer must not be taken for the next one.
-            await input.drain(quietMs, 2 * REPLY_BYTES);
+            await input.drainChunks(quietMs, 2 * REPLY_BYTES);
           }
         }
       } catch (e) {
         // The port went away; what was read before stays, and with nothing read it is an error.
-        const message = e instanceof Error ? e.message : String(e);
+        const message = messageOf(e);
         if (block === 0)
           throw e instanceof FlashError ? e : new FlashError(`Lost the serial port: ${message}`);
         failures.push({ kind: 'garbled', detail: message });
@@ -296,7 +228,7 @@ export async function readRt4dStock(
       ctx.progress({ phase: 'read', done, total });
       // The calibration at the start of the chip is what tells this radio from another.
       if (known && done === RT4D_CALIBRATION_BYTES) {
-        const id = await fingerprint(data.subarray(0, RT4D_CALIBRATION_BYTES));
+        const id = await fingerprintUnlessBlank(data.subarray(0, RT4D_CALIBRATION_BYTES));
         if (id !== null && known(id)) {
           ctx.log('This radio already has a backup; not reading it again.');
           recognised = id;
@@ -304,45 +236,50 @@ export async function readRt4dStock(
         }
       }
     }
-  } finally {
-    // Chrome refuses to close a port whose streams are locked. Cancelling also ends a
-    // read that is still waiting.
-    if (reader) {
-      await reader.cancel().catch(() => {});
-      reader.releaseLock();
-    }
-    writer?.releaseLock();
-    await port.close().catch(() => {});
-  }
+  });
 
   if (recognised !== null) return { known: recognised };
 
+  const repeated = stopped === null && repeatsFirst(data);
+  if (repeated) {
+    done = RT4D_REFERENCE_BYTES;
+    ctx.log('Above 0x400000 the radio sent the first 4 MiB again; keeping the first 4 MiB only.');
+  }
+  const whole = stopped === null && !repeated;
   const part: BackupPart = {
     file: 'spi-flash.bin',
     kind: 'spi-flash',
     address: 0,
-    data: stopped === null ? data : data.slice(0, done),
-    complete: stopped === null,
+    data: whole ? data : data.slice(0, done),
+    complete: whole,
   };
   const notes: string[] = [];
-  if (stopped !== null) {
+  if (repeated) {
+    part.note = `Above ${address(done)} the radio repeated the first 4 MiB instead of giving what is there.`;
+    notes.push(
+      'This is the first 4 MiB of the 16 MiB memory chip. This radio does not give the address book above it (0x400000 to 0xFFFFFF) to this read: it sent the first 4 MiB again, and that copy was dropped.',
+    );
+  } else if (stopped !== null) {
     part.note = `The read stopped at ${address(done)} of ${address(total)}: ${stopped.replace(/\.$/, '')}.`;
     notes.push(
       `Only the first ${done} of ${total} bytes were read; then the radio stopped answering properly. Read it again for a complete backup.`,
     );
+    if (done >= RT4D_REFERENCE_BYTES) {
+      notes.push(
+        'Everything below 0x400000 is in this backup: calibration, settings, channels, zones, contacts, the boot logo, fonts and voices. What is missing is part of the address book above it.',
+      );
+    }
   }
-  if (scope === 'quick') {
+  if (whole) {
     notes.push(
-      'This is the first megabyte of the memory chip: calibration, settings, channels, zones, contacts and the other things you can change. The boot logo, fonts and voice prompts above it are not included.',
-    );
-  } else {
-    notes.push(
-      'This is the first 4 MiB of the 16 MiB memory chip. The address book above it (0x400000 to 0xFFFFFF) is not included.',
+      'This is the whole 16 MiB memory chip, the address book (0x400000 to 0xFFFFFF) included. The firmware is not in it: the program memory of this radio cannot be read.',
     );
   }
 
   const radioId =
-    done >= RT4D_CALIBRATION_BYTES ? await fingerprint(data.subarray(0, RT4D_CALIBRATION_BYTES)) : null;
+    done >= RT4D_CALIBRATION_BYTES
+      ? await fingerprintUnlessBlank(data.subarray(0, RT4D_CALIBRATION_BYTES))
+      : null;
   if (radioId === null) {
     notes.push(
       'The calibration area was not read or is empty, so nothing in this backup tells this radio from another.',

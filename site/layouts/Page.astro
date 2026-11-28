@@ -1,0 +1,94 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Every page of the flasher: a slim header that leads back to openrtx.org and between
+// the pages, the page itself, and a footer with the licences and the build's commit.
+import '@fontsource/ubuntu/latin-400.css';
+import '@fontsource/ubuntu/latin-500.css';
+import '@fontsource/ubuntu/latin-700.css';
+import '@fontsource/ubuntu-mono/latin-400.css';
+import '@fontsource/vt323/latin-400.css';
+import '../styles/theme.css';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Which page of the header's list this is, so it shows as the current one. */
+  current: 'flash' | 'radios' | 'backups' | 'credits';
+}
+
+const { title, description, current } = Astro.props;
+
+/** The site's top, with a slash at the end. */
+const top = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+
+/** This project's repository on GitHub, where a build's commit can be looked up. */
+const REPO = 'https://github.com/turnrye/openrtx-web-flasher';
+
+/** The commit this copy was built from; "unknown" when built outside a git checkout. */
+const build = __BUILD_ID__;
+const isCommit = /^[0-9a-f]{7,40}$/.test(build);
+
+const PAGES = [
+  { id: 'flash', label: 'Flash', href: top },
+  { id: 'radios', label: 'Radios', href: `${top}radios/` },
+  { id: 'backups', label: 'Backups', href: `${top}backups/` },
+  { id: 'credits', label: 'Credits', href: `${top}credits/` },
+] as const;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{current === 'flash' ? 'Flash your radio · OpenRTX' : `${title} · OpenRTX flasher`}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href={`${top}openrtx_logo.svg`} type="image/svg+xml" />
+  </head>
+  <body class="flex min-h-screen flex-col font-sans">
+    <header class="border-b border-base-300 bg-base-200">
+      <nav class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3" aria-label="Flasher">
+        <a href="https://openrtx.org/" class="flex items-center gap-3" data-testid="home-link">
+          <img src={`${top}openrtx_logo.svg`} alt="OpenRTX" width="56" height="28" class="h-7 w-auto" />
+        </a>
+        <span class="text-lg font-bold text-primary">Flasher</span>
+        <ul class="flex flex-1 flex-wrap gap-1" data-testid="site-nav">
+          {
+            PAGES.map((p) => (
+              <li>
+                <a
+                  href={p.href}
+                  class:list={['btn btn-ghost btn-sm font-normal', p.id === current && 'text-primary']}
+                  aria-current={p.id === current ? 'page' : undefined}
+                >
+                  {p.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+        <a href={REPO} class="btn btn-ghost btn-sm btn-square" aria-label="The flasher on GitHub">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"
+            ><path
+              d="M9 19c-4 1.5-4-2-6-2.5m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"
+            ></path></svg
+          >
+        </a>
+      </nav>
+    </header>
+    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+      <h1 class="mb-6 text-4xl font-bold">{title}</h1>
+      <slot />
+    </main>
+    <footer class="border-t border-base-300 px-4 py-6 text-center text-xs text-base-content/70">
+      <p data-testid="site-licence">
+        © OpenRTX contributors. Firmware:{' '}
+        <a class="link" href="https://github.com/OpenRTX/OpenRTX/blob/master/LICENSE">GPL-3.0-or-later</a>.
+        Flasher: GPL-3.0-or-later, see its <a class="link" href={`${top}credits/`}>licences and credits</a>.{' '}
+        <span data-testid="site-build"
+          >Build {isCommit ? <a class="link" href={`${REPO}/commit/${build}`}>{build}</a> : build}.</span
+        >
+      </p>
+    </footer>
+  </body>
+</html>

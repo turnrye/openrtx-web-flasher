@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { strToU8, zipSync } from 'fflate';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import { backupCsk, flashCsk, readCskChipId } from '../src/flash/csk.ts';
-import { quietContext, type Progress } from '../src/flash/types.ts';
+import { quietContext, WrongRadioError, type Progress } from '../src/flash/types.ts';
 import { SimCsk6 } from '../src/sim/csk6.ts';
 import { md5 } from '../src/sim/md5.ts';
 import { CSKBURN_PIN, nativeCskburn, pinnedCskburn, wasmCskburn, type ToolPin } from './cskburn.ts';
@@ -188,6 +188,85 @@ describe('a native cskburn in the place of the WebAssembly module', () => {
     // The stand-in would go on for a minute; it is gone well before that.
     const pid = Number(readFileSync(join(dir, 'pid'), 'utf8'));
     await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow(), { timeout: 5000 });
+  });
+
+  it('has the program read a little between giving the chip ID and writing a backup', async () => {
+    const dir = folder();
+    const options = { loadModule: nativeCskburn(standInCskburn(dir), '/dev/fake') };
+    const image = new Uint8Array(randomBytes(20 * 1024));
+    await flashCsk(untouched, [{ address: 0, data: image }], quietContext(), options, STAND_IN_CHIP_ID);
+    // The real program does not wait to be told to go on: the read is the time to stop it in.
+    expect(recordIn(dir).args.slice(-6)).toEqual([
+      '--chip-id',
+      '--read',
+      '0x0:0x4000:guard.bin',
+      '--verify-all',
+      '0x0',
+      'part0.bin',
+    ]);
+    expect(recordIn(dir).parts).toEqual({ '0x0': sha256(image) });
+  });
+
+  it('ends the program before it writes when the chip is not the one a backup is of', async () => {
+    const dir = folder();
+    const options = { loadModule: nativeCskburn(standInCskburn(dir), '/dev/fake') };
+    const image = new Uint8Array(randomBytes(20 * 1024));
+    const attempt = flashCsk(
+      untouched,
+      [{ address: 0, data: image }],
+      quietContext(),
+      options,
+      'C620240900065701',
+    );
+    await expect(attempt).rejects.toBeInstanceOf(WrongRadioError);
+    await expect(attempt).rejects.toThrow('the one connected ends 89ABCDEF. Nothing was written to it.');
+    const pid = Number(readFileSync(join(dir, 'pid'), 'utf8'));
+    await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow(), { timeout: 5000 });
+    // The stand-in records what it wrote when it is done; it never got that far.
+    expect(existsSync(join(dir, 'record.json'))).toBe(false);
+  });
+
+  it('ends the program and removes its folder when the command line is interrupted', async () => {
+    const signals = [
+      ['SIGHUP', 129],
+      ['SIGINT', 130],
+      ['SIGTERM', 143],
+    ] as const;
+    const before = signals.map(([signal]) => new Set(process.listeners(signal)));
+    const exit = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+    // A module of its own, so that what it listens for can be told from what was there.
+    vi.resetModules();
+    const fresh = await import('./cskburn.ts');
+    const added = () =>
+      signals.map(([signal], i) => process.listeners(signal).filter((l) => !before[i].has(l)));
+    try {
+      const dir = folder();
+      // A backup, ten minutes on a radio: the stand-in gives the chip ID and then reads on.
+      const options = { loadModule: fresh.nativeCskburn(standInCskburn(dir, false, true), '/dev/fake') };
+      const read = backupCsk(untouched, 96 * 1024, quietContext(), options).catch((e: unknown) => e);
+      await vi.waitFor(() => expect(existsSync(join(dir, 'cwd'))).toBe(true), { timeout: 5000 });
+      const pid = Number(readFileSync(join(dir, 'pid'), 'utf8'));
+      const runFolder = readFileSync(join(dir, 'cwd'), 'utf8');
+      expect(existsSync(runFolder)).toBe(true);
+      expect(added().map((listeners) => listeners.length)).toEqual([1, 1, 1]);
+
+      // Ctrl+C.
+      (added()[1][0] as (signal: string) => void)('SIGINT');
+      expect(exit).toHaveBeenLastCalledWith(130);
+      // What may hold a radio's flash is gone, and so is the program that held the port.
+      expect(existsSync(runFolder)).toBe(false);
+      await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow(), { timeout: 5000 });
+      expect(await read).toBeInstanceOf(Error);
+
+      // The other two ways to be told to stop end the same way, with their own exit codes.
+      (added()[0][0] as (signal: string) => void)('SIGHUP');
+      expect(exit).toHaveBeenLastCalledWith(129);
+      (added()[2][0] as (signal: string) => void)('SIGTERM');
+      expect(exit).toHaveBeenLastCalledWith(143);
+    } finally {
+      added().forEach((listeners, i) => listeners.forEach((l) => process.off(signals[i][0], l)));
+      exit.mockRestore();
+    }
   });
 
   it('turns a radio that is not in flashing mode into the page’s message', async () => {

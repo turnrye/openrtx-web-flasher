@@ -197,9 +197,11 @@ export const STAND_IN_CHIP_ID = '0123456789ABCDEF';
 /**
  * Writes a program into `dir` that plays cskburn: it prints what cskburn prints for a
  * write or a read, writes the file a read asks for, and records its arguments and the
- * images it was given in `dir`/record.json. With `silent` it plays a radio that is not
- * in flashing mode. With `slow` it takes a minute over a read after giving the chip ID,
- * and leaves its process ID in `dir`/pid. Returns the program's path.
+ * images it was given in `dir`/record.json. Asked to read and to write, it reads first,
+ * as cskburn does, and takes a moment over it. With `silent` it plays a radio that is not
+ * in flashing mode. With `slow` it takes a minute over a read after giving the chip ID.
+ * It leaves its process ID in `dir`/pid and the folder it runs in in `dir`/cwd. Returns
+ * the program's path.
  */
 export function standInCskburn(dir: string, silent = false, slow = false): string {
   const path = join(dir, 'cskburn');
@@ -217,10 +219,26 @@ if (${JSON.stringify(silent)}) {
   save();
   process.exit(1);
 }
-if (${JSON.stringify(slow)}) fs.writeFileSync(${JSON.stringify(join(dir, 'pid'))}, String(process.pid));
+fs.writeFileSync(${JSON.stringify(join(dir, 'pid'))}, String(process.pid));
+fs.writeFileSync(${JSON.stringify(join(dir, 'cwd'))}, process.cwd());
 say('Entering update mode...');
 if (args.includes('--chip-id')) say('chip-id: ${STAND_IN_CHIP_ID}');
 const read = args.indexOf('--read');
+const images = [];
+for (let i = 0; i < args.length - 1; i++) {
+  if (/^0x[0-9a-f]+$/i.test(args[i]) && fs.existsSync(args[i + 1])) images.push([args[i], args[i + 1]]);
+}
+const burn = () => {
+  images.forEach(([address, file], i) => {
+    const data = fs.readFileSync(file);
+    record.parts[address] = crypto.createHash('sha256').update(data).digest('hex');
+    const kb = (data.length / 1024).toFixed(2);
+    say('Burning partition ' + (i + 1) + '/' + images.length + '... (' + address + ', ' + kb + ' KB)');
+    say(kb + ' KB / ' + kb + ' KB (100.00%)');
+  });
+  say('Finished');
+  save();
+};
 if (${JSON.stringify(slow)} && read >= 0) {
   setTimeout(() => process.exit(0), 60000);
 } else if (read >= 0) {
@@ -231,21 +249,11 @@ if (${JSON.stringify(slow)} && read >= 0) {
   const kb = (data.length / 1024).toFixed(2);
   say('Reading region...');
   say(kb + ' KB / ' + kb + ' KB (100.00%)');
+  // A read takes its time on a radio; whoever ended the run meanwhile sees nothing written.
+  setTimeout(burn, images.length > 0 ? 500 : 0);
 } else {
-  const images = [];
-  for (let i = 0; i < args.length - 1; i++) {
-    if (/^0x[0-9a-f]+$/i.test(args[i]) && fs.existsSync(args[i + 1])) images.push([args[i], args[i + 1]]);
-  }
-  images.forEach(([address, file], i) => {
-    const data = fs.readFileSync(file);
-    record.parts[address] = crypto.createHash('sha256').update(data).digest('hex');
-    const kb = (data.length / 1024).toFixed(2);
-    say('Burning partition ' + (i + 1) + '/' + images.length + '... (' + address + ', ' + kb + ' KB)');
-    say(kb + ' KB / ' + kb + ' KB (100.00%)');
-  });
+  burn();
 }
-say('Finished');
-save();
 `,
   );
   chmodSync(path, 0o755);

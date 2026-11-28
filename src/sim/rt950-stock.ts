@@ -17,6 +17,7 @@
  * and what its identity bytes are.
  */
 import { FakeSerialPort } from './serial.ts';
+import { fillPattern } from './support.ts';
 
 const HANDSHAKE = 'PROGRAMBT9000U';
 const ACK = 0x06;
@@ -68,15 +69,6 @@ export interface SimRt950StockOptions {
   chunkBytes?: number;
   /** Bytes the port already has waiting when it is opened. */
   noise?: number[];
-}
-
-/** Deterministic, non-repeating filler for the memory. */
-function fillPattern(out: Uint8Array, seed: number): void {
-  let x = (seed * 2654435761) >>> 0;
-  for (let i = 0; i < out.length; i++) {
-    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
-    out[i] = x >>> 24;
-  }
 }
 
 /** The scrambling of the programming protocol; the same steps go both ways. */

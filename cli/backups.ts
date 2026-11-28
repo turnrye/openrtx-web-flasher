@@ -16,6 +16,7 @@ import {
 import { join } from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
 import type { BundleManifest } from '../src/backup/bundle.ts';
+import { messageOf } from '../src/flash/types.ts';
 
 /**
  * The backups of radio model `model` in `dir`: the ID of each radio that has one, and
@@ -53,7 +54,7 @@ export function checkWritable(dir: string): void {
     accessSync(dir, constants.W_OK);
   } catch (e) {
     throw new Error(
-      `Backups cannot be saved in ${dir}: ${e instanceof Error ? e.message : String(e)}. Nothing was read. Name another folder with --out.`,
+      `Backups cannot be saved in ${dir}: ${messageOf(e)}. Nothing was read. Name another folder with --out.`,
       { cause: e },
     );
   }

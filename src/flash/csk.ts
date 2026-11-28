@@ -7,7 +7,7 @@
  * uploads its RAM burner, writes each partition and checks it with an MD5 the chip
  * computes over its own flash.
  */
-import { FlashError, type FlashContext, type Segment } from './types.ts';
+import { FlashError, messageOf, WrongRadioError, type FlashContext, type Segment } from './types.ts';
 
 /** The serial calls tools/cskburn-wasm/serial_web.c makes on `Module.cskSerial`. */
 interface CskSerial {
@@ -43,7 +43,17 @@ export interface CskOptions {
   baud?: number;
 }
 
-/** Adapts a Web Serial port to the blocking-style calls cskburn makes. */
+/**
+ * The read errors Web Serial does not count as fatal: bytes were lost or damaged, and the
+ * port goes on working with a new `readable`.
+ */
+const NON_FATAL_READ_ERRORS = new Set(['BufferOverrunError', 'BreakError', 'FramingError', 'ParityError']);
+
+/**
+ * Adapts a Web Serial port to the blocking-style calls cskburn makes. None of them ever
+ * rejects: a rejection would leave cskburn waiting for an answer for ever. When the port
+ * fails, `onFailure` is told and cskburn is cut off from the radio.
+ */
 class WebSerialAdapter implements CskSerial {
   private rx: number[] = [];
   private wake: (() => void) | null = null;
@@ -53,60 +63,93 @@ class WebSerialAdapter implements CskSerial {
   private pump: Promise<void> = Promise.resolve();
   /** Set when the run was stopped: from then on cskburn talks to nothing and gives up. */
   private dead = false;
+  /** Why the run cannot go on, once the port could not be opened or stopped taking data. */
+  failure: FlashError | null = null;
+  /** Told of `failure` when it happens. */
+  onFailure: (() => void) | null = null;
 
   constructor(private readonly port: SerialPort) {}
 
   /** Opens at the boot ROM's 115200 baud. */
-  async open(): Promise<number> {
-    await this.reopen(115200);
-    return 0;
+  open(): Promise<number> {
+    return this.reopen(115200);
   }
 
-  /** Cuts cskburn off from the radio and closes the port. Nothing more is sent. */
-  async stop(): Promise<void> {
+  /** Cuts cskburn off from the radio, at once: nothing more is sent, whatever cskburn goes on to do. */
+  cut(): void {
     this.dead = true;
     this.wake?.();
+  }
+
+  /** Cuts cskburn off from the radio and closes the port. */
+  async stop(): Promise<void> {
+    this.cut();
     await this.close();
   }
 
-  /** (Re)opens the port; Web Serial cannot change baud on an open port. */
-  private async reopen(baud: number): Promise<void> {
+  /** The port failed: cuts cskburn off and reports why, in words for the person. */
+  private fail(what: string, e: unknown): void {
     if (this.dead) return;
+    this.dead = true;
+    this.wake?.();
+    this.failure = new FlashError(`${what}: ${messageOf(e)}`);
+    this.onFailure?.();
+  }
+
+  /** (Re)opens the port; Web Serial cannot change baud on an open port. 0, or -1 when it would not open. */
+  private async reopen(baud: number): Promise<number> {
+    if (this.dead) return 0;
     await this.close();
-    await this.port.open({ baudRate: baud, bufferSize: 64 * 1024 });
+    try {
+      await this.port.open({ baudRate: baud, bufferSize: 64 * 1024 });
+    } catch (e) {
+      this.fail('The serial port could not be opened', e);
+      return -1;
+    }
     this.baud = baud;
     this.writer = this.port.writable!.getWriter();
-    const reader = this.port.readable!.getReader();
-    this.reader = reader;
+    this.reader = this.port.readable!.getReader();
     this.pump = (async () => {
-      try {
-        for (;;) {
-          const { value, done } = await reader.read();
+      for (;;) {
+        try {
+          const { value, done } = await this.reader!.read();
+          // The stream ended: close() cancelled it.
           if (done) break;
           for (const b of value) this.rx.push(b);
           this.wake?.();
+        } catch (e) {
+          // close() is waiting for this loop to end.
+          if (!this.baud) break;
+          // After an error the port can recover from, Web Serial offers a new stream to
+          // read on with. Any other error means the port is gone.
+          const recovers = e instanceof Error && NON_FATAL_READ_ERRORS.has(e.name);
+          const next = recovers ? this.port.readable : null;
+          if (!next) {
+            this.fail('The connection to the radio was lost', e);
+            break;
+          }
+          this.reader!.releaseLock();
+          this.reader = next.getReader();
         }
-      } catch {
-        // Port closed or adapter unplugged: reads just time out from here on.
       }
     })();
+    return 0;
   }
 
-  /** Stops the reader and closes the port; safe to call twice. */
+  /** Stops the reader and closes the port; safe to call twice. A port that is gone is closed already. */
   async close(): Promise<void> {
     if (!this.baud) return;
+    this.baud = 0;
     await this.reader!.cancel().catch(() => {});
     await this.pump;
     this.reader!.releaseLock();
     this.writer!.releaseLock();
-    await this.port.close();
-    this.baud = 0;
+    await this.port.close().catch(() => {});
   }
 
   /** Changes baud by reopening the port. */
   async setBaud(baud: number): Promise<number> {
-    if (baud !== this.baud) await this.reopen(baud);
-    return 0;
+    return baud === this.baud ? 0 : this.reopen(baud);
   }
 
   /** Sets DTR or RTS; adapters without those lines are fine (C62 is entered by hand). */
@@ -139,7 +182,11 @@ class WebSerialAdapter implements CskSerial {
   /** Writes and waits until the port accepted the bytes. */
   async write(bytes: Uint8Array): Promise<void> {
     if (this.dead) return;
-    await this.writer!.write(bytes);
+    try {
+      await this.writer!.write(bytes);
+    } catch (e) {
+      this.fail('The connection to the radio was lost', e);
+    }
   }
 }
 
@@ -156,7 +203,11 @@ interface CskRun {
  * Runs one cskburn command line against `port` in a fresh module instance.
  * `onLine` gets every output line, including the `\r`-terminated progress lines. When
  * it returns true the run is stopped there: the port is closed and cskburn, cut off from
- * the radio, is left to give up by itself.
+ * the radio, is left to give up by itself. The WebAssembly cskburn prints a line before
+ * it sends its next command, and is cut off before `onLine` returns, so nothing is sent
+ * after a line that stops the run. A real cskburn program is ended instead, as fast as
+ * that goes. A port that cannot be opened or stops taking data ends the run the same
+ * way, with a FlashError.
  */
 async function runCskburn(
   port: SerialPort,
@@ -169,6 +220,8 @@ async function runCskburn(
   const lines: string[] = [];
   let pending = '';
   let cut = false;
+  /** The module, once there is one: a real program is ended through it. */
+  let running: CskModule | null = null;
   const emit = (code: number | null) => {
     // Cut off from the radio, cskburn goes on to report errors that mean nothing.
     if (cut) return;
@@ -178,6 +231,9 @@ async function runCskburn(
         lines.push(pending);
         if (onLine(pending) === true) {
           cut = true;
+          // Here and now, not when the run is next looked at: cskburn is about to go on.
+          adapter.cut();
+          running?.stop?.();
           stop();
         }
       }
@@ -190,8 +246,12 @@ async function runCskburn(
   const stopped = new Promise<'stopped'>((resolve) => {
     stop = () => resolve('stopped');
   });
+  const broken = new Promise<'broken'>((resolve) => {
+    adapter.onFailure = () => resolve('broken');
+  });
   const factory = await options.loadModule();
   const mod = (await factory({ cskSerial: adapter, stdout: emit, stderr: emit })) as CskModule;
+  running = mod;
   for (const [path, data] of Object.entries(files)) mod.FS.writeFile(path, data);
   const exited = new Promise<number>((resolve) => {
     mod.onExit = resolve;
@@ -201,8 +261,15 @@ async function runCskburn(
     // fail quickly when the radio is not in flashing mode.
     const probe = ['--probe-timeout', '4000', '--reset-attempts', '0'];
     mod.callMain(['-C', '6', '-s', 'webserial', '-b', String(options.baud ?? 115200), ...probe, ...args]);
-    const code = await Promise.race([exited, stopped]);
-    if (code === 'stopped') {
+    const code = await Promise.race([exited, stopped, broken]);
+    if (adapter.failure) {
+      // What cskburn goes on to say about a port it has lost helps nobody.
+      cut = true;
+      mod.stop?.();
+      await adapter.stop();
+      throw adapter.failure;
+    }
+    if (code === 'stopped' || code === 'broken') {
       mod.stop?.();
       await adapter.stop();
       return { code: 0, lines, fs: mod.FS, stopped: true };
@@ -252,18 +319,44 @@ export async function readCskChipId(
 }
 
 /**
+ * Throws when two segments would be written over the same flash. cskburn writes them one
+ * after the other and checks each as it goes, so the later one would replace part of the
+ * earlier one and the run would still end as a success.
+ */
+function refuseOverlap(segments: Segment[]): void {
+  const sorted = [...segments].sort((a, b) => a.address - b.address);
+  for (let i = 1; i < sorted.length; i++) {
+    const before = sorted[i - 1];
+    if (before.address + before.data.length > sorted[i].address) {
+      throw new FlashError(
+        `The image written at 0x${before.address.toString(16)} (${before.data.length} bytes) runs into ` +
+          `the one written at 0x${sorted[i].address.toString(16)}. Nothing was sent to the radio.`,
+      );
+    }
+  }
+}
+
+/**
  * Writes each segment (app at 0x0, DSP image at 0x100000) and has the chip verify it.
+ * Segments that overlap are refused before anything is sent.
  * The radio must already be in flashing mode: off, hold the secondary PTT, power on, release.
+ *
+ * `onlyChip` is for a backup, which belongs to one radio: the ID of the chip it was read
+ * from. cskburn then reads the chip's ID first, in the same run, and the run is stopped
+ * there with a WrongRadioError when it is another chip, or gives no ID: nothing is
+ * written to it.
  */
 export async function flashCsk(
   port: SerialPort,
   segments: Segment[],
   ctx: FlashContext,
   options: CskOptions,
+  onlyChip?: string,
 ): Promise<void> {
+  refuseOverlap(segments);
   const total = segments.reduce((n, s) => n + s.data.length, 0);
   const files: Record<string, Uint8Array> = {};
-  const args = ['--verify-all'];
+  const args = onlyChip === undefined ? ['--verify-all'] : ['--chip-id', '--verify-all'];
   segments.forEach((s, i) => {
     files[`/part${i}.bin`] = s.data;
     args.push(`0x${s.address.toString(16)}`, `/part${i}.bin`);
@@ -271,23 +364,47 @@ export async function flashCsk(
 
   let part = -1;
   let before = 0;
-  const onLine = (line: string) => {
+  /** The ID the chip gave, when one was asked for. */
+  let chipId: string | null = null;
+  /** Why the run was stopped before anything was written, when it was. */
+  let wrong: WrongRadioError | null = null;
+  const onLine = (line: string): boolean => {
     const progress = /^\s*([\d.]+) KB \/ ([\d.]+) KB/.exec(line);
     if (progress) {
       const done =
         before + Math.min(Math.round(Number(progress[1]) * 1024), segments[part]?.data.length ?? 0);
       ctx.progress({ phase: 'write', done, total });
-      return;
+      return false;
+    }
+    ctx.log(line);
+    if (onlyChip !== undefined) {
+      chipId ??= /chip-id:\s*([0-9A-Fa-f]+)/.exec(line)?.[1] ?? null;
+      if (chipId !== null && chipId.toUpperCase() !== onlyChip.toUpperCase()) {
+        wrong = new WrongRadioError(
+          `This backup is of another radio (ID ending ${onlyChip.slice(-8)}); the one connected ends ` +
+            `${chipId.slice(-8)}. Nothing was written to it.`,
+        );
+        return true;
+      }
+      // cskburn gives the ID before it erases or writes. Should it ever not, stop here.
+      if (chipId === null && /^(Burning|Erasing)\b/.test(line)) {
+        wrong = new WrongRadioError(
+          'The radio did not give its chip ID, so it cannot be told whether this backup is its own. ' +
+            'Nothing was written to it.',
+        );
+        return true;
+      }
     }
     if (line.startsWith('Burning partition')) {
       if (part >= 0) before += segments[part].data.length;
       part++;
     }
-    ctx.log(line);
+    return false;
   };
 
   ctx.progress({ phase: 'connect', done: 0, total });
   const run = await runCskburn(port, args, files, onLine, options);
+  if (wrong) throw wrong as WrongRadioError;
   if (!succeeded(run) || !run.lines.some((l) => l.startsWith('Finished'))) throw failure(run);
   ctx.progress({ phase: 'done', done: total, total });
 }

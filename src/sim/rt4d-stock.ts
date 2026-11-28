@@ -13,13 +13,15 @@
  * speaks the same protocol with 128-byte blocks: the header repeats the request
  * (`52 blkH blkL`), a packet with a bad checksum gets `FF`, and the "notify" command
  * only answers `06`. Invented here: what a read past the end of the chip returns
- * (0xFF bytes) and how many `FF` a bootloader sends back.
+ * (0xFF bytes), how many `FF` a bootloader sends back, and the two ways a firmware
+ * might refuse the blocks above the first 4 MiB (`wrapBlocks`, `silentFrom`).
  *
  * Nothing that could change the radio is ever acted on. Region writes (0x40,
  * 0x90-0xA5), the bootloader's erase and write (0x39, 0x57) and anything unknown are
  * recorded in `forbidden` and dropped.
  */
 import { FakeSerialPort } from './serial.ts';
+import { fillPattern } from './support.ts';
 
 const CMD_SESSION = 0x34;
 const CMD_READ = 0x52;
@@ -61,15 +63,13 @@ export interface SimRt4dStockOptions {
   chunkBytes?: number;
   /** Bytes the port already has waiting when it is opened. */
   noise?: number[];
-}
-
-/** Deterministic, non-repeating filler for the flash. */
-function fillPattern(out: Uint8Array, seed: number): void {
-  let x = (seed * 2654435761) >>> 0;
-  for (let i = 0; i < out.length; i++) {
-    x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
-    out[i] = x >>> 24;
-  }
+  /**
+   * Look at the block index modulo this many blocks, like a firmware that decodes fewer
+   * address bits than the request carries. Not seen on a radio; the reader must notice.
+   */
+  wrapBlocks?: number;
+  /** Send no reply to this block or any after it, like a firmware that serves only the start of the chip. */
+  silentFrom?: number;
 }
 
 /** Plain 8-bit sum, the checksum of the original firmware's protocol. */
@@ -168,13 +168,15 @@ export class SimRt4dStock extends FakeSerialPort {
     const block = (packet[1] << 8) | packet[2];
     this.reads.push(block);
     if (this.hit(this.options.drop, block, Infinity)) return;
+    if (this.options.silentFrom !== undefined && block >= this.options.silentFrom) return;
+    const from = block % (this.options.wrapBlocks ?? 0x10000);
     const answer = new Uint8Array(3 + BLOCK + 1).fill(0xff, 3);
     const shown = this.hit(this.options.wrongHeader, block, 1) ? block + 1 : block;
     answer[0] = CMD_READ;
     answer[1] = (shown >> 8) & 0xff;
     answer[2] = shown & 0xff;
     // Past the end of the chip the 0xFF filler stays.
-    answer.set(this.flash.subarray(block * BLOCK, (block + 1) * BLOCK), 3);
+    answer.set(this.flash.subarray(from * BLOCK, (from + 1) * BLOCK), 3);
     answer[3 + BLOCK] = sum8(answer, 3 + BLOCK);
     if (this.hit(this.options.corruptChecksum, block, 1)) answer[3 + BLOCK] ^= 0x10;
     this.reply(answer);

@@ -8,7 +8,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { zipSync } from 'fflate';
-import { flash, pickBuild, pickRadio, skipToFlash, step } from './flow.ts';
+import { answerRuns, flash, pickBuild, pickRadio, skipToFlash, step } from './flow.ts';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -40,7 +40,7 @@ const FLASHED: [id: string, ext: string][] = [
 ];
 
 /** Radios marked as checked on hardware (docs/verification.md): they ask for no confirmation. */
-const CHECKED = ['cs7000'];
+const CHECKED = ['mduv3x0', 'dm1701', 'cs7000'];
 
 /** Builds in the manifest that have a file for the radio. */
 function buildsFor(id: string, ext: string): ManifestBuild[] {
@@ -185,6 +185,7 @@ test('rt950pro: flashes a .BTF the user brings', async ({ page }) => {
   await expect(step(page, 'step-firmware')).toHaveAttribute('data-mode', 'folded');
 
   // The firmware cannot be read, so the backup step says where Radtel publishes it.
+  await answerRuns(page, 'original');
   await expect(page.getByTestId('backup-not-included').locator('a')).toHaveAttribute(
     'href',
     'https://www.radtels.com/pages/software-download',
@@ -234,5 +235,6 @@ test('a radio that does not answer ends in a clear error, and can be retried', a
   await skipToFlash(page);
   await page.getByTestId('flash').click();
   await expect(page.getByTestId('flash-error')).toContainText('did not answer');
-  await expect(page.getByTestId('flash')).toHaveText('Flash again');
+  // The way on is to try again; nothing calls a failed attempt a flash.
+  await expect(page.getByTestId('flash')).toHaveText('Try again');
 });

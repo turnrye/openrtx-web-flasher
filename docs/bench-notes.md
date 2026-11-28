@@ -6,6 +6,9 @@ to tell which one it was.
 
 ## Backups
 
+- Most backups do not hold everything on the radio. [backup-coverage.md](backup-coverage.md)
+  lists every memory of every radio, what is saved of it and what is not; only the C62
+  and Module 17 are saved whole.
 - A backup is only as good as its first restore. Until one has been restored on a real
   radio of that kind, treat the page's backup as unproven and keep a dump made with the
   usual tool as well.
@@ -20,18 +23,29 @@ to tell which one it was.
   the backup's name and in the Backups list does not tell them apart.
 - CS7000 Plus: the backup is all 2 MiB, bootloader and both firmware slots. Restoring it
   rewrites the bootloader too.
+- CS7000 and CS7000 Plus: the memory chip beside the processor (16 MiB and 32 MiB) is
+  not in the backup. OpenRTX reads the factory calibration from 0x1000 to 0x10DC of it,
+  and the first time it starts it erases an area for its own settings: 0x8000 to 0xBFFF
+  on the CS7000, 0x1000000 to 0x1003FFF on the Plus. Restoring the backup does not put
+  that back.
 
-### Through the original firmware (TYT, GD-77, DM-1801, RT-4D)
+### Through the original firmware (TYT, GD-77, DM-1801, RT-4D, RT-950 Pro)
 
 None of these reads has been run from the page on a radio. Each reader sends only read
 requests and its simulator fails the test on anything else, but what a real radio
 answers is known from other tools, and for the TYT family from one MD-9600.
 
-- The page cannot write these backups back. They are a record: codeplug, settings and
-  the factory data. Compare the first one of each model with a read made by the usual
-  programming software.
+- The page cannot write these backups back. They are a record of what each read
+  reaches, which is never the whole radio: the program memory is missing from all of
+  them, or all but its first 64 KB. Compare the first one of each model with a read made
+  by the usual programming software.
+- A radio that already runs OpenRTX gives nothing this way: the firmware that answered
+  is gone.
 - TYT: info blocks, one snapshot of the first 64 KB of internal flash (the bootloader),
   then the SPI flash in program mode, then `91 05`, on which the radio restarts.
+  - Not read: the firmware beyond the snapshot (960 KB) and the memory chip's security
+    registers, where the calibration is stored. Info block 05 is the firmware's copy of
+    the calibration as loaded in RAM, not the stored bytes.
   - On an MD-9600 compare with a backup made by a known-good tool: the info blocks must
     be identical except `info-08` (the clock), the snapshot is 65535 bytes on macOS and
     Windows and 4096 on Linux (usbfs caps a control transfer), firmware reads
@@ -47,15 +61,34 @@ answers is known from other tools, and for the TYT family from one MD-9600.
 - RT-4D: only block reads are sent, without the programming software's "open" and
   "close". If block 0 reads but later blocks time out, the open may be needed after
   all. If block 0 fails with "the answer starts with …", the message shows what the
-  radio really sent. Expect about seven minutes for the 4 MB the page reads.
+  radio really sent.
+- RT-4D: the page reads all 16 MiB, blocks 0 to 16383. The tool it follows stops after
+  block 4095, so nobody is known to have asked a real radio for the blocks above, where
+  the address book is. The first thing to watch is block 4096. If the radio stops
+  answering there, the backup keeps the first 4 MiB and is marked incomplete. If it
+  answers with the first 4 MiB over again, the page notices, keeps the first 4 MiB and
+  says so. Either way, write down which.
+- RT-4D: record how long the read takes. The page says about half an hour, which is an
+  estimate: 16,384 blocks of 1,032 bytes at 115200 baud are 24.5 minutes on the wire,
+  before the radio's own time per block.
 - The radio ID of a GD-77, DM-1801 or RT-4D backup is a fingerprint of its calibration
   data, not a serial number. It should be the same on a second read of the same radio.
-- The page skips the read for a radio whose ID matches a complete backup it holds. Two
-  things to confirm on real radios: that two radios of one model never report the same
-  ID (the STM32 bootloader's USB serial number is the one to watch), and that an RT-4D's
-  fingerprint does not change when its settings do. On a TYT radio the ID comes from the
-  info blocks, before program mode, so a recognised radio keeps running and does not
-  restart; on a C62 reading the chip ID ends flashing mode, as a full read does.
+- The page skips the read for a radio whose ID matches a complete backup it holds, but
+  only where the ID is known to be the radio's own (`idIsPerUnit` in `src/radios.ts`):
+  the C62's chip ID, a TYT radio's unique ID, and the USB serial number of an STM32F405
+  in DFU mode (Module 17, CS7000-M17). On a TYT radio the ID comes from the info blocks,
+  before program mode, so a recognised radio keeps running and does not restart; on a
+  C62 reading the chip ID ends flashing mode, as a full read does.
+- Open, to confirm on real radios, two of a model each: that two radios never report the
+  same ID. Until it is confirmed these are read every time, and their backups still carry
+  the ID:
+  - CS7000-M17 Plus: whether the STM32H743 bootloader's USB serial number differs
+    between radios, or is the same on all of them.
+  - RT-4D, RT-950 Pro: whether two radios can have the same calibration, and so the same
+    fingerprint; and that an RT-4D's fingerprint does not change when its settings do.
+  - Module 17, CS7000-M17: the STM32F405 bootloader derives its serial number from the
+    chip's unique ID, so the read is still skipped on a match; check it on two radios
+    all the same.
 
 ## TYT (MD-380, MD-UV380, MD-9600, DM-1701)
 
@@ -170,6 +203,14 @@ answers is known from other tools, and for the TYT family from one MD-9600.
   every start. A build without `dsp_firmware.bin` can still be flashed, with a warning:
   that is only right for a radio that already runs OpenRTX. Restoring a backup writes
   the whole flash, DSP included.
+- Restoring a backup, not run on a radio yet: the run asks the chip for its ID first
+  (`--chip-id` with the image, one cskburn run) and stops before anything is erased when
+  it is not the ID in the backup. The page's cskburn sends nothing more once the ID is
+  wrong. The command line's cskburn is a separate program that does not wait, so it is
+  also asked to read 16 KiB (`--read 0x0:0x4000:guard.bin`) between the ID and the write:
+  over a second at 115200 baud, in which the program is ended. To confirm on the bench:
+  that cskburn takes `--chip-id`, `--read` and an image in one run on a C62, and reads
+  before it erases, as its source says.
 - First runs on a real C62 (21 Nov 2026, Chrome on macOS, a Prolific cable):
   - The page's backup of all 4 MiB was identical to a `cskburn --read` dump of the same
     radio, except for 12,816 bytes in 0x3B1A90–0x3B4FAF that the original firmware

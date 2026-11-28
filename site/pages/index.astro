@@ -1,0 +1,16 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// The flasher. It talks to radios through browser APIs, so it only ever runs in the
+// browser: nothing of it is rendered at build time.
+import { App } from '../../src/app.tsx';
+import Page from '../layouts/Page.astro';
+---
+
+<Page
+  title="Flash your radio"
+  description="Put OpenRTX on your radio from the browser, with a backup first."
+  current="flash"
+>
+  <App client:only="preact" />
+  <noscript>This page needs JavaScript to list firmware and talk to the radio.</noscript>
+</Page>

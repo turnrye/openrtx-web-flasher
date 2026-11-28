@@ -1,0 +1,72 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// The credits and the licence texts of everything the site contains that others wrote.
+import apache from '../../LICENSES/Apache-2.0.txt?raw';
+import bsd from '../../LICENSES/BSD-3-Clause.txt?raw';
+import emscripten from '../../LICENSES/Emscripten.txt?raw';
+import gpl from '../../LICENSES/GPL-3.0-or-later.txt?raw';
+import radioFoundry from '../../LICENSES/MIT.txt?raw';
+import musl from '../../LICENSES/musl.txt?raw';
+import ubuntuFont from '../../LICENSES/Ubuntu-font-1.0.txt?raw';
+import fflate from '../../node_modules/fflate/LICENSE?raw';
+import preact from '../../node_modules/preact/LICENSE?raw';
+import vt323 from '../../node_modules/@fontsource/vt323/LICENSE?raw';
+import { PORTED, SHIPPED, type Credit } from '../../src/credits.ts';
+
+interface Props {
+  /** Which part to show. */
+  show: 'ported' | 'shipped' | 'texts';
+}
+const { show } = Astro.props;
+
+/** The licence texts, in the order the lists name them. */
+const TEXTS: { title: string; text: string }[] = [
+  { title: 'GNU General Public License, version 3', text: gpl },
+  { title: 'Apache License 2.0 (cskburn, rt-4d-spiflash-cli, cs7000plus_flasher)', text: apache },
+  { title: 'MIT License (RadioFoundry)', text: radioFoundry },
+  { title: 'MIT License (Preact)', text: preact },
+  { title: 'MIT License (fflate)', text: fflate },
+  { title: 'MIT and NCSA licences (Emscripten)', text: emscripten },
+  { title: 'MIT License (musl libc)', text: musl },
+  { title: 'BSD 3-Clause License (dmrconfig)', text: bsd },
+  { title: 'Ubuntu Font Licence 1.0', text: ubuntuFont },
+  { title: 'SIL Open Font License 1.1 (VT323)', text: vt323 },
+];
+const credits: Credit[] = show === 'ported' ? PORTED : show === 'shipped' ? SHIPPED : [];
+---
+
+{
+  credits.length > 0 && (
+    <table>
+      <thead>
+        <tr>
+          <th>Work</th>
+          <th>By, and licence</th>
+          <th>Used for</th>
+        </tr>
+      </thead>
+      <tbody>
+        {credits.map((credit) => (
+          <tr data-testid={`credit-${credit.name}`}>
+            <td>
+              <a href={credit.url}>{credit.name}</a>
+            </td>
+            <td>
+              {credit.by}. {credit.licence}.
+            </td>
+            <td>{credit.use}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+{
+  show === 'texts' &&
+    TEXTS.map(({ title, text }) => (
+      <details data-testid="licence-text">
+        <summary>{title}</summary>
+        <pre>{text}</pre>
+      </details>
+    ))
+}

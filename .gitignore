@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.astro/
 # Everything in public/ is produced at build time: scripts/vendor.mjs and scripts/mirror-firmware.mjs.
 public/
 .vendor/

@@ -12,7 +12,7 @@
  * same branch makes one). It is sent as it is; the bootloader unscrambles it. The
  * bootloader itself, the first 12 KiB of flash, is never written.
  */
-import { ByteReader } from './bytes.ts';
+import { withSerial } from './serial.ts';
 import { FlashError, type FlashContext } from './types.ts';
 
 /** Serial speed; 8 data bits, no parity, 1 stop bit. */
@@ -147,27 +147,7 @@ export async function flashRt950(
   ctx.log(`Firmware size ${btf.length} (0x${btf.length.toString(16)}) bytes, ${blocks} blocks`);
 
   ctx.progress({ phase: 'connect', done: 0, total });
-  try {
-    await port.open({
-      baudRate: RT950_BAUD_RATE,
-      dataBits: 8,
-      stopBits: 1,
-      parity: 'none',
-      flowControl: 'none',
-    });
-  } catch (e) {
-    throw new FlashError(`Could not open the serial port: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  let writer: WritableStreamDefaultWriter<Uint8Array> | undefined;
-  try {
-    if (!port.readable || !port.writable) throw new FlashError('The serial port has no data streams.');
-    reader = port.readable.getReader();
-    writer = port.writable.getWriter();
-    const input = new ByteReader(reader);
-    const output = writer;
-
+  await withSerial(port, { baudRate: RT950_BAUD_RATE }, async (input, output) => {
     /**
      * Sends one packet and reads the 9-byte answer: 0xAA, command, 0, result, 0, 0, CRC,
      * 0x55. Returns the result code, or null when no answer came in time. Like the
@@ -254,14 +234,5 @@ export async function flashRt950(
 
     ctx.progress({ phase: 'done', done: total, total });
     ctx.log(`Sent ${blocks} blocks. The radio restarts with the new firmware.`);
-  } finally {
-    // Chrome refuses to close a port whose streams are locked. Cancelling also ends a
-    // read that is still waiting.
-    if (reader) {
-      await reader.cancel().catch(() => {});
-      reader.releaseLock();
-    }
-    writer?.releaseLock();
-    await port.close().catch(() => {});
-  }
+  });
 }

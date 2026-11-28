@@ -52,6 +52,34 @@ describe('backups in a folder', () => {
     expect(knownBackups(dir, 'rt4d').get('ABCD1234')).toBe(whole.name);
   });
 
+  it('does not count a backup with a part that could not be read at all', async () => {
+    const dir = folder();
+    const backup: RadioBackup = {
+      radioId: '0123456789ABCDEF00112233',
+      idKind: 'uid',
+      notes: [],
+      parts: [
+        { file: 'info-07.bin', kind: 'info', data: new Uint8Array(16), complete: true },
+        {
+          file: 'spi-flash.bin',
+          kind: 'spi-flash',
+          address: 0,
+          data: new Uint8Array(0),
+          complete: false,
+          note: 'The read stopped after 0 of 16777216 bytes: refused.',
+        },
+      ],
+    };
+    const { name, zip } = await makeBundle(
+      { id: 'mduv3x0', name: 'MD-UV380' },
+      backup,
+      'original-firmware',
+      new Date('2026-11-20T10:00:00'),
+    );
+    saveBackup(dir, name, zip);
+    expect(knownBackups(dir, 'mduv3x0').size).toBe(0);
+  });
+
   it('says before any read when the folder cannot be written to', () => {
     const dir = folder();
     expect(() => checkWritable(join(dir, 'new', 'one'))).not.toThrow();

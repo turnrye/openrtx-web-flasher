@@ -1,0 +1,50 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Every radio the flasher knows, written from its catalogue.
+import RadioTable from '../components/RadioTable.astro';
+import Page from '../layouts/Page.astro';
+
+/** The site's top, with a slash at the end. */
+const top = import.meta.env.BASE_URL.replace(/\/?$/, '/');
+---
+
+<Page
+  title="Radios the flasher supports"
+  description="Every radio the flasher can put OpenRTX on, how it reaches it, whether that was checked on a real radio, and what it can back up first."
+  current="radios"
+>
+  <article class="prose prose-invert max-w-none prose-a:text-primary">
+    <p class="max-w-3xl">
+      This table is written from the flasher's own list of radios, so it is always what the tool does today. For what
+      OpenRTX itself can do on each radio once it is flashed, see the{' '}
+      <a href="https://openrtx.org/#/dev_status">development status</a>.
+    </p>
+    <div class="overflow-x-auto">
+      <RadioTable />
+    </div>
+    <h2>Reading the table</h2>
+    <ul class="max-w-3xl">
+      <li>
+        <strong>Flashing checked on a real radio</strong> means somebody flashed that model from the web page and the
+        radio started OpenRTX. The <a href="https://github.com/turnrye/openrtx-web-flasher/blob/main/docs/verification.md"
+          >bench record</a
+        > has each entry. Until a model is checked, the flasher asks before it writes to it.
+      </li>
+      <li>
+        <strong>Backup before flashing</strong> says whether the flasher can save everything the radio holds. Most radios
+        have gaps: a part of their memory that cannot be read yet. Each gap is listed on{' '}
+        <a href={`${top}backups/`}>what a backup keeps</a>, with what would be lost and whether it can be saved another
+        way.
+      </li>
+      <li>
+        <strong>Otherwise</strong> is the usual tool for that radio, for browsers that cannot talk to it and for getting
+        a radio back when a flash went wrong.
+      </li>
+    </ul>
+    <p class="max-w-3xl">
+      A radio that is not here may still run OpenRTX: the <a href="https://openrtx.org/#/hardware/hardware"
+        >hardware pages</a
+      > cover every port, and the <a href="https://openrtx.org/#/user_guide">users' guide</a> has the manual way to flash.
+    </p>
+  </article>
+</Page>

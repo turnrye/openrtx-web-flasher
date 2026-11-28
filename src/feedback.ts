@@ -19,7 +19,17 @@ export interface Report {
   /** The step the report is about. */
   step?: 'flash' | 'backup';
   radio?: { id: string; name: string };
-  firmware?: { label: string; file: string; sha256: string };
+  firmware?: {
+    label: string;
+    file: string;
+    sha256: string;
+    /** The commit the build was made from, when the build says. */
+    commit?: string;
+    /** The build's date as the build gives it (made, or released), ISO 8601. */
+    date?: string;
+    /** The build's release page or CI run. */
+    url?: string;
+  };
   /** How the backup step ended, in a few words: "saved, complete", "skipped". */
   backup?: string;
   /** The message the page showed. */
@@ -86,9 +96,12 @@ export function reportBody(report: Report, logLines?: number): string {
         report.firmware.label,
         // A file given by hand is labelled with its own name
         report.firmware.file !== report.firmware.label ? report.firmware.file : undefined,
+        report.firmware.commit && `commit ${report.firmware.commit}`,
+        report.firmware.date && `dated ${report.firmware.date}`,
+        report.firmware.url,
         `SHA-256 ${report.firmware.sha256}`,
       ]
-        .filter((part) => part !== undefined)
+        .filter(Boolean)
         .join(', '),
   );
   add('Backup', report.backup);

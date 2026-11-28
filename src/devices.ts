@@ -32,6 +32,20 @@ export interface DeviceEnv {
   sleep(ms: number): Promise<void>;
 }
 
+/** The device objects that stand for simulated radios. */
+const simulatedDevices = new WeakSet<object>();
+
+/** Records that `device` is a simulated radio, and returns it. The simulated environment does this for every device it hands out. */
+export function markSimulated<T extends object>(device: T): T {
+  simulatedDevices.add(device);
+  return device;
+}
+
+/** True when `device` came from the simulated environment: nothing done to it reaches hardware. */
+export function isSimulated(device: object): boolean {
+  return simulatedDevices.has(device);
+}
+
 /** Devices through Chrome's WebUSB, Web Serial and WebHID choosers. */
 export function browserEnv(): DeviceEnv {
   return {

@@ -63,6 +63,27 @@ describe('feedback reports', () => {
     expect(reportBody(report)).toContain(`**Firmware:** ${file}, SHA-256 ${'cd'.repeat(32)}\n`);
   });
 
+  it('names the build by its commit, its date and its page, when the build has them', () => {
+    const report: Report = {
+      ...failed([]),
+      firmware: {
+        label: 'PR #588',
+        file: 'openrtx_mduv3x0_fix.bin',
+        sha256: 'ef'.repeat(32),
+        commit: 'feedc0de'.repeat(5),
+        date: '2026-11-20T02:05:00Z',
+        url: 'https://github.com/OpenRTX/OpenRTX/actions/runs/77',
+      },
+    };
+    expect(reportBody(report)).toContain(
+      `**Firmware:** PR #588, openrtx_mduv3x0_fix.bin, commit ${'feedc0de'.repeat(5)}, ` +
+        'dated 2026-11-20T02:05:00Z, https://github.com/OpenRTX/OpenRTX/actions/runs/77, ' +
+        `SHA-256 ${'ef'.repeat(32)}\n`,
+    );
+    // The commit is a fact about the build, not about one radio: it is not scrubbed.
+    expect(reportBody(report)).not.toContain('[removed]');
+  });
+
   it('keeps anything that identifies one radio out of the log', () => {
     const log = scrubLog([
       'chip-id: C620240900065701',

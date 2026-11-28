@@ -5,6 +5,7 @@
  * every radio, so a backup can be understood later without knowing how it was made.
  */
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
+import { sha256Hex } from '../bytes.ts';
 import type { BackupPart, IdKind, PartKind, RadioBackup } from './types.ts';
 
 /** Format name and version written into every manifest. */
@@ -46,18 +47,14 @@ export interface BundleManifest {
   parts: ManifestPart[];
   /** What made the bundle. */
   tool: { name: string; userAgent: string };
+  /** Present when the backup was read from a simulated radio: it must never be written to a real one. */
+  simulated?: true;
 }
 
 /** An opened bundle. */
 export interface Bundle {
   manifest: BundleManifest;
   parts: BackupPart[];
-}
-
-/** SHA-256 of `bytes` as lower-case hex. */
-async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes as BufferSource);
-  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /** "20261121-0605" in local time. */
@@ -112,6 +109,7 @@ export async function makeBundle(
       name: 'openrtx-web-flasher',
       userAgent: typeof navigator === 'undefined' ? '' : navigator.userAgent,
     },
+    ...(backup.simulated ? { simulated: true as const } : {}),
   };
   // Stored, not compressed: firmware and flash dumps barely shrink, and a plain zip
   // can be picked apart with any tool.

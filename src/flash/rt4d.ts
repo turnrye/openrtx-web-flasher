@@ -13,7 +13,8 @@
  * end of the 256 KiB flash is 0x3D800 bytes, the same 246 KiB the linker script
  * allows. The whole region is always written, zero-padded after the image.
  */
-import { ByteReader } from './bytes.ts';
+import { hexByte } from '../bytes.ts';
+import { withSerial } from './serial.ts';
 import { FlashError, type FlashContext } from './types.ts';
 
 /** Serial speed; 8 data bits, no parity, 1 stop bit. */
@@ -65,11 +66,6 @@ function packet(...parts: (number | Uint8Array)[]): Uint8Array {
   return out;
 }
 
-/** Two-digit hex for messages. */
-function hex(byte: number): string {
-  return `0x${byte.toString(16).padStart(2, '0')}`;
-}
-
 /**
  * Flashes a raw OpenRTX image onto an RT-4D that is in its bootloader. Takes a closed
  * port, opens it at 115200 baud and closes it again whatever happens. Throws
@@ -107,33 +103,13 @@ export async function flashRt4d(
   image.set(bin);
 
   ctx.progress({ phase: 'connect', done: 0, total });
-  try {
-    await port.open({
-      baudRate: RT4D_BAUD_RATE,
-      dataBits: 8,
-      stopBits: 1,
-      parity: 'none',
-      flowControl: 'none',
-    });
-  } catch (e) {
-    throw new FlashError(`Could not open the serial port: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
-  let writer: WritableStreamDefaultWriter<Uint8Array> | undefined;
-  try {
-    if (!port.readable || !port.writable) throw new FlashError('The serial port has no data streams.');
-    reader = port.readable.getReader();
-    writer = port.writable.getWriter();
-    const input = new ByteReader(reader);
-    const output = writer;
-
+  await withSerial(port, { baudRate: RT4D_BAUD_RATE }, async (input, output) => {
     /** Sends one packet and requires a single ACK byte back. */
     const command = async (bytes: Uint8Array, failure: string): Promise<void> => {
       await output.write(bytes);
       const answer = await input.readByte(responseTimeoutMs);
       if (answer === null) throw new FlashError(`${failure}: the radio did not answer.`);
-      if (answer !== ACK_RESPONSE) throw new FlashError(`${failure}: the radio answered ${hex(answer)}.`);
+      if (answer !== ACK_RESPONSE) throw new FlashError(`${failure}: the radio answered ${hexByte(answer)}.`);
     };
 
     // check_bootloader_mode(): throw away stale input, then probe with a read command.
@@ -144,7 +120,7 @@ export async function flashRt4d(
       throw new FlashError(
         first === null
           ? 'The radio did not answer. Is it connected and in flashing mode?'
-          : `The radio is not in flashing mode (it answered ${hex(first)}).`,
+          : `The radio is not in flashing mode (it answered ${hexByte(first)}).`,
       );
     }
     // The reference reads up to 4 bytes here and looks only at the first.
@@ -175,14 +151,5 @@ export async function flashRt4d(
 
     ctx.progress({ phase: 'done', done: total, total });
     ctx.log(`Written ${total} (0x${total.toString(16)}) bytes. Switch the radio off and on again.`);
-  } finally {
-    // Chrome refuses to close a port whose streams are locked. Cancelling also ends a
-    // read that is still waiting.
-    if (reader) {
-      await reader.cancel().catch(() => {});
-      reader.releaseLock();
-    }
-    writer?.releaseLock();
-    await port.close().catch(() => {});
-  }
+  });
 }

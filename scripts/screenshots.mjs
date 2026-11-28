@@ -3,7 +3,7 @@
 /**
  * Takes the screenshots in docs/ from the built site, using the simulated radios.
  *
- *   npm run build && node scripts/screenshots.mjs [output dir]
+ *   SITE_BASE=/sub/path/ npm run build && node scripts/screenshots.mjs [output dir]
  */
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
@@ -12,48 +12,71 @@ import { chromium } from '@playwright/test';
 const out = process.argv[2] || 'docs/screenshots';
 const port = 4199;
 mkdirSync(out, { recursive: true });
-const server = spawn('node', ['tests/e2e/serve.mjs', String(port)], { stdio: 'ignore' });
+// The same server the browser tests use: dist/ under the path it was built for.
+const base = `/${(process.env.SITE_BASE || '/sub/path/').replace(/^\/+|\/+$/g, '')}/`.replace('//', '/');
+const server = spawn('node', ['tests/e2e/serve.mjs', String(port)], {
+  stdio: 'ignore',
+  env: { ...process.env, SITE_BASE: base },
+});
 await new Promise((resolve) => setTimeout(resolve, 600));
 
 try {
   const browser = await chromium.launch();
   const page = await browser.newPage({
-    viewport: { width: 1100, height: 900 },
+    viewport: { width: 1200, height: 860 },
     deviceScaleFactor: 2,
     // Steps fold and open at once, so a screenshot never catches one half way.
     reducedMotion: 'reduce',
   });
-  const base = `http://localhost:${port}/sub/path/`;
-  const shot = (name) => page.screenshot({ path: `${out}/${name}.png`, fullPage: true });
+  const top = `http://localhost:${port}${base}`;
+  /** Takes one picture, from the top of the page: the site's bar stays where the page is scrolled to. */
+  const shot = async (name, fullPage = true) => {
+    await page.evaluate('window.scrollTo(0, 0)');
+    await page.screenshot({ path: `${out}/${name}.png`, fullPage });
+  };
+  const id = (name) => page.getByTestId(name);
+  /** Picks the first build the chosen radio can take. */
+  const pickBuild = () =>
+    page.locator('#step-firmware [data-testid^="build-"]:not([disabled])').first().click();
+  // Tell the flasher this is not somebody's first visit, so the introduction is folded.
+  const fold = () => id('before-you-start').locator('summary').click();
 
-  // The radio list is drawn once the builds are known; show the second list unfolded.
-  await page.goto(base);
-  await page.locator('.radio-card').first().waitFor();
-  await page.getByTestId('no-release').locator('summary').click();
+  // Step 1: the radios, with the introduction a first-timer sees.
+  await page.goto(`${top}?sim=1`);
+  await id('radio-md3x0').waitFor();
   await shot('1-radios');
 
-  // Step 2: the three choices, with "Other" open on a branch build.
-  await page.goto(`${base}?sim=1#mduv3x0`);
-  await page.getByTestId('open-other').click();
-  await page.getByTestId('open-ci').click();
+  // Step 2: the three choices of firmware.
+  await page.goto(`${top}?sim=1#mduv3x0`);
+  await id('builds').waitFor();
+  await fold();
   await shot('2-firmware');
 
-  // Step 3: the backup through the original firmware.
-  await page.getByTestId('build-master').click();
-  await page.locator('#step-backup').getByTestId('turn-on-experimental').click();
-  await page.getByTestId('backup').click();
-  await page.getByTestId('backup-done').waitFor();
-  await shot('3-backed-up');
+  // Step 3: the backup, with what it will not hold said first.
+  await pickBuild();
+  await id('runs-original').click();
+  await id('backup').waitFor();
+  await shot('3-backup');
 
   // Step 4: how to enter flashing mode.
-  await page.getByTestId('backup-continue').click();
+  await page.goto(`${top}?sim=1#mod17`);
+  await pickBuild();
+  await id('entered').waitFor();
   await shot('4-flashing-mode');
 
-  // Step 5: flashed.
-  await page.getByTestId('entered').click();
-  await page.getByTestId('flash').click();
-  await page.getByTestId('done').waitFor();
+  // Step 5: backed up, then flashed.
+  await id('entered').click();
+  await id('backup').click();
+  await id('backup-done').waitFor();
+  await id('backup-continue').click();
+  await id('turn-on-experimental').click();
+  await id('flash').click();
+  await id('done').waitFor();
   await shot('5-flashed');
+
+  // The radios page, written from the flasher's own catalogue.
+  await page.goto(`${top}radios/`, { waitUntil: 'networkidle' });
+  await shot('6-radio-table', false);
   await browser.close();
   console.log(`wrote screenshots to ${out}/`);
 } finally {
