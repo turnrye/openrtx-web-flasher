@@ -163,28 +163,34 @@ test('a "Before you start" block sits above step 1, and stays folded once folded
   await expect(page.getByTestId('before-you-start').getByText('What you need')).toBeVisible();
 });
 
-test('every radio card says whether flashing it from this page was checked on a real radio', async ({
+test('every radio card says what the radio needs for M17, and none says whether it was checked', async ({
   page,
 }) => {
   await page.goto('');
   const cards = radioCards(page);
   await expect(cards).toHaveCount(13);
-  await expect(cards.getByTestId('checked-badge')).toHaveCount(13);
-  // docs/verification.md: the MD-UV380, the DM-1701, the CS7000-M17 and the C62 are checked.
-  await expect(page.getByTestId('radio-cs7000').getByTestId('checked-badge')).toHaveText('Checked');
-  await expect(page.getByTestId('radio-mduv3x0').getByTestId('checked-badge')).toHaveText('Checked');
-  await expect(page.getByTestId('radio-dm1701').getByTestId('checked-badge')).toHaveText('Checked');
-  await expect(page.getByTestId('radio-md3x0').getByTestId('checked-badge')).toHaveText('Not checked yet');
-  await expect(cards.locator('[data-checked="yes"]')).toHaveCount(4);
-  await expect(page.getByTestId('checked-legend')).toContainText('started OpenRTX');
+  await expect(cards.getByTestId('m17-badge')).toHaveCount(13);
+  await expect(cards.getByText(/checked/i)).toHaveCount(0);
+  // The website's M17 page: the CS7000s as they come, the TYT radios after a mod, the GD-77 never.
+  await expect(page.getByTestId('radio-cs7000').getByTestId('m17-badge')).toHaveText('M17 built in');
+  await expect(page.getByTestId('radio-mduv3x0').getByTestId('m17-badge')).toHaveText(
+    'M17 after a hardware mod',
+  );
+  await expect(page.getByTestId('radio-md3x0').getByTestId('m17-badge')).toContainText(
+    'VHF models receive only',
+  );
+  await expect(page.getByTestId('radio-gd77').getByTestId('m17-badge')).toHaveText(
+    'No M17: the hardware cannot',
+  );
+  await expect(page.getByTestId('m17-legend')).toContainText('hardware modification');
 
   // Both groups carry the badge: the release's radios and the ones without a release.
   const unreleased = page.getByTestId('no-release');
   await unreleased.locator('summary').click();
-  await expect(unreleased.getByTestId('radio-c62').getByTestId('checked-badge')).toHaveText('Checked');
-  await expect(unreleased.getByTestId('radio-rt4d').getByTestId('checked-badge')).toHaveText(
-    'Not checked yet',
+  await expect(unreleased.getByTestId('radio-c62').getByTestId('m17-badge')).toHaveText(
+    'M17 not working yet',
   );
+  await expect(unreleased.getByTestId('radio-rt4d').getByTestId('m17-badge')).toHaveText('M17 not known yet');
 });
 
 test('reading a radio is not held back as experimental; only the flash is, and it names the way out', async ({

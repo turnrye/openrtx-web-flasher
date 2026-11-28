@@ -34,6 +34,7 @@ import { formatDateTime, Notice, Step, type StepMode } from './ui/common.tsx';
 import { EnterStep } from './ui/EnterStep.tsx';
 import { FirmwareStep } from './ui/FirmwareStep.tsx';
 import { FlashStep } from './ui/FlashStep.tsx';
+import { ProgressRail, type RailStep } from './ui/ProgressRail.tsx';
 import { RadioPicker } from './ui/RadioPicker.tsx';
 import { ReportLink } from './ui/Report.tsx';
 
@@ -67,6 +68,15 @@ function stepsFor(radio: Radio | null): StepId[] {
     'flash',
   ];
 }
+
+/** Each step's name as the page shows it. */
+const TITLES: Record<StepId, string> = {
+  radio: 'Radio',
+  firmware: 'Firmware',
+  backup: 'Back up',
+  enter: 'Flashing mode',
+  flash: 'Flash',
+};
 
 /** The first step of `order` that is not done. */
 function firstUndone(order: StepId[], done: Done): StepId {
@@ -304,6 +314,18 @@ export function App() {
   /** Opens a step, unless the radio is being read or written. */
   const opener = (step: StepId) => (busy ? undefined : () => setOpen(step));
   const number = (step: StepId) => order.indexOf(step) + 1;
+  /** The steps as the progress rail shows them: the open one, those done, those to come. */
+  const rail: RailStep[] = order.map((step) => ({
+    id: step,
+    title: TITLES[step],
+    status:
+      step === open
+        ? 'current'
+        : step !== 'flash' && done[step] && mode(step) !== 'waiting'
+          ? 'done'
+          : 'upcoming',
+    onOpen: opener(step),
+  }));
   /** True when there is nothing to back up because the radio already runs OpenRTX. */
   const runsOpenrtx = backup.skipped && backup.runs === 'openrtx';
   /** How the backup step ended, for a report. Says nothing about what the backup holds. */
@@ -409,62 +431,70 @@ export function App() {
 
       <BeforeYouStart />
 
-      <div class="flex flex-col gap-3">
-        <Step
-          num={1}
-          title="Radio"
-          id="step-radio"
-          mode={mode('radio')}
-          onOpen={opener('radio')}
-          state={radio?.name}
-          hint="change"
-        >
-          {/* Drawn once the builds are known, so no radio moves between the lists. */}
-          {manifest && (
-            <RadioPicker released={released} unreleased={unreleased} chosen={radio} onChoose={selectRadio} />
-          )}
-        </Step>
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-8">
+        <ProgressRail steps={rail} />
+        <div class="flex min-w-0 flex-1 flex-col gap-3">
+          <Step
+            num={1}
+            title="Radio"
+            id="step-radio"
+            mode={mode('radio')}
+            onOpen={opener('radio')}
+            state={radio?.name}
+            hint="change"
+          >
+            {/* Drawn once the builds are known, so no radio moves between the lists. */}
+            {manifest && (
+              <RadioPicker
+                released={released}
+                unreleased={unreleased}
+                chosen={radio}
+                onChoose={selectRadio}
+              />
+            )}
+          </Step>
 
-        <Step
-          num={2}
-          title="Firmware"
-          id="step-firmware"
-          mode={mode('firmware')}
-          onOpen={opener('firmware')}
-          state={file ? build?.label : undefined}
-          detail={file && build ? <BuildFacts build={build} testid="chosen-build" /> : undefined}
-          hint="change"
-        >
-          {radio && <FirmwareStep radio={radio} manifest={manifest} build={build} onBuild={chooseBuild} />}
-          {dropError && (
-            <Notice tone="warning" role="alert" testid="drop-error">
-              {dropError}
-            </Notice>
-          )}
-        </Step>
+          <Step
+            num={2}
+            title="Firmware"
+            id="step-firmware"
+            mode={mode('firmware')}
+            onOpen={opener('firmware')}
+            state={file ? build?.label : undefined}
+            detail={file && build ? <BuildFacts build={build} testid="chosen-build" /> : undefined}
+            hint="change"
+          >
+            {radio && <FirmwareStep radio={radio} manifest={manifest} build={build} onBuild={chooseBuild} />}
+            {dropError && (
+              <Notice tone="warning" role="alert" testid="drop-error">
+                {dropError}
+              </Notice>
+            )}
+          </Step>
 
-        {backupFirst(radio) ? [backupStep, enterStep] : [enterStep, backupStep]}
+          {backupFirst(radio) ? [backupStep, enterStep] : [enterStep, backupStep]}
 
-        <Step num={5} title="Flash" id="step-flash" mode={mode('flash')} onOpen={opener('flash')}>
-          {radio && build && file && env && (
-            <FlashStep
-              key={round}
-              radio={radio}
-              build={build}
-              file={file}
-              env={env}
-              supported={supported}
-              allowed={allowed}
-              onExperimental={setExperimental}
-              getDevice={getDevice}
-              dropDevice={dropDevice}
-              onBusy={setBusy}
-              backupSummary={backupSummary}
-              radioId={backup.saved?.manifest.radioId ?? backup.already?.manifest.radioId}
-              onAnother={flashAnother}
-            />
-          )}
-        </Step>
+          <Step num={5} title="Flash" id="step-flash" mode={mode('flash')} onOpen={opener('flash')}>
+            {radio && build && file && env && (
+              <FlashStep
+                key={round}
+                radio={radio}
+                build={build}
+                file={file}
+                env={env}
+                supported={supported}
+                allowed={allowed}
+                onExperimental={setExperimental}
+                getDevice={getDevice}
+                dropDevice={dropDevice}
+                onBusy={setBusy}
+                backupSummary={backupSummary}
+                radioId={backup.saved?.manifest.radioId ?? backup.already?.manifest.radioId}
+                onAnother={flashAnother}
+              />
+            )}
+          </Step>
+        </div>
       </div>
 
       {records.length > 0 && (
