@@ -5,10 +5,14 @@ import {
   checksFor,
   filesFor,
   forCommandLine,
+  m17Label,
+  MAKERS,
+  makersOf,
   pickFile,
   radioById,
   radioForFile,
   RADIOS,
+  type Maker,
 } from './radios.ts';
 
 const RELEASE = [
@@ -133,6 +137,46 @@ describe('radio catalogue', () => {
     expect(radioById('cs7000p')!.flashNotes).toHaveLength(3);
     expect(radioById('ttwrplus')!.flashNotes).toHaveLength(2);
     expect(RADIOS.filter((r) => r.flashNotes).map((r) => r.id)).toEqual(['cs7000p', 'rt950pro', 'ttwrplus']);
+  });
+
+  it('names the maker of every radio, as its name does', () => {
+    for (const radio of RADIOS) {
+      expect(radio.maker, radio.id).toBeTruthy();
+      // Module 17 is named for the protocol, not its maker.
+      if (radio.id !== 'mod17') {
+        expect(radio.name.toLowerCase().startsWith(radio.maker.toLowerCase()), radio.id).toBe(true);
+      }
+    }
+    expect(radioById('mod17')!.maker).toBe('M17 Project');
+  });
+
+  it('lists every maker an "also sold as" name names, so the maker filter finds rebadged radios', () => {
+    for (const radio of RADIOS) {
+      // Each part of `aka` ("Retevis RT3 / RT8") that starts with a maker's name.
+      const named = (radio.aka ?? '')
+        .split('/')
+        .map((part) => MAKERS.find((m) => part.trim().startsWith(`${m} `)))
+        .filter((m): m is Maker => m !== undefined);
+      expect([...new Set(named)], radio.id).toEqual(radio.alsoSoldBy ?? []);
+    }
+    expect(makersOf(radioById('mduv3x0')!)).toEqual(['Tytera', 'Retevis']);
+    expect(makersOf(radioById('c62')!)).toEqual(['Retevis']);
+  });
+
+  it('says for every radio what it needs for M17, with a guide for each mod', () => {
+    for (const radio of RADIOS) {
+      expect(['built-in', 'mod', 'none', 'not-yet', 'unknown'], radio.id).toContain(radio.m17.need);
+      expect(Boolean(radio.m17.guide), radio.id).toBe(radio.m17.need === 'mod');
+    }
+    // The website's M17 page names these; the GD-77 family has no M17 at all.
+    const by = (need: string) => RADIOS.filter((r) => r.m17.need === need).map((r) => r.id);
+    expect(by('built-in')).toEqual(['cs7000', 'cs7000p', 'mod17']);
+    expect(by('mod')).toEqual(['md3x0', 'mduv3x0', 'dm1701']);
+    expect(by('none')).toEqual(['gd77', 'dm1801']);
+    expect(m17Label(radioById('md3x0')!)).toEqual({
+      text: 'M17 after a hardware mod (UHF; VHF models receive only)',
+      tone: 'mod',
+    });
   });
 
   it('marks as checked only the radios with a line in the bench record', () => {

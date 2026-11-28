@@ -51,12 +51,76 @@ export interface Companion {
   what: string;
 }
 
+/**
+ * What a radio needs for M17, as the website's M17 and development status pages say:
+ * - `built-in`: works as it comes
+ * - `mod`: works after a hardware modification
+ * - `none`: the hardware cannot do it
+ * - `not-yet`: the hardware can, OpenRTX does not yet
+ * - `unknown`: those pages do not say
+ */
+export type M17Need = 'built-in' | 'mod' | 'none' | 'not-yet' | 'unknown';
+
+/** M17 on one radio. */
+export interface M17Support {
+  need: M17Need;
+  /** A qualification, such as which band works. */
+  note?: string;
+  /** The guide to the modification, for `mod`. */
+  guide?: string;
+}
+
+/** Who makes or sells a radio, as the picker's maker filter names them. */
+export const MAKERS = [
+  'Tytera',
+  'Baofeng',
+  'Radioddity',
+  'Connect Systems',
+  'Retevis',
+  'Radtel',
+  'LILYGO',
+  'M17 Project',
+] as const;
+
+/** One of {@link MAKERS}. */
+export type Maker = (typeof MAKERS)[number];
+
+/**
+ * Every maker a radio is sold by: the one that makes it, then any that sell it under
+ * their own name. The picker's maker filter finds a radio under each.
+ * @param radio the radio
+ * @returns its makers, its own first
+ */
+export function makersOf(radio: Pick<Radio, 'maker' | 'alsoSoldBy'>): Maker[] {
+  return [radio.maker, ...(radio.alsoSoldBy ?? [])];
+}
+
+/** What a radio needs for M17, in a few words, and whether that is good news for someone choosing. */
+export function m17Label(radio: Pick<Radio, 'm17'>): { text: string; tone: 'good' | 'mod' | 'none' } {
+  const { need, note } = radio.m17;
+  const text = {
+    'built-in': 'M17 built in',
+    mod: 'M17 after a hardware mod',
+    none: 'No M17: the hardware cannot',
+    'not-yet': 'M17 not working yet',
+    unknown: 'M17 not known yet',
+  }[need];
+  const tone = need === 'built-in' ? 'good' : need === 'mod' ? 'mod' : 'none';
+  return { text: note ? `${text} (${note})` : text, tone };
+}
+
 /** One supported radio. */
 export interface Radio {
   id: string;
   name: string;
+  /** Who makes it; the radio picker filters on this. */
+  maker: Maker;
   /** Other names the same hardware is sold under. */
   aka?: string;
+  /** Makers that sell the same hardware under their own name, as `aka` names them. */
+  alsoSoldBy?: Maker[];
+  /** What it needs for M17 (the website's M17 page and development status). */
+  m17: M17Support;
   method: Method;
   /** Extension of the file to flash in the browser. */
   ext: string;
@@ -156,7 +220,10 @@ export const RADIOS: Radio[] = [
     id: 'md3x0',
     heldKeysDrawn: true,
     name: 'Tytera MD-380 / MD-390',
+    maker: 'Tytera',
+    m17: { need: 'mod', note: 'UHF; VHF models receive only', guide: 'https://openrtx.org/#/M17/md380_mods' },
     aka: 'Retevis RT3 / RT8',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     enter: [
@@ -172,7 +239,10 @@ export const RADIOS: Radio[] = [
     id: 'mduv3x0',
     heldKeysDrawn: true,
     name: 'Tytera MD-UV380 / MD-UV390',
+    maker: 'Tytera',
+    m17: { need: 'mod', guide: 'https://openrtx.org/#/M17/mduv380_mods' },
     aka: 'Retevis RT3S',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     enter: [
@@ -197,7 +267,10 @@ export const RADIOS: Radio[] = [
     id: 'md9600',
     heldKeysDrawn: true,
     name: 'Tytera MD-9600',
+    maker: 'Tytera',
+    m17: { need: 'not-yet' },
     aka: 'Retevis RT90',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     enter: [
@@ -221,7 +294,10 @@ export const RADIOS: Radio[] = [
     id: 'dm1701',
     heldKeysDrawn: true,
     name: 'Baofeng DM-1701',
+    maker: 'Baofeng',
+    m17: { need: 'mod', guide: 'https://github.com/M17-Project/DM-1701_mod' },
     aka: 'Retevis RT84',
+    alsoSoldBy: ['Retevis'],
     method: 'tyt-dfu',
     ext: 'bin',
     otherExts: ['wrap'],
@@ -240,6 +316,8 @@ export const RADIOS: Radio[] = [
     id: 'gd77',
     heldKeysDrawn: true,
     name: 'Radioddity GD-77',
+    maker: 'Radioddity',
+    m17: { need: 'none' },
     method: 'gd77-hid',
     ext: 'sgl',
     hidModel: 'GD-77',
@@ -256,6 +334,8 @@ export const RADIOS: Radio[] = [
     id: 'dm1801',
     heldKeysDrawn: true,
     name: 'Baofeng DM-1801',
+    maker: 'Baofeng',
+    m17: { need: 'none' },
     method: 'gd77-hid',
     ext: 'sgl',
     hidModel: 'DM-1801',
@@ -273,6 +353,8 @@ export const RADIOS: Radio[] = [
     memoryChipMb: 16,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17',
+    maker: 'Connect Systems',
+    m17: { need: 'built-in' },
     method: 'stm32-dfu',
     ext: 'dfu',
     otherExts: ['bin'],
@@ -298,6 +380,8 @@ export const RADIOS: Radio[] = [
     memoryChipMb: 32,
     heldKeysDrawn: true,
     name: 'Connect Systems CS7000-M17 Plus',
+    maker: 'Connect Systems',
+    m17: { need: 'built-in' },
     method: 'stm32-dfu',
     ext: 'dfu',
     otherExts: ['bin'],
@@ -376,6 +460,8 @@ export const RADIOS: Radio[] = [
     id: 'rt4d',
     heldKeysDrawn: true,
     name: 'Radtel RT-4D',
+    maker: 'Radtel',
+    m17: { need: 'unknown' },
     method: 'rt4d-serial',
     ext: 'bin',
     enter: [
@@ -396,6 +482,8 @@ export const RADIOS: Radio[] = [
     id: 'rt950pro',
     heldKeysDrawn: true,
     name: 'Radtel RT-950 Pro',
+    maker: 'Radtel',
+    m17: { need: 'unknown' },
     method: 'rt950-serial',
     ext: 'btf',
     // The port's build is openrtx_rt950pro.BTF; any .BTF is taken, and the flasher
@@ -420,6 +508,8 @@ export const RADIOS: Radio[] = [
   {
     id: 'mod17',
     name: 'Module 17',
+    maker: 'M17 Project',
+    m17: { need: 'built-in' },
     method: 'stm32-dfu',
     ext: 'bin',
     address: 0x08000000,
@@ -439,6 +529,8 @@ export const RADIOS: Radio[] = [
   {
     id: 'ttwrplus',
     name: 'Lilygo T-TWR Plus',
+    maker: 'LILYGO',
+    m17: { need: 'not-yet' },
     method: 'uf2-copy',
     ext: 'uf2',
     ciArtifact: 'zephyr-release-bins',
@@ -463,6 +555,8 @@ export const RADIOS: Radio[] = [
     id: 'c62',
     heldKeysDrawn: true,
     name: 'Retevis C62 / C2',
+    maker: 'Retevis',
+    m17: { need: 'not-yet' },
     method: 'csk-serial',
     ext: 'bin',
     alsoMatches: '(^|/)zephyr\\.bin$',
