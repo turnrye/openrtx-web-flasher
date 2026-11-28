@@ -1,0 +1,175 @@
+{
+  "version": 1,
+  "generated": "2026-11-28T05:22:53.526Z",
+  "flasher": "https://turnrye.github.io/openrtx-web-flasher/",
+  "release": {
+    "id": "v0.4.5",
+    "date": "2026-10-04T08:23:00Z",
+    "url": "https://github.com/OpenRTX/OpenRTX/releases/tag/v0.4.5"
+  },
+  "radios": [
+    {
+      "id": "md3x0",
+      "name": "Tytera MD-380 / MD-390",
+      "aka": "Retevis RT3 / RT8",
+      "maker": "Tytera",
+      "alsoSoldBy": [
+        "Retevis"
+      ],
+      "inRelease": true,
+      "m17": {
+        "need": "mod",
+        "note": "UHF; VHF models receive only",
+        "guide": "https://openrtx.org/#/M17/md380_mods"
+      },
+      "art": "art/md3x0.svg",
+      "flash": "#md3x0"
+    },
+    {
+      "id": "mduv3x0",
+      "name": "Tytera MD-UV380 / MD-UV390",
+      "aka": "Retevis RT3S",
+      "maker": "Tytera",
+      "alsoSoldBy": [
+        "Retevis"
+      ],
+      "inRelease": true,
+      "m17": {
+        "need": "mod",
+        "guide": "https://openrtx.org/#/M17/mduv380_mods"
+      },
+      "art": "art/mduv3x0.svg",
+      "flash": "#mduv3x0"
+    },
+    {
+      "id": "md9600",
+      "name": "Tytera MD-9600",
+      "aka": "Retevis RT90",
+      "maker": "Tytera",
+      "alsoSoldBy": [
+        "Retevis"
+      ],
+      "inRelease": false,
+      "m17": {
+        "need": "not-yet"
+      },
+      "art": "art/md9600.svg",
+      "flash": "#md9600"
+    },
+    {
+      "id": "dm1701",
+      "name": "Baofeng DM-1701",
+      "aka": "Retevis RT84",
+      "maker": "Baofeng",
+      "alsoSoldBy": [
+        "Retevis"
+      ],
+      "inRelease": true,
+      "m17": {
+        "need": "mod",
+        "guide": "https://github.com/M17-Project/DM-1701_mod"
+      },
+      "art": "art/dm1701.svg",
+      "flash": "#dm1701"
+    },
+    {
+      "id": "gd77",
+      "name": "Radioddity GD-77",
+      "maker": "Radioddity",
+      "inRelease": true,
+      "m17": {
+        "need": "none"
+      },
+      "art": "art/gd77.svg",
+      "flash": "#gd77"
+    },
+    {
+      "id": "dm1801",
+      "name": "Baofeng DM-1801",
+      "maker": "Baofeng",
+      "inRelease": true,
+      "m17": {
+        "need": "none"
+      },
+      "art": "art/dm1801.svg",
+      "flash": "#dm1801"
+    },
+    {
+      "id": "cs7000",
+      "name": "Connect Systems CS7000-M17",
+      "maker": "Connect Systems",
+      "inRelease": true,
+      "m17": {
+        "need": "built-in"
+      },
+      "art": "art/cs7000.svg",
+      "flash": "#cs7000"
+    },
+    {
+      "id": "cs7000p",
+      "name": "Connect Systems CS7000-M17 Plus",
+      "maker": "Connect Systems",
+      "inRelease": true,
+      "m17": {
+        "need": "built-in"
+      },
+      "art": "art/cs7000p.svg",
+      "flash": "#cs7000p"
+    },
+    {
+      "id": "rt4d",
+      "name": "Radtel RT-4D",
+      "maker": "Radtel",
+      "inRelease": false,
+      "m17": {
+        "need": "unknown"
+      },
+      "art": "art/rt4d.svg",
+      "flash": "#rt4d"
+    },
+    {
+      "id": "rt950pro",
+      "name": "Radtel RT-950 Pro",
+      "maker": "Radtel",
+      "inRelease": false,
+      "m17": {
+        "need": "unknown"
+      },
+      "art": "art/rt950pro.svg",
+      "flash": "#rt950pro"
+    },
+    {
+      "id": "mod17",
+      "name": "Module 17",
+      "maker": "M17 Project",
+      "inRelease": true,
+      "m17": {
+        "need": "built-in"
+      },
+      "art": "art/mod17.svg",
+      "flash": "#mod17"
+    },
+    {
+      "id": "ttwrplus",
+      "name": "Lilygo T-TWR Plus",
+      "maker": "LILYGO",
+      "inRelease": false,
+      "m17": {
+        "need": "not-yet"
+      },
+      "art": "art/ttwrplus.svg",
+      "flash": "#ttwrplus"
+    },
+    {
+      "id": "c62",
+      "name": "Retevis C62 / C2",
+      "maker": "Retevis",
+      "inRelease": false,
+      "m17": {
+        "need": "not-yet"
+      },
+      "art": "art/c62.svg",
+      "flash": "#c62"
+    }
+  ]
+}

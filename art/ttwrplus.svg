@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lilygo T-TWR Plus. Drawn for the OpenRTX web flasher in the manner of https://github.com/ranguli/openrtx-device-mockups. GPL-3.0-or-later. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 1584">
+<rect x="236" y="40" width="48" height="130" rx="8" style="fill:#b8902f;stroke:#4f4f4f;stroke-width:3"/>
+<rect x="120" y="160" width="280" height="1370" rx="16" style="fill:#141414;stroke:#4f4f4f;stroke-width:8"/>
+<circle cx="398" cy="830" r="56" style="fill:#161616;stroke:#4f4f4f;stroke-width:5"/>
+<circle cx="398" cy="830" r="20" style="fill:#000000;stroke:#343434;stroke-width:3"/>
+<rect x="104" y="790" width="44" height="78" rx="12" style="fill:#8a8a8a;stroke:#4f4f4f;stroke-width:3"/>
+<rect x="100" y="180" width="320" height="540" rx="22" style="fill:#3a3a3a;stroke:#757575;stroke-width:5"/>
+<rect x="125" y="250" width="270" height="150" rx="14" style="fill:#272727;stroke:#0c0c0c;stroke-width:2.3"/><rect x="131" y="256" width="258" height="138" rx="0" style="fill:#000000"/><image x="131" y="256" width="258" height="138" preserveAspectRatio="xMidYMid meet" style="image-rendering:pixelated" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAABAAQMAAADoGO08AAAABlBMVEX///8AAABVwtN+AAABnUlEQVR42sWTTUtUURjHf/fMrasym2ohguKAorWpnSAZDuoH0A8Q+DFSsTmIEbSZWbTOoA+QyyDQuwgaQlBcjYTNBMqsAl8Gzp3uy+Pi3mHuvQRFEJ3N4fzO8/yf539eLCE7FH8IaqV6DcK1jmvFGtMPll43+Dn7+G4Ssfzm/jKoF32NZL6lc6LFtzkgRwnYXW3sQrQRgYiISHXsc1UkeObvWH/d+j8H9e1Qh7p21Y+YMSUzfnaqe6C1mDM8HbQP2wfdnfnYppJyXlSHGWBHfJmMc58sslK5UBYz8Vb01J1ra+yAQgyshamO7WgloynBLijnLKXoCAooHhWP1x+VYcS1UbBJCCB7OvHyarA1+H10YutdGW7zv67BO5nVGeJ/NfuSGgq8UlbjNJuhVCEHcHNVLAZaGRL5XiVd5ff27cvndyxNIYiX9YbtfGgo6F2n5yqquRzzMQBIKn1rcrEWQe8PyHnTdoJ0/L1hzEPRUEgi/CbmfSWUrvhixIi8bP6y04grOnwifgciEkoo12LkR3KEQMQQYPfNKcCjCHADnW/UHT3N6qMAAAAASUVORK5CYII="/>
+<text x="260" y="620" text-anchor="middle" style="font-family:FreeSans,'Liberation Sans',Arial,Helvetica,sans-serif;font-size:44px;font-weight:bold;fill:#ffffff">OPENRTX</text>
+<circle cx="148" cy="930" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="930" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="964" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="964" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="998" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="998" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1032" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1032" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1066" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1066" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1100" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1100" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1134" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1134" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1168" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1168" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1202" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1202" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1236" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1236" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1270" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1270" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1304" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1304" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1338" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1338" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1372" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1372" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1406" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1406" r="7" style="fill:#b8902f"/>
+<circle cx="148" cy="1440" r="7" style="fill:#b8902f"/>
+<circle cx="372" cy="1440" r="7" style="fill:#b8902f"/>
+<rect x="170" y="1180" width="180" height="250" rx="8" style="fill:#2c2c2c;stroke:#757575;stroke-width:4"/>
+<rect x="190" y="1200" width="140" height="150" rx="4" style="fill:#8a8a8a"/>
+</svg>

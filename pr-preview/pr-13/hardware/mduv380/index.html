@@ -1,0 +1,852 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar data-astro-cid-g5ptsecz><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>MD-UV380 | OpenRTX</title><script>(function(){var h=location.hash;if(h.indexOf('#/')!==0)return;var p=h.slice(2).split('?');var path=p[0].replace(/\.md$/,'').replace(/^\/+|\/+$/g,'').toLowerCase();var id=/(?:^|&)id=([^&]+)/.exec(p[1]||'');location.replace("/openrtx-web-flasher/pr-preview/pr-13/"+(path?path+'/':'')+(id?'#'+id[1]:''));})();</script><link rel="shortcut icon" href="/openrtx-web-flasher/pr-preview/pr-13/openrtx_logo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.4.13"/><meta name="generator" content="Starlight v0.43.2"/><meta property="og:title" content="MD-UV380"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Free and open source firmware for digital amateur radios."/><meta property="og:site_name" content="OpenRTX"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Free and open source firmware for digital amateur radios."/><script>
+  document.documentElement.dataset.theme = 'dark';
+</script><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/print.C9eyqPGL.css" media="print"><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/common.D8aNLElG.css"><style>@layer starlight.components{.card-grid[data-astro-cid-7qmvx3iy]{grid-template-columns:100%;gap:1rem;display:grid}.card-grid[data-astro-cid-7qmvx3iy]>*{margin-top:0!important}@media (width>=50rem){.card-grid[data-astro-cid-7qmvx3iy]{grid-template-columns:1fr 1fr;gap:1.5rem}.stagger[data-astro-cid-7qmvx3iy]{--stagger-height:5rem;padding-bottom:var(--stagger-height)}.stagger[data-astro-cid-7qmvx3iy]>:nth-child(2n){transform:translateY(var(--stagger-height))}}.sl-link-card[data-astro-cid-zaaezwya]{border:1px solid var(--sl-color-gray-5);box-shadow:var(--sl-shadow-sm);border-radius:.5rem;grid-template-columns:1fr auto;gap:.5rem;padding:1rem;display:grid;position:relative}a[data-astro-cid-zaaezwya]{line-height:var(--sl-line-height-headings);text-decoration:none}a[data-astro-cid-zaaezwya]:before{content:"";position:absolute;inset:0}.stack[data-astro-cid-zaaezwya]{flex-direction:column;gap:.5rem}.title[data-astro-cid-zaaezwya]{color:var(--sl-color-white);font-weight:600;font-size:var(--sl-text-lg)}.description[data-astro-cid-zaaezwya]{color:var(--sl-color-gray-3);line-height:1.5}.icon[data-astro-cid-zaaezwya]{color:var(--sl-color-gray-3)}.sl-link-card[data-astro-cid-zaaezwya]:hover{background:var(--sl-color-gray-7,var(--sl-color-gray-6));border-color:var(--sl-color-gray-2)}.sl-link-card[data-astro-cid-zaaezwya]:hover .icon[data-astro-cid-zaaezwya]{color:var(--sl-color-white)}}
+@layer starlight.components.icon{svg[data-astro-cid-hkc32dio]{color:var(--sl-icon-color);font-size:var(--sl-icon-size,1em);width:1em;height:1em;overflow:visible}}@layer starlight.components{.sl-link-button[data-astro-cid-dcqstdaq]{font-size:var(--sl-text-sm);outline-offset:.25rem;border:1px solid #0000;border-radius:999rem;align-items:center;gap:.5em;padding:.4375rem 1.125rem;line-height:1.1875;text-decoration:none;display:inline-flex}.sl-link-button[data-astro-cid-dcqstdaq].primary{background:var(--sl-color-text-accent);border-color:var(--sl-color-text-accent);color:var(--sl-color-black)}.sl-link-button[data-astro-cid-dcqstdaq].primary:hover{color:var(--sl-color-black)}.sl-link-button[data-astro-cid-dcqstdaq].secondary{border-color:inherit;color:var(--sl-color-white)}.sl-link-button[data-astro-cid-dcqstdaq].minimal{color:var(--sl-color-white);padding-inline:0}.sl-link-button[data-astro-cid-dcqstdaq] svg{flex-shrink:0}@media (width>=50rem){.sl-link-button[data-astro-cid-dcqstdaq]{font-size:var(--sl-text-base);padding:.9375rem 1.25rem}}.sl-markdown-content .sl-link-button[data-astro-cid-dcqstdaq]{margin-inline-end:1rem}.sl-markdown-content .sl-link-button[data-astro-cid-dcqstdaq]:not(:where(p *)){margin-block:1rem}}
+</style><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/page.cNngjUgL.js"></script></head><body data-astro-cid-g5ptsecz><a class="sl-skip-link" href="#_top" data-astro-cid-qb7clj6f>Skip to content</a><div class="page sl-flex" data-astro-cid-yntsjkba><header class="header" data-astro-cid-yntsjkba><div class="header" data-astro-cid-by6fddyj><div class="title-wrapper sl-flex" data-astro-cid-by6fddyj><a href="/openrtx-web-flasher/pr-preview/pr-13/" class="site-title sl-flex" data-astro-cid-6rvad3va><img alt src="/openrtx-web-flasher/pr-preview/pr-13/_astro/openrtx_logo.Cbuljq-X.svg" width="100" height="100" data-astro-cid-6rvad3va><span translate="no" data-astro-cid-6rvad3va>OpenRTX</span></a></div><div class="sl-flex print:hidden" data-astro-cid-by6fddyj><site-search data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-astro-cid-b5kgnn7o="true"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" data-astro-cid-b5kgnn7o><svg data-astro-cid-b5kgnn7o="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block" aria-hidden="true" data-astro-cid-b5kgnn7o>Search</span><kbd class="sl-hidden md:sl-flex" style="display: none" data-astro-cid-b5kgnn7o><kbd data-astro-cid-b5kgnn7o>Ctrl</kbd><kbd data-astro-cid-b5kgnn7o>K</kbd></kbd></button><dialog style="padding: 0" aria-label="Search" data-astro-cid-b5kgnn7o><div class="dialog-frame sl-flex" data-astro-cid-b5kgnn7o><button data-close-modal class="sl-flex md:sl-hidden" data-astro-cid-b5kgnn7o>Cancel</button><div class="search-container" data-astro-cid-b5kgnn7o><div id="starlight__search" data-astro-cid-b5kgnn7o></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/Search.astro_astro_type_script_index_0_lang.DUJITJT7.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group" data-astro-cid-by6fddyj><div class="sl-flex social-icons" data-astro-cid-by6fddyj><a href="https://github.com/OpenRTX/OpenRTX" rel="me" class="sl-flex" data-astro-cid-n2mnl6yq><span class="sr-only" data-astro-cid-n2mnl6yq>OpenRTX on GitHub</span><svg data-astro-cid-n2mnl6yq="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div></header><nav class="sidebar print:hidden" aria-label="Main" data-astro-cid-yntsjkba><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden" data-astro-cid-r2osgdlg><svg class="open-menu" data-astro-cid-r2osgdlg="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg class="close-menu" data-astro-cid-r2osgdlg="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only" data-astro-cid-r2osgdlg>Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane" data-astro-cid-yntsjkba="true"><div class="sidebar-content sl-flex" data-astro-cid-yntsjkba><sl-sidebar-state-persist data-hash="0xy3j1m" data-astro-cid-ipdry5cl="true"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level" data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Flash your radio</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Flash your radio</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/radios/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Radios the flasher supports</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/backups/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>What a backup keeps</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/credits/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Flasher licences and credits</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Users</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/user_guide/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Users guide</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/dev_status/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Development status</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/accessibility/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Accessibility</span></a></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>M17</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/hw_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hardware Modifications</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/m17/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>M17</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/md380_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Md380 mods</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/mduv380_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Mduv380 mods</span></a></li></ul></details></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Radios</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/c62/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Retevis C62</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/cs7000/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>CS7000-M17</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/ft2d/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Yaesu FT2D</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/gd77/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>GD-77</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/hardware/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hardware documentation</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/hd1/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Ailunce HD1</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md380/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-380</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md9600/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-9600</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/mduv380/" aria-current="page" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-UV380</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/rt4d/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Radtel RT-4D</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/ttwrplus/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>LILYGO T-TWR Plus</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/uv878/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Anytone UV878</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Developers</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/developers_guide/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Developers&#39; Guide</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/compiling/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Building OpenRTX from sources</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/tests/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Tests</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/linux/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Testing on Linux</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/software/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/nvm/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Non-volatile memory</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/software_modes/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Software Modes</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/coding_style/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Coding style guidelines</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/peripheral_table/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Peripheral allocation table</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/rtxlink/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>RTXLink - OpenRTX Communication Protocol</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/website/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Contributing to the OpenRTX website</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/binary_cps_format/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX Binary CPS Format</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/at1846_registers/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>AT1846S register table</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/docrepository/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Documentation repository</span></a></li><li data-astro-cid-rmhv4bp6><a href="https://github.com/OpenRTX/OpenRTX-external-docs" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX-external-docs</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>News</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>All posts</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/2025-10-05-announcing-042-release/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Announcing 0.4.2 Release</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260213/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 13 February 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260424/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 24 April 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260723/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 23 July 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20261019/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 19 October 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hackathon/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hackathon (Jan 31, before FOSDEM)</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Project</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/about/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>About OpenRTX</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/get_in_touch/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Get in touch</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/contribute/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Help improve this site</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex" data-astro-cid-p4azlveh><div class="social-icons" data-astro-cid-p4azlveh><a href="https://github.com/OpenRTX/OpenRTX" rel="me" class="sl-flex" data-astro-cid-n2mnl6yq><span class="sr-only" data-astro-cid-n2mnl6yq>OpenRTX on GitHub</span><svg data-astro-cid-n2mnl6yq="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div></div></div></div></sl-sidebar-pane></nav><div class="main-frame" data-astro-cid-yntsjkba><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex" data-astro-cid-lrzkfocr><aside class="right-sidebar-container print:hidden" data-astro-cid-lrzkfocr><div class="right-sidebar" data-astro-cid-lrzkfocr><div class="lg:sl-hidden" data-astro-cid-qok35upx><mobile-starlight-toc data-min-h="2" data-max-h="3" data-astro-cid-66cqc7ze="true"><nav aria-labelledby="starlight__on-this-page--mobile" data-astro-cid-66cqc7ze><details id="starlight__mobile-toc" data-astro-cid-66cqc7ze><summary id="starlight__on-this-page--mobile" class="sl-flex" data-astro-cid-66cqc7ze><span class="toggle sl-flex" data-astro-cid-66cqc7ze>On this page<svg class="caret" data-astro-cid-66cqc7ze="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current" data-astro-cid-66cqc7ze></span></summary><div class="dropdown" data-astro-cid-66cqc7ze><ul class="isMobile" style="--depth: 0;" data-astro-cid-jugkfwgx><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#_top" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Overview</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#device-models" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Device models</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#specifications" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Specifications</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#memory-layout" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Memory Layout</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#hardware-configuration" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Hardware configuration</span></a><ul class="isMobile" style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#clock-tree" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Clock tree</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#gpio-mapping" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>GPIO mapping</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#hr_c6000" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>HR_C6000</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#at1846s" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>AT1846S</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#memory-mapping" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Memory mapping</span></a><ul class="isMobile" style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#flash---other-functions-not-listed-in-the-above-blocks" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Flash - other functions not listed in the above blocks</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#spi-flash-layout" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>SPI Flash layout</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#system-tasks" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>System tasks</span></a></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block" data-astro-cid-qok35upx><div class="sl-container" data-astro-cid-qok35upx><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul style="--depth: 0;" data-astro-cid-jugkfwgx><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#_top" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Overview</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#device-models" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Device models</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#specifications" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Specifications</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#memory-layout" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Memory Layout</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#hardware-configuration" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Hardware configuration</span></a><ul style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#clock-tree" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Clock tree</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#gpio-mapping" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>GPIO mapping</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#hr_c6000" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>HR_C6000</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#at1846s" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>AT1846S</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#memory-mapping" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Memory mapping</span></a><ul style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#flash---other-functions-not-listed-in-the-above-blocks" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Flash - other functions not listed in the above blocks</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#spi-flash-layout" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>SPI Flash layout</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#system-tasks" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>System tasks</span></a></li></ul></nav></starlight-toc><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane" data-astro-cid-lrzkfocr><main data-pagefind-body lang="en" dir="ltr" data-astro-cid-g5ptsecz><div class="content-panel" data-astro-cid-a7po4psb><div class="sl-container" data-astro-cid-a7po4psb><h1 id="_top" data-astro-cid-bebwqqxs>MD-UV380</h1></div></div><div class="content-panel" data-astro-cid-a7po4psb><div class="sl-container" data-astro-cid-a7po4psb><div class="sl-markdown-content"><div class="sl-heading-wrapper level-h2"><h2 id="device-models">Device models</h2><a class="sl-anchor-link" href="#device-models"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Device models”</span></a></div>
+<ul>
+<li>Tytera MD-UV380</li>
+<li>Tytera MD-UV390</li>
+<li>Retevis RT3s</li>
+</ul>
+<p><strong>Model variants</strong></p>
+<ul>
+<li>With GPS: with JumpStar JS-H210 module on display/keyboard PCB</li>
+<li>Without GPS: no module footprint present on display/keyboard PCB</li>
+</ul>
+<div class="sl-heading-wrapper level-h2"><h2 id="specifications">Specifications</h2><a class="sl-anchor-link" href="#specifications"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Specifications”</span></a></div>
+<ul>
+<li>Display: 160x128 color TFT</li>
+<li>Frequency range
+<ul>
+<li>VHF: 136.000-174.000</li>
+<li>UHF: 400.000-480.000</li>
+</ul>
+</li>
+</ul>
+<div class="sl-heading-wrapper level-h2"><h2 id="memory-layout">Memory Layout</h2><a class="sl-anchor-link" href="#memory-layout"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Memory Layout”</span></a></div>
+<p>The STM32F405 of the MD-UV380 has 128k SRAM, 64k CCM, and 1M FLASH.
+The stock bootloader resides at the first 48k of the FLASH therefore we only
+have 1M - 48k (0xC000) bytes of FLASH.</p>
+<p>Considering this, the memory regions in the linker script look like this:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/ec.w36nc.css"><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">MEMORY</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53"> </span></span><span style="--0:#d6deeb;--1:#403f53">sram (rwx) : ORIGIN = 0x20000000, LENGTH = 128k</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53"> </span></span><span style="--0:#d6deeb;--1:#403f53">flash (rx) : ORIGIN = 0x0800C000, LENGTH = 1M - 48K</span></div></div><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53"> </span></span><span style="--0:#d6deeb;--1:#403f53">ccm (rwx) : ORIGIN = 0x10000000, LENGTH = 64K</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="MEMORY{ sram (rwx) : ORIGIN = 0x20000000, LENGTH = 128k flash (rx) : ORIGIN = 0x0800C000, LENGTH = 1M - 48K ccm (rwx) : ORIGIN = 0x10000000, LENGTH = 64K}"><div></div></button></div></figure></div>
+<p>Usually, the stack pointer is defined to be one word past the addressable memory,
+so the first <code dir="auto">push</code> instruction writes to the very last memory location.
+The stock bootloader performs a sanity check on the initial stack pointer, but
+contains an off-by-one error: in order to boot, the initial stack pointer must
+be <em>within</em> the SRAM region. Thus, the stack must be placed at least one word
+down from the top.</p>
+<p>Linker script:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">PROVIDE(_stack = ORIGIN(sram) + LENGTH(sram) - 4);</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="PROVIDE(_stack = ORIGIN(sram) + LENGTH(sram) - 4);"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h2"><h2 id="hardware-configuration">Hardware configuration</h2><a class="sl-anchor-link" href="#hardware-configuration"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Hardware configuration”</span></a></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="clock-tree">Clock tree</h3><a class="sl-anchor-link" href="#clock-tree"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Clock tree”</span></a></div>
+<ul>
+<li>8MHz crystal as PLL reference</li>
+<li>System clock frequency: 72MHz</li>
+<li>APB1 bus clock frequency: 36MHz</li>
+<li>APB2 bus clock frequency: 72MHz</li>
+</ul>
+<div class="sl-heading-wrapper level-h3"><h3 id="gpio-mapping">GPIO mapping</h3><a class="sl-anchor-link" href="#gpio-mapping"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “GPIO mapping”</span></a></div>
+<div class="sl-heading-wrapper level-h5"><h5 id="port-a">Port A</h5><a class="sl-anchor-link" href="#port-a"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Port A”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>GPIO</th>
+<th>Mode</th>
+<th>Function</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PA0</td>
+<td>analog</td>
+<td>volume level</td>
+<td>ADC1_IN0, measured range 0 - 1600mV</td>
+</tr>
+<tr>
+<td>PA1</td>
+<td>analog</td>
+<td>battery voltage</td>
+<td>ADC1_IN1, 1:3 voltage divider</td>
+</tr>
+<tr>
+<td>PA2</td>
+<td>output</td>
+<td>UHF LNA enable</td>
+<td></td>
+</tr>
+<tr>
+<td>PA3</td>
+<td>analog</td>
+<td>vox input</td>
+<td>to be confirmed</td>
+</tr>
+<tr>
+<td>PA4</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PA5</td>
+<td>output</td>
+<td>VHF LNA enable</td>
+<td></td>
+</tr>
+<tr>
+<td>PA6</td>
+<td>output</td>
+<td>keyboard row 1</td>
+<td></td>
+</tr>
+<tr>
+<td>PA7</td>
+<td>output</td>
+<td>power gate</td>
+<td>if high keeps the radio on</td>
+</tr>
+<tr>
+<td>PA8</td>
+<td>output</td>
+<td>AT1846S SCL</td>
+<td></td>
+</tr>
+<tr>
+<td>PA9</td>
+<td>output</td>
+<td>GPS power enable</td>
+<td></td>
+</tr>
+<tr>
+<td>PA10</td>
+<td>AF</td>
+<td>GPS data RX</td>
+<td>USART1 RX</td>
+</tr>
+<tr>
+<td>PA11</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PA12</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PA13</td>
+<td>output</td>
+<td>mic power switch</td>
+<td></td>
+</tr>
+<tr>
+<td>PA14</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PA15</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h5"><h5 id="port-b">Port B</h5><a class="sl-anchor-link" href="#port-b"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Port B”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>GPIO</th>
+<th>Mode</th>
+<th>Function</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PB0</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB1</td>
+<td>analog</td>
+<td>to be defined</td>
+<td>connected to AT1846S GPIO0</td>
+</tr>
+<tr>
+<td>PB2</td>
+<td>input</td>
+<td>to be defined</td>
+<td>connected to AT1846S GPIO6</td>
+</tr>
+<tr>
+<td>PB3</td>
+<td>AF</td>
+<td>SPI1_SCK</td>
+<td>external flash</td>
+</tr>
+<tr>
+<td>PB4</td>
+<td>AF</td>
+<td>SPI1_MISO</td>
+<td>external flash</td>
+</tr>
+<tr>
+<td>PB5</td>
+<td>AF</td>
+<td>SPI1_MOSI</td>
+<td>external flash</td>
+</tr>
+<tr>
+<td>PB6</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB7</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB8</td>
+<td>output</td>
+<td>speaker mute</td>
+<td>set to logic low level to unmute</td>
+</tr>
+<tr>
+<td>PB9</td>
+<td>output</td>
+<td>audio amp. power</td>
+<td></td>
+</tr>
+<tr>
+<td>PB10</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB11</td>
+<td>input</td>
+<td>channel selector</td>
+<td></td>
+</tr>
+<tr>
+<td>PB12</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB13</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB14</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PB15</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h5"><h5 id="port-c">Port C</h5><a class="sl-anchor-link" href="#port-c"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Port C”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>GPIO</th>
+<th>Mode</th>
+<th>Function</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC0</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC1</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC2</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC3</td>
+<td>alternate</td>
+<td>not connected</td>
+<td>RF in for M17 mod</td>
+</tr>
+<tr>
+<td>PC4</td>
+<td>output</td>
+<td>PA control</td>
+<td></td>
+</tr>
+<tr>
+<td>PC5</td>
+<td>output</td>
+<td>PA control</td>
+<td></td>
+</tr>
+<tr>
+<td>PC6</td>
+<td>output</td>
+<td>VHF/UHF PA switch</td>
+<td>low = VHF, high = UHF</td>
+</tr>
+<tr>
+<td>PC7</td>
+<td>alternate</td>
+<td>CTC/DCS output</td>
+<td>TIM8_CH2, to be confirmed</td>
+</tr>
+<tr>
+<td>PC8</td>
+<td>alternate</td>
+<td>2T/5T/DTMF - beep</td>
+<td>TIM8_CH3</td>
+</tr>
+<tr>
+<td>PC9</td>
+<td>bidirectional</td>
+<td>AT1846S SDA</td>
+<td></td>
+</tr>
+<tr>
+<td>PC10</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC11</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC12</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC13</td>
+<td></td>
+<td>not connected</td>
+<td></td>
+</tr>
+<tr>
+<td>PC14</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PC15</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h5"><h5 id="port-d">Port D</h5><a class="sl-anchor-link" href="#port-d"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Port D”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>GPIO</th>
+<th>Mode</th>
+<th>Function</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PD0</td>
+<td>input/AF</td>
+<td>LCD_D2 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PD1</td>
+<td>input/AF</td>
+<td>LCD_D3 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PD2</td>
+<td>output</td>
+<td>keyboard row 2</td>
+<td></td>
+</tr>
+<tr>
+<td>PD3</td>
+<td>output</td>
+<td>keyboard row 3</td>
+<td></td>
+</tr>
+<tr>
+<td>PD4</td>
+<td>output</td>
+<td>LCD_RD</td>
+<td></td>
+</tr>
+<tr>
+<td>PD5</td>
+<td>output</td>
+<td>LCD_WR</td>
+<td></td>
+</tr>
+<tr>
+<td>PD6</td>
+<td>output</td>
+<td>LCD_CS</td>
+<td></td>
+</tr>
+<tr>
+<td>PD7</td>
+<td>output</td>
+<td>external flash CS</td>
+<td></td>
+</tr>
+<tr>
+<td>PD8</td>
+<td>output</td>
+<td>LCD backlight</td>
+<td></td>
+</tr>
+<tr>
+<td>PD9</td>
+<td>output</td>
+<td>RX audio multiplexer</td>
+<td></td>
+</tr>
+<tr>
+<td>PD10</td>
+<td></td>
+<td>not connected</td>
+<td></td>
+</tr>
+<tr>
+<td>PD11</td>
+<td></td>
+<td>not connected</td>
+<td></td>
+</tr>
+<tr>
+<td>PD12</td>
+<td>alternate</td>
+<td>LCD_RS</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PD13</td>
+<td>output</td>
+<td>LCD_RST</td>
+<td></td>
+</tr>
+<tr>
+<td>PD14</td>
+<td>input/AF</td>
+<td>LCD_D0 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PD15</td>
+<td>input/AF</td>
+<td>LCD_D1 - keyboard</td>
+<td>FSMC</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h5"><h5 id="port-e">Port E</h5><a class="sl-anchor-link" href="#port-e"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Port E”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>GPIO</th>
+<th>Mode</th>
+<th>Function</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PE0</td>
+<td>output</td>
+<td>green LED</td>
+<td></td>
+</tr>
+<tr>
+<td>PE1</td>
+<td>output</td>
+<td>red LED</td>
+<td></td>
+</tr>
+<tr>
+<td>PE2</td>
+<td>output</td>
+<td>HR_C6000 chip select</td>
+<td></td>
+</tr>
+<tr>
+<td>PE3</td>
+<td>output</td>
+<td>HR_C6000 SCK</td>
+<td></td>
+</tr>
+<tr>
+<td>PE4</td>
+<td>output</td>
+<td>HR_C6000 SDO</td>
+<td>MCU  -&gt; chip</td>
+</tr>
+<tr>
+<td>PE5</td>
+<td>input</td>
+<td>HR_C6000 SDI</td>
+<td>chip -&gt; MCU</td>
+</tr>
+<tr>
+<td>PE6</td>
+<td>output</td>
+<td>HR_C6000 power down</td>
+<td></td>
+</tr>
+<tr>
+<td>PE7</td>
+<td>input/AF</td>
+<td>LCD_D4 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PE8</td>
+<td>input/AF</td>
+<td>LCD_D5 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PE9</td>
+<td>input/AF</td>
+<td>LCD_D6 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PE10</td>
+<td>input/AF</td>
+<td>LCD_D7 - keyboard</td>
+<td>FSMC</td>
+</tr>
+<tr>
+<td>PE11</td>
+<td>input</td>
+<td>PTT</td>
+<td>active low</td>
+</tr>
+<tr>
+<td>PE12</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PE13</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>PE14</td>
+<td>input</td>
+<td>channel selector</td>
+<td></td>
+</tr>
+<tr>
+<td>PE15</td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h3"><h3 id="hr_c6000">HR_C6000</h3><a class="sl-anchor-link" href="#hr_c6000"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “HR_C6000”</span></a></div>
+<p>The SPI control interface is connected to the following GPIOs:</p>
+<ul>
+<li>PE2 - chip select</li>
+<li>PE3 - SCK</li>
+<li>PE4 - SDO</li>
+<li>PE5 - SDI</li>
+</ul>
+<p>These SPI connections are shared with some other chip, since the firmware locks a semaphore/mutex before initiating any kind of data transfer through the SPI interface. The semaphore variable is at address 0x2001EFB8.</p>
+<p>Functions identified:</p>
+<ul>
+<li>0x0807A3C0 - software SPI implementation for the control interface</li>
+<li>0x0807A43E - function for sending a data block through the control interface</li>
+<li>0x0807A47E - function to acquire exclusive ownership of the SPI GPIOs and select the HR_C6000</li>
+<li>0x0807A496 - function releasing exclusive ownership of the SPI GPIOs and deselecting the HR_C6000</li>
+<li>0x080545F4 - function for writing to a control RAM register</li>
+</ul>
+<div class="sl-heading-wrapper level-h3"><h3 id="at1846s">AT1846S</h3><a class="sl-anchor-link" href="#at1846s"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “AT1846S”</span></a></div>
+<p>Most of the baseband functionalities are managed by the “radio on a chip” AT1846S IC. The STM32F405 MCU sends data and commands through an I2C interface with SDA on PC9 and SCL on PA8. The interface is managed in software through bit-banging routines and the IC slave address is 0x5C (0x5D in read mode).</p>
+<p>The functions to write and read data from the IC registers are protected by a semaphore located at 0x2001EFBC.</p>
+<p>Functions identified:</p>
+<ul>
+<li>0x08070446 - generation of I2C start condition</li>
+<li>0x0807064A - routine to write one byte on the I2C bus</li>
+<li>0x080704C6 - generation of I2C stop condition</li>
+<li>0x080706CA - start of an I2C transfer, generation of start condition and sending of slave address</li>
+<li>0x080706DC - routine to read one byte from the I2C bus</li>
+<li>0x08070756 - function for writing an AT1846S register</li>
+<li>0x0807079c - function for reading an AT1846S register</li>
+</ul>
+<div class="sl-heading-wrapper level-h2"><h2 id="memory-mapping">Memory mapping</h2><a class="sl-anchor-link" href="#memory-mapping"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Memory mapping”</span></a></div>
+<p>There are two Linux tools for writing the codeplug that can be used as a reference</p>
+<ul>
+<li><a href="https://github.com/sergev/dmrconfig/blob/master/uv380.c">dmrconfig uv380.c</a>: Some addresses seem
+to be incorrect</li>
+<li><a href="https://github.com/hmatuschek/qdmr/blob/master/lib/uv390_codeplug.hh">qdmr uv390_codeplug.hh</a>:
+Detailed UV380 codeplug reverse engineering</li>
+</ul>
+<div class="sl-heading-wrapper level-h3"><h3 id="flash---other-functions-not-listed-in-the-above-blocks">Flash - other functions not listed in the above blocks</h3><a class="sl-anchor-link" href="#flash---other-functions-not-listed-in-the-above-blocks"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Flash - other functions not listed in the above blocks”</span></a></div>
+<ul>
+<li>0x0806B96A: function activating AT1846S RX</li>
+</ul>
+<div class="sl-heading-wrapper level-h3"><h3 id="spi-flash-layout">SPI Flash layout</h3><a class="sl-anchor-link" href="#spi-flash-layout"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “SPI Flash layout”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Start</th>
+<th>End</th>
+<th>Section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x2001</td>
+<td>0x2005</td>
+<td>CPS timestamp</td>
+</tr>
+<tr>
+<td>0x2040</td>
+<td>0x2049</td>
+<td>Splash text line 1</td>
+</tr>
+<tr>
+<td>0x2050</td>
+<td>0x2059</td>
+<td>Splash text line 2</td>
+</tr>
+<tr>
+<td>0x2180</td>
+<td>0x59b9</td>
+<td>SMS quick text</td>
+</tr>
+<tr>
+<td>0x416d0</td>
+<td>0x416e8</td>
+<td>SMS Inbox header?</td>
+</tr>
+<tr>
+<td>0x41798</td>
+<td>0x41d70</td>
+<td>SMS Inbox</td>
+</tr>
+<tr>
+<td>0x45100</td>
+<td>0x45109</td>
+<td>SMS Outbox header?</td>
+</tr>
+<tr>
+<td>0x451c8</td>
+<td>0x45657</td>
+<td>SMS Outbox</td>
+</tr>
+<tr>
+<td>0x48000</td>
+<td>0x48039</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0x48b00</td>
+<td>0x48c83</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0x48f00</td>
+<td>0x48f43</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0x48fc8</td>
+<td>0x49018</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0x60000</td>
+<td>0xbc0d7</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0x100000</td>
+<td>0x103606</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0x110000</td>
+<td>0x13edf9</td>
+<td>Channels</td>
+</tr>
+<tr>
+<td>0x140000</td>
+<td>0x197e39</td>
+<td>Contacts</td>
+</tr>
+<tr>
+<td>0xfe5000</td>
+<td>0xfebff9</td>
+<td>???</td>
+</tr>
+<tr>
+<td>0xfec000</td>
+<td>0xffffff</td>
+<td>DMR ID database</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="cps-timestamp">CPS timestamp</h4><a class="sl-anchor-link" href="#cps-timestamp"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “CPS timestamp”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>0x00</th>
+<th>0x01</th>
+<th>0x2</th>
+<th>0x3</th>
+<th>0x4</th>
+<th>0x5</th>
+<th>0x6</th>
+<th>0x7</th>
+<th>0x8</th>
+<th>0x9</th>
+<th>0xA</th>
+<th>0xB</th>
+<th>0xC</th>
+<th>0xD</th>
+<th>0xE</th>
+<th>0xF</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FF</td>
+<td>year(first two digits)</td>
+<td>year(last two digits)</td>
+<td>month</td>
+<td>date</td>
+<td>hour</td>
+<td>minute</td>
+<td>seconds</td>
+<td>00</td>
+<td>01</td>
+<td>01</td>
+<td>02</td>
+<td>FF</td>
+<td>FF</td>
+<td>FF</td>
+<td>FF</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="sms-messages">SMS messages</h4><a class="sl-anchor-link" href="#sms-messages"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “SMS messages”</span></a></div>
+<p>Messages in SMS inbox are saved in reverse order (lowest address contains last received SMS)
+Because of this the SMS Inbox start address could be lower (Inbox was not full on flash dump).</p>
+<p>Every SMS is stored as ASCII text in 292 bytes of the flash.
+There seems to be a 4-byte header for each SMS</p>
+<p>Inbox/Outbox message header: <code dir="auto">0x0b 0xef 0x21 0x02</code>
+GPS coordinate message header: <code dir="auto">0xc2 0xd2 0x21 0x02</code>
+??? message header: <code dir="auto">0x3e 0xf1 0x21 0xc2</code></p>
+<div class="sl-heading-wrapper level-h2"><h2 id="system-tasks">System tasks</h2><a class="sl-anchor-link" href="#system-tasks"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “System tasks”</span></a></div>
+<div class="sl-heading-wrapper level-h5"><h5 id="rf-pll-task">“RF PLL” task</h5><a class="sl-anchor-link" href="#rf-pll-task"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled ““RF PLL” task”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Body address</th>
+<th style="text-align: center">Stack address</th>
+<th style="text-align: center">ID</th>
+<th style="text-align: center">Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0x0806B05C</td>
+<td style="text-align: center">0x200186CC</td>
+<td style="text-align: center">6</td>
+<td style="text-align: center">6</td>
+</tr>
+</tbody>
+</table>
+<p>This task is in charge of managing the AT1846S baseband chip, setting the TX and RX frequencies and other functionalities to be discovered. Upon startup, the task calls the function at 0x0806B05C to perform the initial configuration of the AT1846S registers. Then it enters in an infinite loop which waits for new data on the mailbox at address 0x2001EFAC; this data is then processed in the function at 0x0804B5D4.</p>
+</div><footer class="sl-flex" data-astro-cid-ddtxxk7k><div class="meta sl-flex" data-astro-cid-ddtxxk7k><a href="https://github.com/OpenRTX/openrtx.github.io/edit/master/hardware/mduv380.md" class="sl-flex print:hidden" data-astro-cid-qlekgd3o><svg data-astro-cid-qlekgd3o="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;" data-astro-cid-hkc32dio><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden" dir="ltr" data-astro-cid-b5raizh3><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md9600/" rel="prev" data-astro-cid-b5raizh3><svg data-astro-cid-b5raizh3="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;" data-astro-cid-hkc32dio><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span data-astro-cid-b5raizh3>Previous<br data-astro-cid-b5raizh3><span class="link-title" data-astro-cid-b5raizh3>MD-9600</span></span></a><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/rt4d/" rel="next" data-astro-cid-b5raizh3><svg data-astro-cid-b5raizh3="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;" data-astro-cid-hkc32dio><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span data-astro-cid-b5raizh3>Next<br data-astro-cid-b5raizh3><span class="link-title" data-astro-cid-b5raizh3>Radtel RT-4D</span></span></a></div></footer><p class="licence" data-testid="site-licence" data-astro-cid-5plcte2k>© OpenRTX contributors. Website text: <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license" data-astro-cid-5plcte2k>CC BY-SA 4.0</a>. Firmware: <a href="https://github.com/OpenRTX/OpenRTX/blob/master/LICENSE" data-astro-cid-5plcte2k>GPL-3.0-or-later</a>. Flasher: GPL-3.0-or-later, see its <a href="/openrtx-web-flasher/pr-preview/pr-13/flash/credits/" data-astro-cid-5plcte2k>licences and credits</a>. <span data-testid="site-build" data-astro-cid-5plcte2k>Build <a href="https://github.com/turnrye/openrtx-web-flasher/commit/2f4b8c3" data-astro-cid-5plcte2k>2f4b8c3</a>.</span></p></div></div></main></div></div></div></div></body></html>

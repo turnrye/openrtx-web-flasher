@@ -1,0 +1,657 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar data-astro-cid-g5ptsecz><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>RTXLink - OpenRTX Communication Protocol | OpenRTX</title><script>(function(){var h=location.hash;if(h.indexOf('#/')!==0)return;var p=h.slice(2).split('?');var path=p[0].replace(/\.md$/,'').replace(/^\/+|\/+$/g,'').toLowerCase();var id=/(?:^|&)id=([^&]+)/.exec(p[1]||'');location.replace("/openrtx-web-flasher/pr-preview/pr-13/"+(path?path+'/':'')+(id?'#'+id[1]:''));})();</script><link rel="shortcut icon" href="/openrtx-web-flasher/pr-preview/pr-13/openrtx_logo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.4.13"/><meta name="generator" content="Starlight v0.43.2"/><meta property="og:title" content="RTXLink - OpenRTX Communication Protocol"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Free and open source firmware for digital amateur radios."/><meta property="og:site_name" content="OpenRTX"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Free and open source firmware for digital amateur radios."/><script>
+  document.documentElement.dataset.theme = 'dark';
+</script><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/print.C9eyqPGL.css" media="print"><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/common.D8aNLElG.css"><style>@layer starlight.components{.card-grid[data-astro-cid-7qmvx3iy]{grid-template-columns:100%;gap:1rem;display:grid}.card-grid[data-astro-cid-7qmvx3iy]>*{margin-top:0!important}@media (width>=50rem){.card-grid[data-astro-cid-7qmvx3iy]{grid-template-columns:1fr 1fr;gap:1.5rem}.stagger[data-astro-cid-7qmvx3iy]{--stagger-height:5rem;padding-bottom:var(--stagger-height)}.stagger[data-astro-cid-7qmvx3iy]>:nth-child(2n){transform:translateY(var(--stagger-height))}}.sl-link-card[data-astro-cid-zaaezwya]{border:1px solid var(--sl-color-gray-5);box-shadow:var(--sl-shadow-sm);border-radius:.5rem;grid-template-columns:1fr auto;gap:.5rem;padding:1rem;display:grid;position:relative}a[data-astro-cid-zaaezwya]{line-height:var(--sl-line-height-headings);text-decoration:none}a[data-astro-cid-zaaezwya]:before{content:"";position:absolute;inset:0}.stack[data-astro-cid-zaaezwya]{flex-direction:column;gap:.5rem}.title[data-astro-cid-zaaezwya]{color:var(--sl-color-white);font-weight:600;font-size:var(--sl-text-lg)}.description[data-astro-cid-zaaezwya]{color:var(--sl-color-gray-3);line-height:1.5}.icon[data-astro-cid-zaaezwya]{color:var(--sl-color-gray-3)}.sl-link-card[data-astro-cid-zaaezwya]:hover{background:var(--sl-color-gray-7,var(--sl-color-gray-6));border-color:var(--sl-color-gray-2)}.sl-link-card[data-astro-cid-zaaezwya]:hover .icon[data-astro-cid-zaaezwya]{color:var(--sl-color-white)}}
+@layer starlight.components.icon{svg[data-astro-cid-hkc32dio]{color:var(--sl-icon-color);font-size:var(--sl-icon-size,1em);width:1em;height:1em;overflow:visible}}@layer starlight.components{.sl-link-button[data-astro-cid-dcqstdaq]{font-size:var(--sl-text-sm);outline-offset:.25rem;border:1px solid #0000;border-radius:999rem;align-items:center;gap:.5em;padding:.4375rem 1.125rem;line-height:1.1875;text-decoration:none;display:inline-flex}.sl-link-button[data-astro-cid-dcqstdaq].primary{background:var(--sl-color-text-accent);border-color:var(--sl-color-text-accent);color:var(--sl-color-black)}.sl-link-button[data-astro-cid-dcqstdaq].primary:hover{color:var(--sl-color-black)}.sl-link-button[data-astro-cid-dcqstdaq].secondary{border-color:inherit;color:var(--sl-color-white)}.sl-link-button[data-astro-cid-dcqstdaq].minimal{color:var(--sl-color-white);padding-inline:0}.sl-link-button[data-astro-cid-dcqstdaq] svg{flex-shrink:0}@media (width>=50rem){.sl-link-button[data-astro-cid-dcqstdaq]{font-size:var(--sl-text-base);padding:.9375rem 1.25rem}}.sl-markdown-content .sl-link-button[data-astro-cid-dcqstdaq]{margin-inline-end:1rem}.sl-markdown-content .sl-link-button[data-astro-cid-dcqstdaq]:not(:where(p *)){margin-block:1rem}}
+</style><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/page.cNngjUgL.js"></script></head><body data-astro-cid-g5ptsecz><a class="sl-skip-link" href="#_top" data-astro-cid-qb7clj6f>Skip to content</a><div class="page sl-flex" data-astro-cid-yntsjkba><header class="header" data-astro-cid-yntsjkba><div class="header" data-astro-cid-by6fddyj><div class="title-wrapper sl-flex" data-astro-cid-by6fddyj><a href="/openrtx-web-flasher/pr-preview/pr-13/" class="site-title sl-flex" data-astro-cid-6rvad3va><img alt src="/openrtx-web-flasher/pr-preview/pr-13/_astro/openrtx_logo.Cbuljq-X.svg" width="100" height="100" data-astro-cid-6rvad3va><span translate="no" data-astro-cid-6rvad3va>OpenRTX</span></a></div><div class="sl-flex print:hidden" data-astro-cid-by6fddyj><site-search data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-astro-cid-b5kgnn7o="true"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" data-astro-cid-b5kgnn7o><svg data-astro-cid-b5kgnn7o="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block" aria-hidden="true" data-astro-cid-b5kgnn7o>Search</span><kbd class="sl-hidden md:sl-flex" style="display: none" data-astro-cid-b5kgnn7o><kbd data-astro-cid-b5kgnn7o>Ctrl</kbd><kbd data-astro-cid-b5kgnn7o>K</kbd></kbd></button><dialog style="padding: 0" aria-label="Search" data-astro-cid-b5kgnn7o><div class="dialog-frame sl-flex" data-astro-cid-b5kgnn7o><button data-close-modal class="sl-flex md:sl-hidden" data-astro-cid-b5kgnn7o>Cancel</button><div class="search-container" data-astro-cid-b5kgnn7o><div id="starlight__search" data-astro-cid-b5kgnn7o></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/Search.astro_astro_type_script_index_0_lang.DUJITJT7.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group" data-astro-cid-by6fddyj><div class="sl-flex social-icons" data-astro-cid-by6fddyj><a href="https://github.com/OpenRTX/OpenRTX" rel="me" class="sl-flex" data-astro-cid-n2mnl6yq><span class="sr-only" data-astro-cid-n2mnl6yq>OpenRTX on GitHub</span><svg data-astro-cid-n2mnl6yq="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div></header><nav class="sidebar print:hidden" aria-label="Main" data-astro-cid-yntsjkba><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden" data-astro-cid-r2osgdlg><svg class="open-menu" data-astro-cid-r2osgdlg="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg class="close-menu" data-astro-cid-r2osgdlg="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only" data-astro-cid-r2osgdlg>Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane" data-astro-cid-yntsjkba="true"><div class="sidebar-content sl-flex" data-astro-cid-yntsjkba><sl-sidebar-state-persist data-hash="0xy3j1m" data-astro-cid-ipdry5cl="true"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level" data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Flash your radio</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Flash your radio</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/radios/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Radios the flasher supports</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/backups/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>What a backup keeps</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/credits/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Flasher licences and credits</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Users</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/user_guide/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Users guide</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/dev_status/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Development status</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/accessibility/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Accessibility</span></a></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>M17</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/hw_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hardware Modifications</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/m17/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>M17</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/md380_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Md380 mods</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/mduv380_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Mduv380 mods</span></a></li></ul></details></li></ul></details></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Radios</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/c62/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Retevis C62</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/cs7000/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>CS7000-M17</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/ft2d/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Yaesu FT2D</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/gd77/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>GD-77</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/hardware/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hardware documentation</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/hd1/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Ailunce HD1</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md380/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-380</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md9600/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-9600</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/mduv380/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-UV380</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/rt4d/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Radtel RT-4D</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/ttwrplus/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>LILYGO T-TWR Plus</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/uv878/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Anytone UV878</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Developers</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/developers_guide/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Developers&#39; Guide</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/compiling/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Building OpenRTX from sources</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/tests/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Tests</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/linux/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Testing on Linux</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/software/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/nvm/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Non-volatile memory</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/software_modes/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Software Modes</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/coding_style/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Coding style guidelines</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/peripheral_table/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Peripheral allocation table</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/rtxlink/" aria-current="page" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>RTXLink - OpenRTX Communication Protocol</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/website/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Contributing to the OpenRTX website</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/binary_cps_format/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX Binary CPS Format</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/at1846_registers/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>AT1846S register table</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/docrepository/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Documentation repository</span></a></li><li data-astro-cid-rmhv4bp6><a href="https://github.com/OpenRTX/OpenRTX-external-docs" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX-external-docs</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>News</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>All posts</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/2025-10-05-announcing-042-release/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Announcing 0.4.2 Release</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260213/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 13 February 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260424/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 24 April 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260723/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 23 July 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20261019/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 19 October 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hackathon/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hackathon (Jan 31, before FOSDEM)</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Project</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/about/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>About OpenRTX</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/get_in_touch/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Get in touch</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/contribute/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Help improve this site</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex" data-astro-cid-p4azlveh><div class="social-icons" data-astro-cid-p4azlveh><a href="https://github.com/OpenRTX/OpenRTX" rel="me" class="sl-flex" data-astro-cid-n2mnl6yq><span class="sr-only" data-astro-cid-n2mnl6yq>OpenRTX on GitHub</span><svg data-astro-cid-n2mnl6yq="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div></div></div></div></sl-sidebar-pane></nav><div class="main-frame" data-astro-cid-yntsjkba><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex" data-astro-cid-lrzkfocr><aside class="right-sidebar-container print:hidden" data-astro-cid-lrzkfocr><div class="right-sidebar" data-astro-cid-lrzkfocr><div class="lg:sl-hidden" data-astro-cid-qok35upx><mobile-starlight-toc data-min-h="2" data-max-h="3" data-astro-cid-66cqc7ze="true"><nav aria-labelledby="starlight__on-this-page--mobile" data-astro-cid-66cqc7ze><details id="starlight__mobile-toc" data-astro-cid-66cqc7ze><summary id="starlight__on-this-page--mobile" class="sl-flex" data-astro-cid-66cqc7ze><span class="toggle sl-flex" data-astro-cid-66cqc7ze>On this page<svg class="caret" data-astro-cid-66cqc7ze="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current" data-astro-cid-66cqc7ze></span></summary><div class="dropdown" data-astro-cid-66cqc7ze><ul class="isMobile" style="--depth: 0;" data-astro-cid-jugkfwgx><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#_top" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Overview</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#physical-layer" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Physical Layer</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#data-link-layer" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Data Link Layer</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#application-layer" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Application Layer</span></a><ul class="isMobile" style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#computer-aided-transceiver-cat" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Computer Aided Transceiver (CAT)</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#file-management-protocol-fmp" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>File Management Protocol (FMP)</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#appendix-a---slip-framing" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Appendix A - SLIP framing</span></a></li></ul></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block" data-astro-cid-qok35upx><div class="sl-container" data-astro-cid-qok35upx><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul style="--depth: 0;" data-astro-cid-jugkfwgx><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#_top" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Overview</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#physical-layer" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Physical Layer</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#data-link-layer" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Data Link Layer</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#application-layer" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Application Layer</span></a><ul style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#computer-aided-transceiver-cat" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Computer Aided Transceiver (CAT)</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#file-management-protocol-fmp" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>File Management Protocol (FMP)</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#appendix-a---slip-framing" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Appendix A - SLIP framing</span></a></li></ul></li></ul></nav></starlight-toc><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane" data-astro-cid-lrzkfocr><main data-pagefind-body lang="en" dir="ltr" data-astro-cid-g5ptsecz><div class="content-panel" data-astro-cid-a7po4psb><div class="sl-container" data-astro-cid-a7po4psb><h1 id="_top" data-astro-cid-bebwqqxs>RTXLink - OpenRTX Communication Protocol</h1></div></div><div class="content-panel" data-astro-cid-a7po4psb><div class="sl-container" data-astro-cid-a7po4psb><div class="sl-markdown-content"><p>This page describes <code dir="auto">rtxlink</code>, the communication protocol used by the OpenRTX firmware to accomplish the following functions:</p>
+<ul>
+<li>Retrieval of radio info</li>
+<li>Reboot of the device</li>
+<li>Backup and restore of the nonvolatile memory</li>
+<li>File download and upload</li>
+<li>Change of some RTX parameters</li>
+</ul>
+<div class="sl-heading-wrapper level-h2"><h2 id="physical-layer">Physical Layer</h2><a class="sl-anchor-link" href="#physical-layer"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Physical Layer”</span></a></div>
+<p>The physical layer of the rtxlink protocol is a serial communication, which may either be based on a physical link (UART) or a Virtual COM over USB.
+In case a physical link is used, its configuration is 8 data bits, no parity and either EIA hardware flow control, or CLOCAL mode (3-wire null-modem).
+The default baud rate is 115200 bit per second but the change to a different data rate can be requested by the client device. The support for data rates
+other than the default one is not mandatory, although an rtxlink host must support at least 115200 bit per second. The protocol tolerates buffering and
+fragmentation of the transmitted data.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="data-link-layer">Data Link Layer</h2><a class="sl-anchor-link" href="#data-link-layer"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Data Link Layer”</span></a></div>
+<p>The data link layer of the rtxlink protocol consists of variable-length frames encoded using the <a href="https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol">Serial Line Internet Protocol (SLIP)</a>.
+Each SLIP frame must begin with an END character: incoming frames not beginning with an END character are accepted anyway, even if not strictly conformant to the specification. SLIP can extend
+the frame length up to the double of the original length, this needs to be taken into account when sizing buffers during the protocol implementation.</p>
+<p>The frames format is the following:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">…</th>
+<th style="text-align: center">N-2</th>
+<th style="text-align: center">N-1</th>
+<th style="text-align: center">N</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">END</td>
+<td style="text-align: center">ProtoID</td>
+<td style="text-align: center">Data</td>
+<td style="text-align: center">CRCL</td>
+<td style="text-align: center">CRCH</td>
+<td style="text-align: center">END</td>
+</tr>
+</tbody>
+</table>
+<p>After the start of frame marker, the first byte of each frame is a protocol identifier describing the frame content. After the payload data and preceding the frame end marker, the frame contains the
+CRC-16 of the protocol identifier and data fields: the CRC is computed using the CCITT polynomial 0x1021 (CCITT CRC-16 polynomial) and transmitted in little-endian format.</p>
+<p>The recognized protocol IDs are the following:</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">ID</th>
+<th style="text-align: center">Frame content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">0x00</td>
+<td style="text-align: center">stdio redirection</td>
+</tr>
+<tr>
+<td style="text-align: center">0x01</td>
+<td style="text-align: center">CAT command/response</td>
+</tr>
+<tr>
+<td style="text-align: center">0x02</td>
+<td style="text-align: center">FMP command/response</td>
+</tr>
+<tr>
+<td style="text-align: center">0x03</td>
+<td style="text-align: center">data transfer protocol</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h2"><h2 id="application-layer">Application Layer</h2><a class="sl-anchor-link" href="#application-layer"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Application Layer”</span></a></div>
+<p>The application layer of rtxlink consists of two different command protocols: the Computer Aided Transceiver (CAT) protocol and the File Management Protocol (FMP).</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="computer-aided-transceiver-cat">Computer Aided Transceiver (CAT)</h3><a class="sl-anchor-link" href="#computer-aided-transceiver-cat"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Computer Aided Transceiver (CAT)”</span></a></div>
+<p>The CAT protocol is based on a request/response command structure. Commands are byte-aligned and encoded in key-value pairs to achieve both simplicity of the protocol and ease of parsing. All the
+commands and their arguments are encoded in little-endian format. The first byte of each CAT command or response packet is the packet opcode.</p>
+<div class="sl-heading-wrapper level-h4"><h4 id="get-requests">Get Requests</h4><a class="sl-anchor-link" href="#get-requests"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Get Requests”</span></a></div>
+<p>A get request is used by the rtxlink client to request the value of given entity. The command frame has a fixed length of three bytes, with the opcode set to 0x47 (ASCII character ‘G’). Following
+the opcode there are two bytes containing the resource ID. In response to a get request the host sends either a data response frame or, in case of failures, an ack frame reporting an error code.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">CMD</td>
+<td style="text-align: center">ID</td>
+<td style="text-align: center">ID</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="set-requests">Set Requests</h4><a class="sl-anchor-link" href="#set-requests"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Set Requests”</span></a></div>
+<p>A set request is used by the rtxlink client to change the value of an entity. The command frame has a variable length with a minimum size of four bytes and the opcode is 0x53 (ASCII character ‘S’).
+Following the opcode there are two bytes containing the resource ID and N bytes of data. In response to a set request the host sends an ack frame with a status code.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">2</th>
+<th style="text-align: center">3</th>
+<th style="text-align: center">…</th>
+<th style="text-align: center">N</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">CMD</td>
+<td style="text-align: center">ID</td>
+<td style="text-align: center">ID</td>
+<td style="text-align: center">V</td>
+<td style="text-align: center">…</td>
+<td style="text-align: center">V</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="peek-requests">Peek Requests</h4><a class="sl-anchor-link" href="#peek-requests"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Peek Requests”</span></a></div>
+<p>A peek request allows the client to read the content of the host internal memory at a given address. The command frame is 4, 6 or 10 bytes long, depending on the address length, with the opcode set to 0x50 (ASCII character ‘P’).
+The command opcode byte is followed by one byte specifying the number of bytes to read and by the start address for the read operation. The length of the address depends on the host architecture and
+it can be either 2, 4 or 8 bytes long; any other length is considered invalid. The host replies to a peek request with a data response packet or, in case of failures, an ack frame reporting an error code.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">2</th>
+<th style="text-align: center">3</th>
+<th style="text-align: center">4</th>
+<th style="text-align: center">5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">CMD</td>
+<td style="text-align: center">LEN</td>
+<td style="text-align: center">ADDR</td>
+<td style="text-align: center">ADDR</td>
+<td style="text-align: center">ADDR</td>
+<td style="text-align: center">ADDR</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="data-response">Data response</h4><a class="sl-anchor-link" href="#data-response"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Data response”</span></a></div>
+<p>A data response frame has the opcode set to 0x44 (ASCII character ‘D’) followed by N bytes of data. Data response frames are sent in reply to get or peek requests.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">…</th>
+<th style="text-align: center">N</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">0x44</td>
+<td style="text-align: center">V</td>
+<td style="text-align: center">…</td>
+<td style="text-align: center">V</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="ack-response">ACK response</h4><a class="sl-anchor-link" href="#ack-response"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “ACK response”</span></a></div>
+<p>An ack response frame has a fixed length of two bytes: the first byte (opcode) is always set to 0x41 (ASCII character ‘A’), the second one carries a status code. A status code zero means that the previous
+command has been successfully executed. Otherwise, in case an error occurred, the status code field contains a POSIX error code describing the fault or 0xFF to signal a generic, unspecified error. The host
+must at least use the values 0x00 and 0xFF for the status field.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">0x41</td>
+<td style="text-align: center">status</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="commands-summary">Commands Summary</h4><a class="sl-anchor-link" href="#commands-summary"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Commands Summary”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Role</th>
+<th style="text-align: left">Command</th>
+<th style="text-align: left">OpCode</th>
+<th style="text-align: left">Parameters</th>
+<th style="text-align: left">Length</th>
+<th style="text-align: left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left">Request</td>
+<td style="text-align: left">Get</td>
+<td style="text-align: left">0x47 ‘G’</td>
+<td style="text-align: left">ID</td>
+<td style="text-align: left">3</td>
+<td style="text-align: left">Gets the N Byte word corresponding to the specified ID.</td>
+</tr>
+<tr>
+<td style="text-align: left">Response</td>
+<td style="text-align: left">Data</td>
+<td style="text-align: left">0x44 ‘D’</td>
+<td style="text-align: left">Value</td>
+<td style="text-align: left">Variable</td>
+<td style="text-align: left">The N Byte word which was requested.</td>
+</tr>
+<tr>
+<td style="text-align: left">Request</td>
+<td style="text-align: left">Set</td>
+<td style="text-align: left">0x53 ‘S’</td>
+<td style="text-align: left">ID, Value</td>
+<td style="text-align: left">Variable</td>
+<td style="text-align: left">Sets a N Byte word to the specified ID.</td>
+</tr>
+<tr>
+<td style="text-align: left">Response</td>
+<td style="text-align: left">Ack</td>
+<td style="text-align: left">0x41 ‘A’</td>
+<td style="text-align: left">Status</td>
+<td style="text-align: left">2</td>
+<td style="text-align: left">Status of the previous command, success or error.</td>
+</tr>
+<tr>
+<td style="text-align: left">Request</td>
+<td style="text-align: left">Peek</td>
+<td style="text-align: left">0x50 ‘P’</td>
+<td style="text-align: left">Length, Address</td>
+<td style="text-align: left">4, 6 or 10</td>
+<td style="text-align: left">Reads Length bytes starting at the specified address (2, 4 or 8 bytes long).</td>
+</tr>
+<tr>
+<td style="text-align: left">Response</td>
+<td style="text-align: left">Data</td>
+<td style="text-align: left">0x44 ‘D’</td>
+<td style="text-align: left">Value</td>
+<td style="text-align: left">Variable</td>
+<td style="text-align: left">The memory content which was requested.</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="getset-resource-ids">Get/set resource IDs</h4><a class="sl-anchor-link" href="#getset-resource-ids"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Get/set resource IDs”</span></a></div>
+<p>The tables below summarize the CAT resource identifiers with their respective size, semantic and permissions.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Permissions</th>
+<th style="text-align: left">Symbol</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left">Read Only</td>
+<td style="text-align: left">R</td>
+</tr>
+<tr>
+<td style="text-align: left">Read and Write</td>
+<td style="text-align: left">RW</td>
+</tr>
+<tr>
+<td style="text-align: left">Write Only</td>
+<td style="text-align: left">W</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Symbol</th>
+<th style="text-align: left">ID</th>
+<th style="text-align: left">Type (Length)</th>
+<th style="text-align: left">Permissions</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left">info</td>
+<td style="text-align: left">0x494E ‘IN’</td>
+<td style="text-align: left">String (16)</td>
+<td style="text-align: left">R</td>
+<td>Return radio identifier</td>
+</tr>
+<tr>
+<td style="text-align: left">rx_frequency</td>
+<td style="text-align: left">0x5246 ‘RF’</td>
+<td style="text-align: left">i32 (4)</td>
+<td style="text-align: left">RW</td>
+<td>Get or set the current VFO receive frequency</td>
+</tr>
+<tr>
+<td style="text-align: left">tx_frequency</td>
+<td style="text-align: left">0x5446 ‘TF’</td>
+<td style="text-align: left">i32 (4)</td>
+<td style="text-align: left">RW</td>
+<td>Get or set the current VFO transmit frequency</td>
+</tr>
+<tr>
+<td style="text-align: left">op_mode</td>
+<td style="text-align: left">0x4F4D ‘OM’</td>
+<td style="text-align: left">i8 (1)</td>
+<td style="text-align: left">RW</td>
+<td>Get or set the current operating mode</td>
+</tr>
+<tr>
+<td style="text-align: left">ptt</td>
+<td style="text-align: left">0x5054 ‘PT’</td>
+<td style="text-align: left">i8 (1)</td>
+<td style="text-align: left">RW</td>
+<td>Get or set the PTT status</td>
+</tr>
+<tr>
+<td style="text-align: left">m17_callsign</td>
+<td style="text-align: left">0x4D43 ‘MC’</td>
+<td style="text-align: left">String (10)</td>
+<td style="text-align: left">RW</td>
+<td>Get or set the M17 callsign</td>
+</tr>
+<tr>
+<td style="text-align: left">m17_dest</td>
+<td style="text-align: left">0x4D44 ‘MD’</td>
+<td style="text-align: left">String (10)</td>
+<td style="text-align: left">RW</td>
+<td>Get or set the M17 destination address</td>
+</tr>
+<tr>
+<td style="text-align: left">m17_can</td>
+<td style="text-align: left">0x4341 ‘CA’</td>
+<td style="text-align: left">i8 (1)</td>
+<td style="text-align: left"> RW</td>
+<td>Get or set the M17 channel access number</td>
+</tr>
+<tr>
+<td style="text-align: left">baud_rate</td>
+<td style="text-align: left">0x4252 ‘BR’</td>
+<td style="text-align: left">i32 (4)</td>
+<td style="text-align: left">W</td>
+<td>Set the baud rate of the rtxlink interface</td>
+</tr>
+<tr>
+<td style="text-align: left">power_cycle</td>
+<td style="text-align: left">0x5043 ‘PC’</td>
+<td style="text-align: left">None</td>
+<td style="text-align: left">W</td>
+<td>Reboot radio</td>
+</tr>
+<tr>
+<td style="text-align: left">file_transfer</td>
+<td style="text-align: left">0x4654 ‘FT’</td>
+<td style="text-align: left">None</td>
+<td style="text-align: left">W</td>
+<td>Enable File Transfer Mode</td>
+</tr>
+</tbody>
+</table>
+<!-- | free_space    | 0x4653 'FS' | i32 (4)       | R           | Return available space in Bytes | -->
+<div class="sl-heading-wrapper level-h4"><h4 id="operating-modes">Operating Modes</h4><a class="sl-anchor-link" href="#operating-modes"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Operating Modes”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Value</th>
+<th style="text-align: left">Operating Mode</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left">0x00</td>
+<td style="text-align: left">No mode set</td>
+</tr>
+<tr>
+<td style="text-align: left">0x01</td>
+<td style="text-align: left">FM 25.0 kHz bandwidth</td>
+</tr>
+<tr>
+<td style="text-align: left">0x02</td>
+<td style="text-align: left">FM 20.0 kHz bandwidth</td>
+</tr>
+<tr>
+<td style="text-align: left">0x03</td>
+<td style="text-align: left">FM 12.5 kHz bandwidth</td>
+</tr>
+<tr>
+<td style="text-align: left">0x04</td>
+<td style="text-align: left">DMR</td>
+</tr>
+<tr>
+<td style="text-align: left">0x05</td>
+<td style="text-align: left">M17</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h3"><h3 id="file-management-protocol-fmp">File Management Protocol (FMP)</h3><a class="sl-anchor-link" href="#file-management-protocol-fmp"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “File Management Protocol (FMP)”</span></a></div>
+<p>The file management protocol is used to read/write files from the radio filesystem and to dump or restore the content of one of its nonvolatile memories. To guarantee data consistency, before doing
+any write operation, the device has to be put in file transfer mode by issuing the corresponding CAT command. The only possible way to resume back to the normal operation after the device has been
+put in file transfer mode is through a power cycle; this ensures that all the changes made either in the files or to the nonvolatile memories are properly loaded.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Command</th>
+<th style="text-align: left">OpCode</th>
+<th style="text-align: left">Request parameters</th>
+<th style="text-align: left">Response arguments</th>
+<th style="text-align: left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left">Meminfo</td>
+<td style="text-align: left">0x01</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Array of Meminfo</td>
+<td style="text-align: left">Return the descriptor of the available non volatile memories.</td>
+</tr>
+<tr>
+<td style="text-align: left">Dump</td>
+<td style="text-align: left">0x02</td>
+<td style="text-align: left">MemIndex</td>
+<td style="text-align: left">Size</td>
+<td style="text-align: left">Dump the full content of a nonvolatile memory.</td>
+</tr>
+<tr>
+<td style="text-align: left">Flash</td>
+<td style="text-align: left">0x03</td>
+<td style="text-align: left">MemIndex, Size</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Write an image on a nonvolatile memory.</td>
+</tr>
+<tr>
+<td style="text-align: left">Read</td>
+<td style="text-align: left">0x04</td>
+<td style="text-align: left">Path</td>
+<td style="text-align: left">Size</td>
+<td style="text-align: left">Transfer the content of the file at the specified path.</td>
+</tr>
+<tr>
+<td style="text-align: left">Write</td>
+<td style="text-align: left">0x05</td>
+<td style="text-align: left">Path, Size</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Check if there is enough space and begin a write to the specified file, the size is mandatory.</td>
+</tr>
+<tr>
+<td style="text-align: left">List</td>
+<td style="text-align: left">0x06</td>
+<td style="text-align: left">Path</td>
+<td style="text-align: left">Array of filenames</td>
+<td style="text-align: left">List the files in a path as strings.</td>
+</tr>
+<tr>
+<td style="text-align: left">Move</td>
+<td style="text-align: left">0x07</td>
+<td style="text-align: left">SourcePath, DestPath</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Rename or move a file.</td>
+</tr>
+<tr>
+<td style="text-align: left">Copy</td>
+<td style="text-align: left">0x08</td>
+<td style="text-align: left">SourcePath, DestPath</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Copy a file.</td>
+</tr>
+<tr>
+<td style="text-align: left">MkDir</td>
+<td style="text-align: left">0x09</td>
+<td style="text-align: left">Path</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Create a new directory.</td>
+</tr>
+<tr>
+<td style="text-align: left">Remove</td>
+<td style="text-align: left">0x0a</td>
+<td style="text-align: left">Path</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Delete a file or directory.</td>
+</tr>
+<tr>
+<td style="text-align: left">Reset</td>
+<td style="text-align: left">0xff</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">-</td>
+<td style="text-align: left">Reset the FMP state machine, aborting the last pending operation.</td>
+</tr>
+</tbody>
+</table>
+<p>Sizes are expressed in 32 bit, little endian format. The maximum length for paths is 128 characters. If there is no filesystem, only the dump and flash commands are available.</p>
+<div class="sl-heading-wrapper level-h4"><h4 id="request-format">Request Format</h4><a class="sl-anchor-link" href="#request-format"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Request Format”</span></a></div>
+<p>A request frame consists of at least two bytes: the first byte specifies the command, the second one the number of parameters. After the first two bytes, the frame contains N bytes specifying the
+length of the parameters (one byte per parameter) followed by the parameters. If a command does not require parameters, the number of parameters is set to zero and the request frame consists
+of only two bytes.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">2</th>
+<th style="text-align: center">3</th>
+<th style="text-align: center">4</th>
+<th style="text-align: center">5</th>
+<th style="text-align: center">6</th>
+<th style="text-align: center">7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">CMD</td>
+<td style="text-align: center">N Params</td>
+<td style="text-align: center">Param 1 length</td>
+<td style="text-align: center">…</td>
+<td style="text-align: center">Param N length</td>
+<td style="text-align: center">Param 1</td>
+<td style="text-align: center">…</td>
+<td style="text-align: center">Param N</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="response-format">Response Format</h4><a class="sl-anchor-link" href="#response-format"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Response Format”</span></a></div>
+<p>A response frame consists of at least three bytes: the first byte is the command byte, followed by a status byte and then by one specifying the number of arguments. The command byte is equal to the
+one sent in the request, the status byte is set to zero to indicate a successful operation or to a POSIX error code in case of faults. A value of 0xFF indicates an unspecified error. Following the
+first three bytes, the frame contains N bytes specifying the length of the arguments (one byte per argument) followed by the arguments. If a response does not contain arguments, the number of arguments
+is set to zero and the frame is three bytes long.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center">0</th>
+<th style="text-align: center">1</th>
+<th style="text-align: center">2</th>
+<th style="text-align: center">3</th>
+<th style="text-align: center">4</th>
+<th style="text-align: center">5</th>
+<th style="text-align: center">6</th>
+<th style="text-align: center">7</th>
+<th style="text-align: center">8</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center">CMD</td>
+<td style="text-align: center">Status</td>
+<td style="text-align: center">NParams</td>
+<td style="text-align: center">Param 1 length</td>
+<td style="text-align: center">…</td>
+<td style="text-align: center">Param N length</td>
+<td style="text-align: center">Param 1</td>
+<td style="text-align: center">…</td>
+<td style="text-align: center">Param N</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="memory-descriptor">Memory descriptor</h4><a class="sl-anchor-link" href="#memory-descriptor"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Memory descriptor”</span></a></div>
+<p>The <code dir="auto">meminfo</code> command returns a list of memory descriptors, providing the information of each nonvolatile memory on the device. The memory index for the dump and flash commands is given by the order
+in which the corresponding descriptor appears in the argument list, with the first element having index 0. The memory descriptor is a binary data structure with the following format:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/ec.w36nc.css"><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="c"><code><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">typedef</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">struct</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">meminfo_t</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">{</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">uint32_t</span><span style="--0:#D6DEEB;--1:#403F53"> size;</span><span style="--0:#919F9F;--1:#5D6376">  // Size of the memory in Bytes</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">uint8_t</span><span style="--0:#D6DEEB;--1:#403F53">  flags;</span><span style="--0:#919F9F;--1:#5D6376"> // Memory type and access flags</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C792EA;--1:#8844AE">char</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C5E478;--1:#3B61B0">name</span><span style="--0:#D6DEEB;--1:#403F53">[</span><span style="--0:#F78C6C;--1:#AA0982">27</span><span style="--0:#D6DEEB;--1:#403F53">];</span><span style="--0:#919F9F;--1:#5D6376">  // Name of the memory</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C5E478;--1:#3B61B0">meminfo_t</span><span style="--0:#D6DEEB;--1:#403F53">;</span><span style="--0:#919F9F;--1:#5D6376">          // sizeof(meminfo_t) == 32;</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="typedef struct meminfo_t{    uint32_t size;  // Size of the memory in Bytes    uint8_t  flags; // Memory type and access flags    char name[27];  // Name of the memory}meminfo_t;          // sizeof(meminfo_t) == 32;"><div></div></button></div></figure></div>
+<p>Or equivalently in Rust:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="rust"><code><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">#[derive(Copy, Clone, Debug)]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">#[repr(C, packed)]</span></div></div><div class="ec-line"><div class="code"><span style="--0:#C792EA;--1:#8844AE">pub</span><span style="--0:#D6DEEB;--1:#403F53"> </span><span style="--0:#C792EA;--1:#8844AE">struct</span><span style="--0:#D6DEEB;--1:#403F53"> MemInfo {</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">size</span><span style="--0:#7FDBCA;--1:#096E72">:</span><span style="--0:#D6DEEB;--1:#403F53">  u32,     </span><span style="--0:#919F9F;--1:#5D6376">// Size of the memory in Bytes</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">flags</span><span style="--0:#7FDBCA;--1:#096E72">:</span><span style="--0:#D6DEEB;--1:#403F53"> u8,      </span><span style="--0:#919F9F;--1:#5D6376">// Memory type and access flags</span></div></div><div class="ec-line"><div class="code"><span class="indent">    </span><span style="--0:#C5E478;--1:#3B61B0">name</span><span style="--0:#7FDBCA;--1:#096E72">:</span><span style="--0:#D6DEEB;--1:#403F53"> [u8; </span><span style="--0:#F78C6C;--1:#AA0982">27</span><span style="--0:#D6DEEB;--1:#403F53">], </span><span style="--0:#919F9F;--1:#5D6376">// Name of the memory</span></div></div><div class="ec-line"><div class="code"><span style="--0:#D6DEEB;--1:#403F53">}</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="#[derive(Copy, Clone, Debug)]#[repr(C, packed)]pub struct MemInfo {    size:  u32,     // Size of the memory in Bytes    flags: u8,      // Memory type and access flags    name: [u8; 27], // Name of the memory}"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="appendix-a---slip-framing">Appendix A - SLIP framing</h3><a class="sl-anchor-link" href="#appendix-a---slip-framing"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Appendix A - SLIP framing”</span></a></div>
+<p>The following are the standard value Bytes employed by the SLIP protocol.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left">Hex value</th>
+<th style="text-align: left">Dec Value</th>
+<th style="text-align: left">Oct Value</th>
+<th style="text-align: left">Abbreviation</th>
+<th style="text-align: left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left">0xC0</td>
+<td style="text-align: left">192</td>
+<td style="text-align: left">300</td>
+<td style="text-align: left">END</td>
+<td style="text-align: left">Frame End</td>
+</tr>
+<tr>
+<td style="text-align: left">0xDB</td>
+<td style="text-align: left">219</td>
+<td style="text-align: left">333</td>
+<td style="text-align: left">ESC</td>
+<td style="text-align: left">Frame Escape</td>
+</tr>
+<tr>
+<td style="text-align: left">0xDC</td>
+<td style="text-align: left">220</td>
+<td style="text-align: left">334</td>
+<td style="text-align: left">ESC_END</td>
+<td style="text-align: left">Transposed Frame End</td>
+</tr>
+<tr>
+<td style="text-align: left">0xDD</td>
+<td style="text-align: left">221</td>
+<td style="text-align: left">335</td>
+<td style="text-align: left">ESC_ESC</td>
+<td style="text-align: left">Transposed Frame Escape</td>
+</tr>
+</tbody>
+</table>
+<p>SLIP modifies a standard TCP/IP datagram by:</p>
+<ul>
+<li>Appending a special “END” Byte to it, to distinguish datagram boundaries in the Byte stream,</li>
+<li>If the END Byte occurs in the data to be sent, the two Byte sequence ESC, ESC_END is sent instead,</li>
+<li>If the ESC Byte occurs in the data, the two Byte sequence ESC, ESC_ESC is sent.</li>
+<li>Variants of the protocol may begin, as well as end, packets with END.</li>
+</ul>
+</div><footer class="sl-flex" data-astro-cid-ddtxxk7k><div class="meta sl-flex" data-astro-cid-ddtxxk7k><a href="https://github.com/OpenRTX/openrtx.github.io/edit/master/rtxlink.md" class="sl-flex print:hidden" data-astro-cid-qlekgd3o><svg data-astro-cid-qlekgd3o="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;" data-astro-cid-hkc32dio><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden" dir="ltr" data-astro-cid-b5raizh3><a href="/openrtx-web-flasher/pr-preview/pr-13/peripheral_table/" rel="prev" data-astro-cid-b5raizh3><svg data-astro-cid-b5raizh3="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;" data-astro-cid-hkc32dio><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span data-astro-cid-b5raizh3>Previous<br data-astro-cid-b5raizh3><span class="link-title" data-astro-cid-b5raizh3>Peripheral allocation table</span></span></a><a href="/openrtx-web-flasher/pr-preview/pr-13/website/" rel="next" data-astro-cid-b5raizh3><svg data-astro-cid-b5raizh3="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;" data-astro-cid-hkc32dio><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span data-astro-cid-b5raizh3>Next<br data-astro-cid-b5raizh3><span class="link-title" data-astro-cid-b5raizh3>Contributing to the OpenRTX website</span></span></a></div></footer><p class="licence" data-testid="site-licence" data-astro-cid-5plcte2k>© OpenRTX contributors. Website text: <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license" data-astro-cid-5plcte2k>CC BY-SA 4.0</a>. Firmware: <a href="https://github.com/OpenRTX/OpenRTX/blob/master/LICENSE" data-astro-cid-5plcte2k>GPL-3.0-or-later</a>. Flasher: GPL-3.0-or-later, see its <a href="/openrtx-web-flasher/pr-preview/pr-13/flash/credits/" data-astro-cid-5plcte2k>licences and credits</a>. <span data-testid="site-build" data-astro-cid-5plcte2k>Build <a href="https://github.com/turnrye/openrtx-web-flasher/commit/2f4b8c3" data-astro-cid-5plcte2k>2f4b8c3</a>.</span></p></div></div></main></div></div></div></div></body></html>

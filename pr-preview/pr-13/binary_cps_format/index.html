@@ -1,0 +1,793 @@
+<!DOCTYPE html><html lang="en" dir="ltr" data-theme="dark" data-has-toc data-has-sidebar data-astro-cid-g5ptsecz><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>OpenRTX Binary CPS Format | OpenRTX</title><script>(function(){var h=location.hash;if(h.indexOf('#/')!==0)return;var p=h.slice(2).split('?');var path=p[0].replace(/\.md$/,'').replace(/^\/+|\/+$/g,'').toLowerCase();var id=/(?:^|&)id=([^&]+)/.exec(p[1]||'');location.replace("/openrtx-web-flasher/pr-preview/pr-13/"+(path?path+'/':'')+(id?'#'+id[1]:''));})();</script><link rel="shortcut icon" href="/openrtx-web-flasher/pr-preview/pr-13/openrtx_logo.svg" type="image/svg+xml"/><meta name="generator" content="Astro v7.4.13"/><meta name="generator" content="Starlight v0.43.2"/><meta property="og:title" content="OpenRTX Binary CPS Format"/><meta property="og:type" content="article"/><meta property="og:locale" content="en"/><meta property="og:description" content="Free and open source firmware for digital amateur radios."/><meta property="og:site_name" content="OpenRTX"/><meta name="twitter:card" content="summary_large_image"/><meta name="description" content="Free and open source firmware for digital amateur radios."/><script>
+  document.documentElement.dataset.theme = 'dark';
+</script><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/print.C9eyqPGL.css" media="print"><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/common.D8aNLElG.css"><style>@layer starlight.components{.card-grid[data-astro-cid-7qmvx3iy]{grid-template-columns:100%;gap:1rem;display:grid}.card-grid[data-astro-cid-7qmvx3iy]>*{margin-top:0!important}@media (width>=50rem){.card-grid[data-astro-cid-7qmvx3iy]{grid-template-columns:1fr 1fr;gap:1.5rem}.stagger[data-astro-cid-7qmvx3iy]{--stagger-height:5rem;padding-bottom:var(--stagger-height)}.stagger[data-astro-cid-7qmvx3iy]>:nth-child(2n){transform:translateY(var(--stagger-height))}}.sl-link-card[data-astro-cid-zaaezwya]{border:1px solid var(--sl-color-gray-5);box-shadow:var(--sl-shadow-sm);border-radius:.5rem;grid-template-columns:1fr auto;gap:.5rem;padding:1rem;display:grid;position:relative}a[data-astro-cid-zaaezwya]{line-height:var(--sl-line-height-headings);text-decoration:none}a[data-astro-cid-zaaezwya]:before{content:"";position:absolute;inset:0}.stack[data-astro-cid-zaaezwya]{flex-direction:column;gap:.5rem}.title[data-astro-cid-zaaezwya]{color:var(--sl-color-white);font-weight:600;font-size:var(--sl-text-lg)}.description[data-astro-cid-zaaezwya]{color:var(--sl-color-gray-3);line-height:1.5}.icon[data-astro-cid-zaaezwya]{color:var(--sl-color-gray-3)}.sl-link-card[data-astro-cid-zaaezwya]:hover{background:var(--sl-color-gray-7,var(--sl-color-gray-6));border-color:var(--sl-color-gray-2)}.sl-link-card[data-astro-cid-zaaezwya]:hover .icon[data-astro-cid-zaaezwya]{color:var(--sl-color-white)}}
+@layer starlight.components.icon{svg[data-astro-cid-hkc32dio]{color:var(--sl-icon-color);font-size:var(--sl-icon-size,1em);width:1em;height:1em;overflow:visible}}@layer starlight.components{.sl-link-button[data-astro-cid-dcqstdaq]{font-size:var(--sl-text-sm);outline-offset:.25rem;border:1px solid #0000;border-radius:999rem;align-items:center;gap:.5em;padding:.4375rem 1.125rem;line-height:1.1875;text-decoration:none;display:inline-flex}.sl-link-button[data-astro-cid-dcqstdaq].primary{background:var(--sl-color-text-accent);border-color:var(--sl-color-text-accent);color:var(--sl-color-black)}.sl-link-button[data-astro-cid-dcqstdaq].primary:hover{color:var(--sl-color-black)}.sl-link-button[data-astro-cid-dcqstdaq].secondary{border-color:inherit;color:var(--sl-color-white)}.sl-link-button[data-astro-cid-dcqstdaq].minimal{color:var(--sl-color-white);padding-inline:0}.sl-link-button[data-astro-cid-dcqstdaq] svg{flex-shrink:0}@media (width>=50rem){.sl-link-button[data-astro-cid-dcqstdaq]{font-size:var(--sl-text-base);padding:.9375rem 1.25rem}}.sl-markdown-content .sl-link-button[data-astro-cid-dcqstdaq]{margin-inline-end:1rem}.sl-markdown-content .sl-link-button[data-astro-cid-dcqstdaq]:not(:where(p *)){margin-block:1rem}}
+</style><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/page.cNngjUgL.js"></script></head><body data-astro-cid-g5ptsecz><a class="sl-skip-link" href="#_top" data-astro-cid-qb7clj6f>Skip to content</a><div class="page sl-flex" data-astro-cid-yntsjkba><header class="header" data-astro-cid-yntsjkba><div class="header" data-astro-cid-by6fddyj><div class="title-wrapper sl-flex" data-astro-cid-by6fddyj><a href="/openrtx-web-flasher/pr-preview/pr-13/" class="site-title sl-flex" data-astro-cid-6rvad3va><img alt src="/openrtx-web-flasher/pr-preview/pr-13/_astro/openrtx_logo.Cbuljq-X.svg" width="100" height="100" data-astro-cid-6rvad3va><span translate="no" data-astro-cid-6rvad3va>OpenRTX</span></a></div><div class="sl-flex print:hidden" data-astro-cid-by6fddyj><site-search data-translations="{&quot;placeholder&quot;:&quot;Search&quot;}" data-astro-cid-b5kgnn7o="true"><button data-open-modal disabled aria-label="Search" aria-keyshortcuts="Control+K" data-astro-cid-b5kgnn7o><svg data-astro-cid-b5kgnn7o="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M21.71 20.29 18 16.61A9 9 0 1 0 16.61 18l3.68 3.68a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.39ZM11 18a7 7 0 1 1 0-14 7 7 0 0 1 0 14Z"/></svg><span class="sl-hidden md:sl-block" aria-hidden="true" data-astro-cid-b5kgnn7o>Search</span><kbd class="sl-hidden md:sl-flex" style="display: none" data-astro-cid-b5kgnn7o><kbd data-astro-cid-b5kgnn7o>Ctrl</kbd><kbd data-astro-cid-b5kgnn7o>K</kbd></kbd></button><dialog style="padding: 0" aria-label="Search" data-astro-cid-b5kgnn7o><div class="dialog-frame sl-flex" data-astro-cid-b5kgnn7o><button data-close-modal class="sl-flex md:sl-hidden" data-astro-cid-b5kgnn7o>Cancel</button><div class="search-container" data-astro-cid-b5kgnn7o><div id="starlight__search" data-astro-cid-b5kgnn7o></div></div></div></dialog></site-search><script>
+	(() => {
+		const openBtn = document.querySelector('button[data-open-modal]');
+		const shortcut = openBtn?.querySelector('kbd');
+		if (!openBtn || !(shortcut instanceof HTMLElement)) return;
+		const platformKey = shortcut.querySelector('kbd');
+		if (platformKey && /(Mac|iPhone|iPod|iPad)/i.test(navigator.platform)) {
+			platformKey.textContent = '⌘';
+			openBtn.setAttribute('aria-keyshortcuts', 'Meta+K');
+		}
+		shortcut.style.display = '';
+	})();
+</script><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/Search.astro_astro_type_script_index_0_lang.DUJITJT7.js"></script></div><div class="sl-hidden md:sl-flex print:hidden right-group" data-astro-cid-by6fddyj><div class="sl-flex social-icons" data-astro-cid-by6fddyj><a href="https://github.com/OpenRTX/OpenRTX" rel="me" class="sl-flex" data-astro-cid-n2mnl6yq><span class="sr-only" data-astro-cid-n2mnl6yq>OpenRTX on GitHub</span><svg data-astro-cid-n2mnl6yq="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div><script type="module">var e=class extends HTMLElement{constructor(){super();let e=this.querySelector(`select`);e&&(e.addEventListener(`change`,e=>{e.currentTarget instanceof HTMLSelectElement&&(window.location.pathname=e.currentTarget.value)}),window.addEventListener(`pageshow`,t=>{if(!t.persisted)return;let n=e.querySelector(`option[selected]`)?.index;n!==e.selectedIndex&&(e.selectedIndex=n??0)}))}};customElements.define(`starlight-lang-select`,e);</script></div></div></header><nav class="sidebar print:hidden" aria-label="Main" data-astro-cid-yntsjkba><button popovertarget="starlight__sidebar" class="sl-menu-button sl-flex md:sl-hidden print:hidden" data-astro-cid-r2osgdlg><svg class="open-menu" data-astro-cid-r2osgdlg="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M3 8h18a1 1 0 1 0 0-2H3a1 1 0 0 0 0 2Zm18 8H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Zm0-5H3a1 1 0 0 0 0 2h18a1 1 0 0 0 0-2Z"/></svg><svg class="close-menu" data-astro-cid-r2osgdlg="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="m13.41 12 6.3-6.29a1.004 1.004 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1.004 1.004 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 0 1.42.998.998 0 0 0 1.42 0l6.29-6.3 6.29 6.3a.999.999 0 0 0 1.42 0 1 1 0 0 0 0-1.42L13.41 12Z"/></svg><span class="sr-only" data-astro-cid-r2osgdlg>Menu</span></button><script type="module">var e=class extends HTMLElement{constructor(){super();let e=matchMedia(`(min-width: 50em)`),t=()=>{this.popover=e.matches?null:`auto`};t(),e.addEventListener(`change`,()=>t()),this.addEventListener(`toggle`,({newState:e})=>this.trapFocus(e===`open`))}trapFocus(e){document.querySelectorAll(`.main-frame, .sl-skip-link`).forEach(t=>{t.toggleAttribute(`inert`,e)})}};customElements.define(`sl-sidebar-pane`,e);</script><sl-sidebar-pane popover id="starlight__sidebar" class="sidebar-pane" data-astro-cid-yntsjkba="true"><div class="sidebar-content sl-flex" data-astro-cid-yntsjkba><sl-sidebar-state-persist data-hash="0xy3j1m" data-astro-cid-ipdry5cl="true"><script aria-hidden="true">
+		(() => {
+			try {
+				if (!matchMedia('(min-width: 50em)').matches) return;
+				/** @type {HTMLElement | null} */
+				const target = document.querySelector('sl-sidebar-state-persist');
+				const state = JSON.parse(sessionStorage.getItem('sl-sidebar-state') || '0');
+				if (!target || !state || target.dataset.hash !== state.hash) return;
+				window._starlightScrollRestore = state.scroll;
+				customElements.define(
+					'sl-sidebar-restore',
+					class SidebarRestore extends HTMLElement {
+						connectedCallback() {
+							try {
+								const idx = parseInt(this.dataset.index || '');
+								const details = this.closest('details');
+								if (details && typeof state.open[idx] === 'boolean') details.open = state.open[idx];
+							} catch {}
+						}
+					}
+				);
+			} catch {}
+		})();
+	</script><ul class="top-level" data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Flash your radio</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="0"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Flash your radio</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/radios/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Radios the flasher supports</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/backups/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>What a backup keeps</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/flash/credits/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Flasher licences and credits</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Users</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="1"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/user_guide/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Users guide</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/dev_status/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Development status</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/accessibility/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Accessibility</span></a></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>M17</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="2"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/hw_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hardware Modifications</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/m17/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>M17</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/md380_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Md380 mods</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/m17/mduv380_mods/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Mduv380 mods</span></a></li></ul></details></li></ul></details></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Radios</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="3"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/c62/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Retevis C62</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/cs7000/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>CS7000-M17</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/ft2d/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Yaesu FT2D</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/gd77/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>GD-77</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/hardware/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hardware documentation</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/hd1/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Ailunce HD1</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md380/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-380</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/md9600/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-9600</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/mduv380/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>MD-UV380</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/rt4d/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Radtel RT-4D</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/ttwrplus/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>LILYGO T-TWR Plus</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hardware/uv878/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Anytone UV878</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Developers</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="4"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/developers_guide/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Developers&#39; Guide</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/compiling/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Building OpenRTX from sources</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/tests/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Tests</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/linux/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Testing on Linux</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/software/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/nvm/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Non-volatile memory</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/software_modes/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Software Modes</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/coding_style/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Coding style guidelines</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/peripheral_table/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Peripheral allocation table</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/rtxlink/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>RTXLink - OpenRTX Communication Protocol</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/website/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Contributing to the OpenRTX website</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/binary_cps_format/" aria-current="page" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX Binary CPS Format</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/at1846_registers/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>AT1846S register table</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/docrepository/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Documentation repository</span></a></li><li data-astro-cid-rmhv4bp6><a href="https://github.com/OpenRTX/OpenRTX-external-docs" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>OpenRTX-external-docs</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>News</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="5"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>All posts</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/2025-10-05-announcing-042-release/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Announcing 0.4.2 Release</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260213/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 13 February 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260424/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 24 April 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20260723/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 23 July 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/posts/openrtx-office-hours-20261019/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Office Hours for OpenRTX meeting, 19 October 2026</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/hackathon/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Hackathon (Jan 31, before FOSDEM)</span></a></li></ul></details></li><li data-astro-cid-rmhv4bp6><details open data-astro-cid-rmhv4bp6><summary data-astro-cid-rmhv4bp6><span class="group-label" data-astro-cid-rmhv4bp6><span class="large" data-astro-cid-rmhv4bp6>Project</span></span><svg class="caret" data-astro-cid-rmhv4bp6="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.25rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></summary><sl-sidebar-restore data-index="6"></sl-sidebar-restore><ul data-astro-cid-rmhv4bp6><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/about/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>About OpenRTX</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/get_in_touch/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Get in touch</span></a></li><li data-astro-cid-rmhv4bp6><a href="/openrtx-web-flasher/pr-preview/pr-13/contribute/" data-astro-cid-rmhv4bp6><span data-astro-cid-rmhv4bp6>Help improve this site</span></a></li></ul></details></li></ul><script aria-hidden="true">
+		(() => {
+			const scroller = document.getElementById('starlight__sidebar');
+			if (!window._starlightScrollRestore || !scroller) return;
+			scroller.scrollTop = window._starlightScrollRestore;
+			delete window._starlightScrollRestore;
+		})();
+	</script></sl-sidebar-state-persist><div class="md:sl-hidden"><div class="mobile-preferences sl-flex" data-astro-cid-p4azlveh><div class="social-icons" data-astro-cid-p4azlveh><a href="https://github.com/OpenRTX/OpenRTX" rel="me" class="sl-flex" data-astro-cid-n2mnl6yq><span class="sr-only" data-astro-cid-n2mnl6yq>OpenRTX on GitHub</span><svg data-astro-cid-n2mnl6yq="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1em;" data-astro-cid-hkc32dio><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.08 1.83 2.81 1.3 3.5 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3Z"/></svg></a></div></div></div></div></sl-sidebar-pane></nav><div class="main-frame" data-astro-cid-yntsjkba><script type="module">var e=document.getElementById(`starlight__sidebar`),t=e?.querySelector(`sl-sidebar-state-persist`),n=`sl-sidebar-state`,r=()=>{let r=[],i=t?.dataset.hash||``;try{let e=sessionStorage.getItem(n),t=JSON.parse(e||`{}`);Array.isArray(t.open)&&t.hash===i&&(r=t.open)}catch{}return{hash:i,open:r,scroll:e?.scrollTop||0}},i=e=>{try{sessionStorage.setItem(n,JSON.stringify(e))}catch{}},a=()=>i(r()),o=(e,t)=>{let n=r();n.open[t]=e,i(n)};t?.addEventListener(`click`,e=>{if(!(e.target instanceof Element))return;let t=e.target.closest(`summary`)?.closest(`details`);if(!t)return;let n=t.querySelector(`sl-sidebar-restore`),r=parseInt(n?.dataset.index||``);isNaN(r)||o(!t.open,r)}),addEventListener(`visibilitychange`,()=>{document.visibilityState===`hidden`&&a()});</script><div class="lg:sl-flex" data-astro-cid-lrzkfocr><aside class="right-sidebar-container print:hidden" data-astro-cid-lrzkfocr><div class="right-sidebar" data-astro-cid-lrzkfocr><div class="lg:sl-hidden" data-astro-cid-qok35upx><mobile-starlight-toc data-min-h="2" data-max-h="3" data-astro-cid-66cqc7ze="true"><nav aria-labelledby="starlight__on-this-page--mobile" data-astro-cid-66cqc7ze><details id="starlight__mobile-toc" data-astro-cid-66cqc7ze><summary id="starlight__on-this-page--mobile" class="sl-flex" data-astro-cid-66cqc7ze><span class="toggle sl-flex" data-astro-cid-66cqc7ze>On this page<svg class="caret" data-astro-cid-66cqc7ze="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1rem;" data-astro-cid-hkc32dio><path d="m14.83 11.29-4.24-4.24a1 1 0 1 0-1.42 1.41L12.71 12l-3.54 3.54a1 1 0 0 0 0 1.41 1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.24-4.24a1.002 1.002 0 0 0 0-1.42Z"/></svg></span><span class="display-current" data-astro-cid-66cqc7ze></span></summary><div class="dropdown" data-astro-cid-66cqc7ze><ul class="isMobile" style="--depth: 0;" data-astro-cid-jugkfwgx><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#_top" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Overview</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#copyright-notice" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Copyright notice</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#introduction" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Introduction</span></a><ul class="isMobile" style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#objectives" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Objectives</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#version-control" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Version control</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#specification" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Specification</span></a><ul class="isMobile" style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#header" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Header</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#contacts" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Contacts</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#channels" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Channels</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#bank-data-offsets" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Bank Data Offsets</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#bank" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Bank</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#appendix" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Appendix</span></a><ul class="isMobile" style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#references" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>References</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#feedback" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Feedback</span></a></li></ul></li></ul></div></details></nav></mobile-starlight-toc><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/MobileTableOfContents.astro_astro_type_script_index_0_lang.C3fM4Kra.js"></script></div><div class="right-sidebar-panel sl-hidden lg:sl-block" data-astro-cid-qok35upx><div class="sl-container" data-astro-cid-qok35upx><starlight-toc data-min-h="2" data-max-h="3"><nav aria-labelledby="starlight__on-this-page"><h2 id="starlight__on-this-page">On this page</h2><ul style="--depth: 0;" data-astro-cid-jugkfwgx><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#_top" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Overview</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#copyright-notice" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Copyright notice</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#introduction" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Introduction</span></a><ul style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#objectives" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Objectives</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#version-control" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Version control</span></a></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#specification" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Specification</span></a><ul style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#header" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Header</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#contacts" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Contacts</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#channels" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Channels</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#bank-data-offsets" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Bank Data Offsets</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#bank" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Bank</span></a></li></ul></li><li style="--depth: 0;" data-astro-cid-jugkfwgx><a href="#appendix" style="--depth: 0;" data-astro-cid-jugkfwgx><span style="--depth: 0;" data-astro-cid-jugkfwgx>Appendix</span></a><ul style="--depth: 1;" data-astro-cid-jugkfwgx><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#references" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>References</span></a></li><li style="--depth: 1;" data-astro-cid-jugkfwgx><a href="#feedback" style="--depth: 1;" data-astro-cid-jugkfwgx><span style="--depth: 1;" data-astro-cid-jugkfwgx>Feedback</span></a></li></ul></li></ul></nav></starlight-toc><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/TableOfContents.astro_astro_type_script_index_0_lang.BpJaGz7G.js"></script></div></div></div></aside><div class="main-pane" data-astro-cid-lrzkfocr><main data-pagefind-body lang="en" dir="ltr" data-astro-cid-g5ptsecz><div class="content-panel" data-astro-cid-a7po4psb><div class="sl-container" data-astro-cid-a7po4psb><h1 id="_top" data-astro-cid-bebwqqxs>OpenRTX Binary CPS Format</h1></div></div><div class="content-panel" data-astro-cid-a7po4psb><div class="sl-container" data-astro-cid-a7po4psb><div class="sl-markdown-content"><p>Authors names go here</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="copyright-notice">Copyright notice</h2><a class="sl-anchor-link" href="#copyright-notice"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Copyright notice”</span></a></div>
+<p>Copyright (c) 2023 the persons and organizations identified as authors. All rights reserved.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="introduction">Introduction</h2><a class="sl-anchor-link" href="#introduction"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Introduction”</span></a></div>
+<p>The OpenRTX Binary CPS Format (OBCF) is a binary data format for storing radio configurations in an easy-to-use and platform-agnostic way while providing support for modern amateur-radio use cases like M17. This format is utilized in radio codeplugs constructed using a customer programming software (CPS) and loaded directly to radio transceivers.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="objectives">Objectives</h3><a class="sl-anchor-link" href="#objectives"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Objectives”</span></a></div>
+<ul>
+<li>Be open and free</li>
+<li>Support common amateur-radio needs for communicating both directly and utilizing infrastructure like repeaters or hotspots</li>
+<li>Support memory channel use cases for analog FM, DMR Tier II, and M17 modes</li>
+<li>Provide portability across various hardware platforms, both for end users and for firmware developers</li>
+</ul>
+<div class="sl-heading-wrapper level-h2"><h2 id="version-control">Version control</h2><a class="sl-anchor-link" href="#version-control"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Version control”</span></a></div>
+<p>OBCF observed <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning v2.0.0</a>. This document is at <strong>v0.1.0</strong> of the standard presently. Errata not resulting in substantially different understandings, capabilities, or definitions may be treated as un-versioned revisions of this document without incrementing the patch versions. A detailed history of changes for this document may be viewed <a href="https://github.com/OpenRTX/openrtx.github.io/commits/master/binary_cps_format.md">on GitHub</a>.</p>
+<div class="sl-heading-wrapper level-h2"><h2 id="specification">Specification</h2><a class="sl-anchor-link" href="#specification"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Specification”</span></a></div>
+<p>The OBCF format defines a binary file with the following structure:</p>
+<div class="expressive-code"><link rel="stylesheet" href="/openrtx-web-flasher/pr-preview/pr-13/_astro/ec.w36nc.css"><script type="module" src="/openrtx-web-flasher/pr-preview/pr-13/_astro/ec.0vx5m.js"></script><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53"> </span></span><span style="--0:#d6deeb;--1:#403f53">(MSB)                                 (LSB)</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">+------+--------+--------+------------+-----+</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">|header|contacts|channels|bank offsets|banks|</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">+------+--------+--------+------------+-----+</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code=" (MSB)                                 (LSB)+------+--------+--------+------------+-----+|header|contacts|channels|bank offsets|banks|+------+--------+--------+------------+-----+"><div></div></button></div></figure></div>
+<p>These 5 sections are further described in the sections below. The file extension is <code dir="auto">.rtxc</code>.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="header">Header</h3><a class="sl-anchor-link" href="#header"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Header”</span></a></div>
+<p>The header contains metadata about the codeplug to ensure compatibility with interpreting software and identifying information about the codeplug to simplify identification.</p>
+<div class="sl-heading-wrapper level-h4"><h4 id="field-definition">Field definition</h4><a class="sl-anchor-link" href="#field-definition"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Field definition”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field Name</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>magic</td>
+<td>uint64_t</td>
+<td>Number used to identify the start of a codeplug; this is always “RTXC”, i.e. <code dir="auto">0x43585452</code></td>
+</tr>
+<tr>
+<td>version_number</td>
+<td>uint16_t</td>
+<td>Major and minor version of the OBCF standard, constructed as the <code dir="auto">(CPS_VERSION_MAJOR &lt;&lt; 8) | CPS_VERSION_MINOR</code>. Refer to <a href="#version-control">Version control</a>.</td>
+</tr>
+<tr>
+<td>author</td>
+<td>char[32]</td>
+<td>User-provided author of the codeplug</td>
+</tr>
+<tr>
+<td>desc</td>
+<td>char[32]</td>
+<td>User-provided description of the codeplug, max 32 characters</td>
+</tr>
+<tr>
+<td>timestamp</td>
+<td>uint64_t</td>
+<td>Unix timestamp of when the codeplug was last edited</td>
+</tr>
+<tr>
+<td>ct_count</td>
+<td>uint16_t</td>
+<td>Number of stored contacts, used for memory offsets</td>
+</tr>
+<tr>
+<td>ch_count</td>
+<td>uint16_t</td>
+<td>Number of stored channels, used for memory offsets</td>
+</tr>
+<tr>
+<td>b_count</td>
+<td>uint16_t</td>
+<td>Number of stored banks</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="layout">Layout</h4><a class="sl-anchor-link" href="#layout"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Layout”</span></a></div>
+<p>This structure is the beginning of the file. The fields are laid out in the following manner:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;magic----------------&gt;|&lt;vers|&lt;author----------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020  ----------------------------&gt;|&lt;descr-----------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0030  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0040  ----------------------------&gt;|&lt;timestamp-------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0050  ----&gt;|&lt;ct_c|&lt;ch_c|&lt;b_co|</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<magic---------------->|<vers|<author----------0010  -----------------------------------------------0020  ---------------------------->|<descr-----------0030  -----------------------------------------------0040  ---------------------------->|<timestamp-------0050  ---->|<ct_c|<ch_c|<b_co|"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="contacts">Contacts</h3><a class="sl-anchor-link" href="#contacts"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Contacts”</span></a></div>
+<div class="sl-heading-wrapper level-h4"><h4 id="field-definition-1">Field definition</h4><a class="sl-anchor-link" href="#field-definition-1"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Field definition”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field name</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>name</td>
+<td>char[32]</td>
+<td>Display name for the contact</td>
+</tr>
+<tr>
+<td>mode</td>
+<td>uint8_t</td>
+<td>Mode that the contact is intended to be used for</td>
+</tr>
+<tr>
+<td>info</td>
+<td><a href="#m17contact_t-type-description">m17Contact_t</a> or <a href="#dmrcontact_t-type-description">dmrContact_t</a></td>
+<td>Either contains the m17 info or the dmr info, as described further below</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="mode-lookup-table">Mode lookup table</h4><a class="sl-anchor-link" href="#mode-lookup-table"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Mode lookup table”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Bits</th>
+<th>Value</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right"><code dir="auto">0b00000000</code></td>
+<td>None</td>
+<td>Indeterminate state for compatibility</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b00000001</code></td>
+<td>FM</td>
+<td>Only used for channels</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b00000010</code></td>
+<td>DMR</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b00000011</code></td>
+<td>M17</td>
+<td></td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b00000100..0b11111111</code></td>
+<td>Reserved</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="dmr-contact-type-lookup-table">DMR contact type lookup table</h4><a class="sl-anchor-link" href="#dmr-contact-type-lookup-table"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “DMR contact type lookup table”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Bits</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right"><code dir="auto">0b00</code></td>
+<td>Group contact</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b01</code></td>
+<td>Private contact</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b10</code></td>
+<td>Broadcast call</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b11</code></td>
+<td>Reserved</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="m17contact_t-type-description">m17Contact_t type description</h4><a class="sl-anchor-link" href="#m17contact_t-type-description"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “m17Contact_t type description”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>address</td>
+<td>uint8_t[6]</td>
+<td>M17 address stored in 48 bits, following their <a href="https://spec.m17project.org/pdf/M17_spec.pdf#appendix.A">address encoding</a></td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="dmrcontact_t-type-description">dmrContact_t type description</h4><a class="sl-anchor-link" href="#dmrcontact_t-type-description"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “dmrContact_t type description”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td>uint32_t</td>
+<td>DMR ID</td>
+</tr>
+<tr>
+<td>contact_settings</td>
+<td>uint8_t</td>
+<td>Combination of the contact type (two bits), rx tone enable/disable (one bit), and five reserved bits</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="layout-1">Layout</h4><a class="sl-anchor-link" href="#layout-1"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Layout”</span></a></div>
+<p>If there are contacts, this portion will be the second portion of the file. The memory locations listed below are relative to the end of the previous block, being either the header or a previous contact. The fields depend on the type of contact.</p>
+<p>For M17 contacts, this section is laid out in the following manner:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;name------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  ----------------------------------------------&gt;|</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020 |&lt;m|&lt;address--------&gt;|</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<name------------------------------------------0010  ---------------------------------------------->|0020 |<m|<address-------->|"><div></div></button></div></figure></div>
+<p>For DMR contacts, this section is laid out in the following manner:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;name------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  ----------------------------------------------&gt;|</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020 |&lt;m|&lt;id-------&gt;|&lt;i|  |</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<name------------------------------------------0010  ---------------------------------------------->|0020 |<m|<id------->|<i|  |"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="channels">Channels</h3><a class="sl-anchor-link" href="#channels"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Channels”</span></a></div>
+<div class="sl-heading-wrapper level-h4"><h4 id="field-descriptions">Field descriptions</h4><a class="sl-anchor-link" href="#field-descriptions"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Field descriptions”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field name</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mode</td>
+<td>uint8_t</td>
+<td>Operating mode; refer to <a href="#mode-lookup-table">Mode lookup table</a></td>
+</tr>
+<tr>
+<td>traits</td>
+<td>uint8_t</td>
+<td>First two bits are channel bandwidth (refer to <a href="#bandwidth-lookup-table">Bandwidth lookup table</a>), then one bit indicating true if the channel is RX only</td>
+</tr>
+<tr>
+<td>power</td>
+<td>uint8_t</td>
+<td>transmit power, stored as number of fifths dBm added to 10dBm (e.g. a value of 5 would represent 10+5*0.2=11dBm)</td>
+</tr>
+<tr>
+<td>rx_frequency</td>
+<td>uint32_t</td>
+<td>RX frequency in Hz</td>
+</tr>
+<tr>
+<td>tx_frequency</td>
+<td>uint32_t</td>
+<td>TX frequency in Hz</td>
+</tr>
+<tr>
+<td>scanList_index</td>
+<td>uint8_t</td>
+<td>“Scan List: None, ScanList1…250”</td>
+</tr>
+<tr>
+<td>groupList_index</td>
+<td>uint8_t</td>
+<td>“Group List: None, GroupList1…128”</td>
+</tr>
+<tr>
+<td>name</td>
+<td>char[32]</td>
+<td>display name for channel</td>
+</tr>
+<tr>
+<td>descr</td>
+<td>char[32]</td>
+<td>Description of the channel</td>
+</tr>
+<tr>
+<td>ch_location</td>
+<td><a href="#geo_t-type-description">geo_t</a></td>
+<td>transmitter location</td>
+</tr>
+<tr>
+<td>infoblock</td>
+<td><a href="#fminfo_t-type-description">fmInfo_t</a>, <a href="#dmrinfo_t-type-description">dmrInfo_t</a>, or <a href="#m17info_t-type-description">m17Info_t</a></td>
+<td>Information block for the channel</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="bandwidth-lookup-table">Bandwidth lookup table</h4><a class="sl-anchor-link" href="#bandwidth-lookup-table"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Bandwidth lookup table”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Bits</th>
+<th>Bandwidth (kHz)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0b00</td>
+<td>12.5</td>
+</tr>
+<tr>
+<td>0b01</td>
+<td>20</td>
+</tr>
+<tr>
+<td>0b10</td>
+<td>25</td>
+</tr>
+<tr>
+<td>0b11</td>
+<td>Reserved</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="geo_t-type-description">geo_t type description</h4><a class="sl-anchor-link" href="#geo_t-type-description"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “geo_t type description”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ch_lat_int</td>
+<td>int8_t</td>
+<td>Floor of latitude (⌊x⌋; e.g. given latitude of 44.493889, this value is 44)</td>
+</tr>
+<tr>
+<td>ch_lat_dec</td>
+<td>uint16_t</td>
+<td>Fractional part of latitude, first rounded to the ten-thousandths, represented as a positive whole number (e.g. given latitude of 44.493889, this value is 4939)</td>
+</tr>
+<tr>
+<td>ch_lon_int</td>
+<td>int8_t</td>
+<td>Floor of longitude (⌊x⌋; e.g. given longitude of 11.342778, this value is 11)</td>
+</tr>
+<tr>
+<td>ch_lon_dec</td>
+<td>uint16_t</td>
+<td>Fractional part of longitude, first rounded to the ten-thousandths, represented as a positive whole number (e.g. given longitude of 11.342778, this value is 3428)</td>
+</tr>
+<tr>
+<td>ch_altitude</td>
+<td>uint16_t</td>
+<td>Altitude of the center of the radiator of the transmitter, stored in meters MSL offset +500 (e.g. 0m would be stored as 500)</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="fminfo_t-type-description">fmInfo_t type description</h4><a class="sl-anchor-link" href="#fminfo_t-type-description"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “fmInfo_t type description”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rxTone</td>
+<td>uint8_t</td>
+<td>whether a ctcss tone should be used on to control squelch on receive and at which frequency, represented by its index from <a href="#ctcss-code-frequencies-lookup-table">CTCSS Code Frequencies Lookup Table</a> with a bitwise OR applied on the highest-order bit indicating enabled/disabled (e.g. disabled 173.8 Hz tone value is <code dir="auto">0b00011111</code>)</td>
+</tr>
+<tr>
+<td>txTone</td>
+<td>uint8_t</td>
+<td>whether a ctcss tone should be used on transmit and at which frequency, represented by its index from <a href="#ctcss-code-frequencies-lookup-table">CTCSS Code Frequencies Lookup Table</a> with a bitwise OR applied on the highest-order bit indicating enabled/disabled (e.g. enabled 107.2 tone value is 0b10001110)</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="dmrinfo_t-type-description">dmrInfo_t type description</h4><a class="sl-anchor-link" href="#dmrinfo_t-type-description"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “dmrInfo_t type description”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>colorCode</td>
+<td>uint8_t</td>
+<td>RX and TX colour codes used, as defined by <a href="https://www.etsi.org/deliver/etsi_ts/102300_102399/10236101/02.02.01_60/ts_10236101v020201p.pdf">ETSI TS 102 361-1 Table 9.18</a>, with the RX value represented in the first half (e.g. RX colour code 0 and TX colour code 15 would be represented as <code dir="auto">0b00001111</code>)</td>
+</tr>
+<tr>
+<td>dmr_timeslot</td>
+<td>uint8_t</td>
+<td>Timeslot being used, represented in integer form (e.g. timeslot 2 is <code dir="auto">0b00000010</code>)</td>
+</tr>
+<tr>
+<td>contact_index</td>
+<td>uint16_t</td>
+<td>Index to retrieve contact from list for reverse lookups</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="m17info_t-type-description">m17Info_t type description</h4><a class="sl-anchor-link" href="#m17info_t-type-description"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “m17Info_t type description”</span></a></div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>can</td>
+<td>uint8_t</td>
+<td>RX and TX channel access numbers (CANs) used, as defined by <a href="https://spec.m17project.org/">M17 Specification section 3.1.3</a>, with the RXvalue represented in the first half (e.g. an RX CAN of 0 and TX CAN of 2 is represented as 0b00000010)</td>
+</tr>
+<tr>
+<td>mode_encr</td>
+<td>uint8_t</td>
+<td>Channel operation mode and encryption mode, as defined by <a href="#m17-channel-modes-lookup-table">M17 channel modes lookup table</a> and <a href="#m17-channel-encryption-lookup-table">M17 channel encryption lookup table</a></td>
+</tr>
+<tr>
+<td>gps_mode</td>
+<td>uint8_t</td>
+<td>Boolean whether GPS position should be embedded in transmit payload</td>
+</tr>
+<tr>
+<td>contact_index</td>
+<td>uint16_t</td>
+<td>Index to retrieve contact from list for reverse lookups</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="m17-channel-modes-lookup-table">M17 channel modes lookup table</h4><a class="sl-anchor-link" href="#m17-channel-modes-lookup-table"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “M17 channel modes lookup table”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Bits</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0000</code></td>
+<td>Reserved</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0001</code></td>
+<td>Digital voice</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0010</code></td>
+<td>Digital data</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0011</code></td>
+<td>Digital voice and data</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0100..0b1111</code></td>
+<td>Reserved</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="m17-channel-encryption-lookup-table">M17 channel encryption lookup table</h4><a class="sl-anchor-link" href="#m17-channel-encryption-lookup-table"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “M17 channel encryption lookup table”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Bits</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0000</code></td>
+<td>Plain</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0001</code></td>
+<td>AES-256</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0010</code></td>
+<td>Scrambler</td>
+</tr>
+<tr>
+<td style="text-align: right"><code dir="auto">0b0011..0b1111</code></td>
+<td>Reserved</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="ctcss">CTCSS</h4><a class="sl-anchor-link" href="#ctcss"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “CTCSS”</span></a></div>
+<p>CTCSS code frequency support is implemented as the 39 tones defined in ANSI/TIA-603-E-2016 1.3.5.2 plus 11 additional non-standard tones.</p>
+<div class="sl-heading-wrapper level-h5"><h5 id="ctcss-code-frequencies-lookup-table">CTCSS Code Frequencies Lookup Table</h5><a class="sl-anchor-link" href="#ctcss-code-frequencies-lookup-table"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “CTCSS Code Frequencies Lookup Table”</span></a></div>
+<table>
+<thead>
+<tr>
+<th style="text-align: right">Index</th>
+<th>Frequency (Hz)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right">0</td>
+<td>67.0</td>
+</tr>
+<tr>
+<td style="text-align: right">1</td>
+<td>69.3</td>
+</tr>
+<tr>
+<td style="text-align: right">2</td>
+<td>71.9</td>
+</tr>
+<tr>
+<td style="text-align: right">3</td>
+<td>74.4</td>
+</tr>
+<tr>
+<td style="text-align: right">4</td>
+<td>77.0</td>
+</tr>
+<tr>
+<td style="text-align: right">5</td>
+<td>79.7</td>
+</tr>
+<tr>
+<td style="text-align: right">6</td>
+<td>82.5</td>
+</tr>
+<tr>
+<td style="text-align: right">7</td>
+<td>85.4</td>
+</tr>
+<tr>
+<td style="text-align: right">8</td>
+<td>88.5</td>
+</tr>
+<tr>
+<td style="text-align: right">9</td>
+<td>91.5</td>
+</tr>
+<tr>
+<td style="text-align: right">10</td>
+<td>94.8</td>
+</tr>
+<tr>
+<td style="text-align: right">11</td>
+<td>97.4</td>
+</tr>
+<tr>
+<td style="text-align: right">12</td>
+<td>100.0</td>
+</tr>
+<tr>
+<td style="text-align: right">13</td>
+<td>103.4</td>
+</tr>
+<tr>
+<td style="text-align: right">14</td>
+<td>107.2</td>
+</tr>
+<tr>
+<td style="text-align: right">15</td>
+<td>110.9</td>
+</tr>
+<tr>
+<td style="text-align: right">16</td>
+<td>114.8</td>
+</tr>
+<tr>
+<td style="text-align: right">17</td>
+<td>118.8</td>
+</tr>
+<tr>
+<td style="text-align: right">18</td>
+<td>123.0</td>
+</tr>
+<tr>
+<td style="text-align: right">19</td>
+<td>127.3</td>
+</tr>
+<tr>
+<td style="text-align: right">20</td>
+<td>131.8</td>
+</tr>
+<tr>
+<td style="text-align: right">21</td>
+<td>136.5</td>
+</tr>
+<tr>
+<td style="text-align: right">22</td>
+<td>141.3</td>
+</tr>
+<tr>
+<td style="text-align: right">23</td>
+<td>146.2</td>
+</tr>
+<tr>
+<td style="text-align: right">24</td>
+<td>151.4</td>
+</tr>
+<tr>
+<td style="text-align: right">25</td>
+<td>156.7</td>
+</tr>
+<tr>
+<td style="text-align: right">26</td>
+<td>159.8</td>
+</tr>
+<tr>
+<td style="text-align: right">27</td>
+<td>162.2</td>
+</tr>
+<tr>
+<td style="text-align: right">28</td>
+<td>165.5</td>
+</tr>
+<tr>
+<td style="text-align: right">29</td>
+<td>167.9</td>
+</tr>
+<tr>
+<td style="text-align: right">30</td>
+<td>171.3</td>
+</tr>
+<tr>
+<td style="text-align: right">31</td>
+<td>173.8</td>
+</tr>
+<tr>
+<td style="text-align: right">32</td>
+<td>177.3</td>
+</tr>
+<tr>
+<td style="text-align: right">33</td>
+<td>179.9</td>
+</tr>
+<tr>
+<td style="text-align: right">34</td>
+<td>183.5</td>
+</tr>
+<tr>
+<td style="text-align: right">35</td>
+<td>186.2</td>
+</tr>
+<tr>
+<td style="text-align: right">36</td>
+<td>189.9</td>
+</tr>
+<tr>
+<td style="text-align: right">37</td>
+<td>192.8</td>
+</tr>
+<tr>
+<td style="text-align: right">38</td>
+<td>196.6</td>
+</tr>
+<tr>
+<td style="text-align: right">39</td>
+<td>199.5</td>
+</tr>
+<tr>
+<td style="text-align: right">40</td>
+<td>203.5</td>
+</tr>
+<tr>
+<td style="text-align: right">41</td>
+<td>206.5</td>
+</tr>
+<tr>
+<td style="text-align: right">42</td>
+<td>210.7</td>
+</tr>
+<tr>
+<td style="text-align: right">43</td>
+<td>218.1</td>
+</tr>
+<tr>
+<td style="text-align: right">44</td>
+<td>225.7</td>
+</tr>
+<tr>
+<td style="text-align: right">45</td>
+<td>229.1</td>
+</tr>
+<tr>
+<td style="text-align: right">46</td>
+<td>233.6</td>
+</tr>
+<tr>
+<td style="text-align: right">47</td>
+<td>241.8</td>
+</tr>
+<tr>
+<td style="text-align: right">48</td>
+<td>250.3</td>
+</tr>
+<tr>
+<td style="text-align: right">49</td>
+<td>254.1</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="layout-2">Layout</h4><a class="sl-anchor-link" href="#layout-2"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Layout”</span></a></div>
+<p>The memory locations listed below are relative to the end of the previous block, being either the header or a contact. The fields depend on the type of channel.</p>
+<p>For DMR channels, this section is laid out in the following manner:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;m|&lt;t|&lt;p|&lt;rx_frequen|&lt;tx_frequen|&lt;s|&lt;g|&lt;name---</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020  -------------------------------------&gt;|&lt;descr--</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0030  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0040  -------------------------------------&gt;|&lt;ch_loca</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0050  tion---------&gt;|&lt;c|&lt;d|&lt;cont|  |</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<m|<t|<p|<rx_frequen|<tx_frequen|<s|<g|<name---0010  -----------------------------------------------0020  ------------------------------------->|<descr--0030  -----------------------------------------------0040  ------------------------------------->|<ch_loca0050  tion--------->|<c|<d|<cont|  |"><div></div></button></div></figure></div>
+<p>For FM channels, this section is laid out in the following manner:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;m|&lt;t|&lt;p|&lt;rx_frequen|&lt;tx_frequen|&lt;s|&lt;g|&lt;name---</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020  -------------------------------------&gt;|&lt;descr--</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0030  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0040  -------------------------------------&gt;|&lt;ch_loca</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0050  tion---------&gt;|&lt;r|&lt;t|        |</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<m|<t|<p|<rx_frequen|<tx_frequen|<s|<g|<name---0010  -----------------------------------------------0020  ------------------------------------->|<descr--0030  -----------------------------------------------0040  ------------------------------------->|<ch_loca0050  tion--------->|<r|<t|        |"><div></div></button></div></figure></div>
+<p>For M17 channels, this section is laid out in the following manner:</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;m|&lt;t|&lt;p|&lt;rx_frequen|&lt;tx_frequen|&lt;s|&lt;g|&lt;name---</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020  -------------------------------------&gt;|&lt;descr--</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0030  -----------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0040  -------------------------------------&gt;|&lt;ch_loca</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0050  tion---------&gt;|&lt;c|&lt;m|&lt;g|&lt;cont|</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<m|<t|<p|<rx_frequen|<tx_frequen|<s|<g|<name---0010  -----------------------------------------------0020  ------------------------------------->|<descr--0030  -----------------------------------------------0040  ------------------------------------->|<ch_loca0050  tion--------->|<c|<m|<g|<cont|"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="bank-data-offsets">Bank Data Offsets</h3><a class="sl-anchor-link" href="#bank-data-offsets"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Bank Data Offsets”</span></a></div>
+<p>The Bank Data Offsets structure is variable in length depending on the number of banks. It is used primarily to find the seek position for banks, given that each bank definition is also variable in length. Without it, seeking to a bank would not be possible.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| Field   | Data Type   | Description                                                                      |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| ------- | ----------- | -------------------------------------------------------------------------------- |</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">| offsets | uint32_t[n] | The relative offset where the bank data should begin for each corresponding bank |</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="| Field   | Data Type   | Description                                                                      || ------- | ----------- | -------------------------------------------------------------------------------- || offsets | uint32_t[n] | The relative offset where the bank data should begin for each corresponding bank |"><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h4"><h4 id="layout-3">Layout</h4><a class="sl-anchor-link" href="#layout-3"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Layout”</span></a></div>
+<p>This structure is repeated for each bank present. One structure exists for each bank that exists, and its sort order indicates the banks index (i.e. the first offset appearing is the initial bank).</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;offset---&gt;|...</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<offset--->|..."><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="bank">Bank</h3><a class="sl-anchor-link" href="#bank"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Bank”</span></a></div>
+<p>The Bank structure is variable in length depending on the number of channels. Some implementations may find it easier to split this section into a fixed header portion and a variable channel portion. The Bank structure is repeated for each bank that is present.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Data Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>name</td>
+<td>char[32]</td>
+<td>The name of the bank</td>
+</tr>
+<tr>
+<td>ch_count</td>
+<td>uint16_t</td>
+<td>Count of all of the channels in the bank</td>
+</tr>
+<tr>
+<td>channels</td>
+<td>uint16_t[n]</td>
+<td>The indexes of the channels that are present in the bank</td>
+</tr>
+</tbody>
+</table>
+<div class="sl-heading-wrapper level-h4"><h4 id="layout-4">Layout</h4><a class="sl-anchor-link" href="#layout-4"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Layout”</span></a></div>
+<p>This structure is repeated for each bank present. Its start is immediately after the preceding section, and the memory locations referenced below are relative to that. The final field <em>channels</em> is optional and variable in size depending on the <em>ch_count</em>.</p>
+<div class="expressive-code"><figure class="frame not-content"><figcaption class="header"></figcaption><pre data-language="plaintext"><code><div class="ec-line"><div class="code"><span class="indent"><span style="--0:#d6deeb;--1:#403f53">      </span></span><span style="--0:#d6deeb;--1:#403f53">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0000 |&lt;name------------------------------------------</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0010  ----------------------------------------------&gt;</span></div></div><div class="ec-line"><div class="code"><span style="--0:#d6deeb;--1:#403f53">0020 |&lt;ch_c|?cha?|...</span></div></div></code></pre><div class="copy"><div aria-live="polite"></div><button title="Copy to clipboard" data-copied="Copied!" data-code="      00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000 |<name------------------------------------------0010  ---------------------------------------------->0020 |<ch_c|?cha?|..."><div></div></button></div></figure></div>
+<div class="sl-heading-wrapper level-h2"><h2 id="appendix">Appendix</h2><a class="sl-anchor-link" href="#appendix"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Appendix”</span></a></div>
+<div class="sl-heading-wrapper level-h3"><h3 id="references">References</h3><a class="sl-anchor-link" href="#references"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “References”</span></a></div>
+<p><a href="https://github.com/OpenRTX/OpenRTX/blob/master/openrtx/include/core/cps.h">Refer to this header file</a> for the first implementation of this format.</p>
+<div class="sl-heading-wrapper level-h3"><h3 id="feedback">Feedback</h3><a class="sl-anchor-link" href="#feedback"><span aria-hidden="true" class="sl-anchor-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12.11 15.39-3.88 3.88a2.52 2.52 0 0 1-3.5 0 2.47 2.47 0 0 1 0-3.5l3.88-3.88a1 1 0 1 0-1.42-1.42l-3.88 3.89a4.48 4.48 0 0 0 6.33 6.33l3.89-3.88a1 1 0 0 0-1.42-1.42m8.58-12.08a4.49 4.49 0 0 0-6.33 0l-3.89 3.88a1 1 0 1 0 1.42 1.42l3.88-3.88a2.52 2.52 0 0 1 3.5 0 2.47 2.47 0 0 1 0 3.5l-3.88 3.88a1 1 0 0 0 0 1.42 1 1 0 0 0 1.42 0l3.88-3.89a4.49 4.49 0 0 0 0-6.33M8.83 15.17a1 1 0 0 0 .71.29 1 1 0 0 0 .71-.29l4.92-4.92a1 1 0 1 0-1.42-1.42l-4.92 4.92a1 1 0 0 0 0 1.42"></path></svg></span><span class="sr-only" data-pagefind-ignore>Section titled “Feedback”</span></a></div>
+<p>Persons interested in leaving feedback on the format standard are invited to submit <a href="https://github.com/OpenRTX/OpenRTX/issues">GitHub Issues</a>.</p>
+</div><footer class="sl-flex" data-astro-cid-ddtxxk7k><div class="meta sl-flex" data-astro-cid-ddtxxk7k><a href="https://github.com/OpenRTX/openrtx.github.io/edit/master/binary_cps_format.md" class="sl-flex print:hidden" data-astro-cid-qlekgd3o><svg data-astro-cid-qlekgd3o="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.2em;" data-astro-cid-hkc32dio><path d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-1.1-.22 1 1 0 0 0-.32.22l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8c.1-.1.17-.2.22-.33a1 1 0 0 0 0-.24v-.14l.07-.05ZM6.83 20H4v-2.83l9.93-9.93 2.83 2.83L6.83 20ZM18.17 8.66l-2.83-2.83 1.42-1.41 2.82 2.82-1.41 1.42Z"/></svg>Edit page</a></div><div class="pagination-links print:hidden" dir="ltr" data-astro-cid-b5raizh3><a href="/openrtx-web-flasher/pr-preview/pr-13/website/" rel="prev" data-astro-cid-b5raizh3><svg data-astro-cid-b5raizh3="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;" data-astro-cid-hkc32dio><path d="M17 11H9.41l3.3-3.29a1.004 1.004 0 1 0-1.42-1.42l-5 5a1 1 0 0 0-.21.33 1 1 0 0 0 0 .76 1 1 0 0 0 .21.33l5 5a1.002 1.002 0 0 0 1.639-.325 1 1 0 0 0-.219-1.095L9.41 13H17a1 1 0 0 0 0-2Z"/></svg><span data-astro-cid-b5raizh3>Previous<br data-astro-cid-b5raizh3><span class="link-title" data-astro-cid-b5raizh3>Contributing to the OpenRTX website</span></span></a><a href="/openrtx-web-flasher/pr-preview/pr-13/at1846_registers/" rel="next" data-astro-cid-b5raizh3><svg data-astro-cid-b5raizh3="true" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="--sl-icon-size: 1.5rem;" data-astro-cid-hkc32dio><path d="M17.92 11.62a1.001 1.001 0 0 0-.21-.33l-5-5a1.003 1.003 0 1 0-1.42 1.42l3.3 3.29H7a1 1 0 0 0 0 2h7.59l-3.3 3.29a1.002 1.002 0 0 0 .325 1.639 1 1 0 0 0 1.095-.219l5-5a1 1 0 0 0 .21-.33 1 1 0 0 0 0-.76Z"/></svg><span data-astro-cid-b5raizh3>Next<br data-astro-cid-b5raizh3><span class="link-title" data-astro-cid-b5raizh3>AT1846S register table</span></span></a></div></footer><p class="licence" data-testid="site-licence" data-astro-cid-5plcte2k>© OpenRTX contributors. Website text: <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license" data-astro-cid-5plcte2k>CC BY-SA 4.0</a>. Firmware: <a href="https://github.com/OpenRTX/OpenRTX/blob/master/LICENSE" data-astro-cid-5plcte2k>GPL-3.0-or-later</a>. Flasher: GPL-3.0-or-later, see its <a href="/openrtx-web-flasher/pr-preview/pr-13/flash/credits/" data-astro-cid-5plcte2k>licences and credits</a>. <span data-testid="site-build" data-astro-cid-5plcte2k>Build <a href="https://github.com/turnrye/openrtx-web-flasher/commit/2f4b8c3" data-astro-cid-5plcte2k>2f4b8c3</a>.</span></p></div></div></main></div></div></div></div></body></html>
