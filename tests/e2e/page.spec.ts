@@ -500,16 +500,15 @@ test('a radio that was checked on hardware is not asked for more successes', asy
   expect(problem.get('title')).toBe('Failed: Retevis C62 / C2, flash');
 });
 
-test('the footer leads to the licences and credits, with the licence texts', async ({ page }) => {
+test('the site footer leads to the licences and credits, with the licence texts', async ({ page }) => {
   const problems: string[] = [];
   page.on('console', (m) => m.type() === 'error' && problems.push(m.text()));
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()} ${r.url()}`));
   await page.goto('');
-  // In a new tab, like every link of the flasher: a flash is never navigated away from.
-  const link = page.getByTestId('licences');
-  await expect(link).toHaveAttribute('target', '_blank');
-  await page.goto((await link.getAttribute('href'))!);
+  // The flasher's own footer no longer repeats it.
+  await expect(page.getByTestId('licences')).toHaveCount(0);
+  await page.getByTestId('site-licence').getByRole('link', { name: 'licences and credits' }).click();
   await expect(page.getByRole('heading', { name: 'Flasher licences and credits' })).toBeVisible();
   await expect(page.getByTestId('credit-radio_tool')).toContainText('GPL-3.0-or-later');
   await expect(page.getByTestId('credit-GD-77 firmware uploader')).toContainText('Roger Clark VK3KYY');

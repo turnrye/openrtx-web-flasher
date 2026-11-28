@@ -7,7 +7,6 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { backupStore, type BackupRecord } from './backup/store.ts';
-import { siteUrl } from './base.ts';
 import { browserEnv, type DeviceEnv, type WebApi } from './devices.ts';
 import {
   buildFromBundle,
@@ -31,7 +30,7 @@ import {
 } from './ui/BackupStep.tsx';
 import { BeforeYouStart } from './ui/BeforeYouStart.tsx';
 import { BuildFacts } from './ui/BuildFacts.tsx';
-import { formatDateTime, Notice, Out, Step, type StepMode } from './ui/common.tsx';
+import { formatDateTime, Notice, Step, type StepMode } from './ui/common.tsx';
 import { EnterStep } from './ui/EnterStep.tsx';
 import { FirmwareStep } from './ui/FirmwareStep.tsx';
 import { FlashStep } from './ui/FlashStep.tsx';
@@ -508,20 +507,21 @@ export function App() {
         />
       )}
 
-      <footer class="flex flex-col gap-1 pt-2 text-sm text-muted">
+      {/* The site's footer has the licences and credits; this keeps what is the flasher's own. */}
+      <footer class="pt-2 text-sm text-muted">
         <p>
-          Flashing firmware is at your own risk.{' '}
-          <ReportLink report={{ outcome: 'suggestion' }} label="Feedback" testid="feedback" plain />
-          {' · '}
-          <Out href={siteUrl('flash/credits/')} testid="licences">
-            Licences and credits
-          </Out>
+          {manifest?.generated && (
+            <>
+              Firmware copied from {manifest.source} on {formatDateTime(manifest.generated)}.{' '}
+            </>
+          )}
+          <ReportLink
+            report={{ outcome: 'suggestion' }}
+            label="Feedback on the flasher"
+            testid="feedback"
+            plain
+          />
         </p>
-        {manifest?.generated && (
-          <p>
-            Firmware copied from {manifest.source} on {formatDateTime(manifest.generated)}.
-          </p>
-        )}
       </footer>
     </div>
   );
