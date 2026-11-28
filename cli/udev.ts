@@ -11,7 +11,13 @@
  * covered here without being listed twice.
  */
 import { readFileSync } from 'node:fs';
-import { CS7000_ROBOT_FILTERS, DFU_FILTERS, GD77_FILTERS } from '../src/flash/run.ts';
+import { cs7000Robot } from '../src/drivers/cs7000-robot.ts';
+import { DFU_FILTERS } from '../src/drivers/shared.ts';
+import { GD77_HID_FILTER } from '../src/flash/gd77.ts';
+
+/** The robot mode bootloader's IDs, and the GD-77 family's. */
+const CS7000_ROBOT_FILTERS = cs7000Robot.filters;
+const GD77_FILTERS = [GD77_HID_FILTER];
 import { forCommandLine, RADIOS, type Radio } from '../src/radios.ts';
 
 /**

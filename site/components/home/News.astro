@@ -1,0 +1,25 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// The newest posts of the website's news, as cards.
+import { posts, shortDate } from '../../home.ts';
+
+interface Props {
+  count?: number;
+}
+
+const { count = 3 } = Astro.props;
+const shown = (await posts()).slice(0, count);
+---
+
+<ul class="not-content m-0 grid list-none grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-4 p-0" data-testid="home-news">
+  {
+    shown.map((p) => (
+      <li>
+        <a href={p.href} class="card card-border h-full gap-3 border-base-200 bg-[#0c0d0f] p-5 transition-colors hover:border-gray-400">
+          <span class="font-mono text-xs tracking-widest text-primary uppercase">{shortDate(p.date.toISOString())}</span>
+          <b class="text-lg leading-snug text-white">{p.title}</b>
+        </a>
+      </li>
+    ))
+  }
+</ul>

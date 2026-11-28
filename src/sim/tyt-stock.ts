@@ -15,6 +15,7 @@
  * dfuERROR. Memory contents are pseudo-random from a seed, so tests compare what a
  * backup read with `flash`, `spi` and `infoBlock()` byte for byte.
  */
+import { hexSpaced } from '../bytes.ts';
 import { SimStall, SimUsbDevice, type SimDfuStatus } from './usb.ts';
 
 const IDLE = 2;
@@ -94,7 +95,7 @@ function pseudoRandom(length: number, seed: number): Uint8Array {
 
 /** Bytes as "91 01". */
 function hexBytes(data: Uint8Array): string {
-  return [...data.subarray(0, 16)].map((b) => b.toString(16).padStart(2, '0')).join(' ');
+  return hexSpaced(data.subarray(0, 16));
 }
 
 /** Simulated TYT radio for the read-only backup, original firmware or bootloader. */
@@ -118,6 +119,8 @@ export class SimTytStock extends SimUsbDevice {
   shortSpiAt: number | null = null;
   /** Info codes whose `A2 ss` command stalls. */
   stallInfo: number[] = [];
+  /** When true, `91 01` stalls: the radio does not enter program mode. */
+  refuseProgramMode = false;
 
   private readonly usbCap: number;
   private readonly version: Uint8Array;
@@ -230,6 +233,7 @@ export class SimTytStock extends SimUsbDevice {
     } else if (data[1] === 0x01) {
       // The original firmware acts on 91 01 only below program mode; the bootloader takes it once.
       if (this.programMode && this.mode === 'bootloader') this.fail('91 01 twice');
+      if (this.refuseProgramMode) this.fail('91 01 refused');
       this.modeByte = PROGRAM_MODE;
     } else {
       if (!this.programMode) this.fail('91 05 below program mode');

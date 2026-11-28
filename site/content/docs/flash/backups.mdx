@@ -1,0 +1,17 @@
+---
+title: What a backup keeps
+description: For each radio, whether the flasher's backup holds everything, and what it cannot save yet.
+---
+
+import BackupGaps from '../../../components/BackupGaps.astro';
+
+Before it flashes, the flasher offers to back the radio up: a copy of what is on it, to
+go back to if you need to. For most radios that copy is not whole yet. This page says,
+radio by radio, what it leaves out and what that would cost you, so you can decide before
+you flash. It is written from the same record the flasher's backup step reads.
+
+<BackupGaps />
+
+The memory map behind this page, with sizes, the ranges read and how each read was
+checked, is in the flasher's
+[backup coverage notes](https://github.com/turnrye/openrtx-web-flasher/blob/main/docs/backup-coverage.md).

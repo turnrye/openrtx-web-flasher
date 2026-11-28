@@ -1,0 +1,27 @@
+---
+title: Radios the flasher supports
+description: Every radio the flasher can put OpenRTX on, how it reaches it, whether that was checked on a real radio, and what it can back up first.
+---
+
+import RadioTable from '../../../components/RadioTable.astro';
+
+This table is written from the flasher's own list of radios, so it is always what the
+tool does today. For what OpenRTX itself can do on each radio once it is flashed, see the
+[development status](../../dev_status/).
+
+<RadioTable />
+
+## Reading the table
+
+- **Flashing checked on a real radio** means somebody flashed that model from the web
+  page and the radio started OpenRTX. The [bench record](https://github.com/turnrye/openrtx-web-flasher/blob/main/docs/verification.md) has
+  each entry. Until a model is checked, the flasher asks before it writes to it.
+- **Backup before flashing** says whether the flasher can save everything the radio
+  holds. Most radios have gaps: a part of their memory that cannot be read yet. Each gap
+  is listed on [what a backup keeps](../backups/), with what would be lost and whether
+  it can be saved another way.
+- **Otherwise** is the usual tool for that radio, for browsers that cannot talk to it and
+  for getting a radio back when a flash went wrong.
+
+A radio that is not here may still run OpenRTX: the [hardware pages](../../hardware/hardware/)
+cover every port, and the [users' guide](../../user_guide/) has the manual way to flash.

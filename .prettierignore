@@ -1,4 +1,5 @@
 dist/
+.astro/
 public/
 node_modules/
 package-lock.json
@@ -8,3 +9,6 @@ test-results/
 LICENSE
 LICENSES/
 docs/screenshots/
+# Pages copied in at build time (scripts/import-docs.mjs). Pages written here are .mdx.
+site/content/docs/**/*.md
+site/content/docs/_media/

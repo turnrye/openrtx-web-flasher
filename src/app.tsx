@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 /**
- * The page: pick a radio, pick a firmware build, back the radio up, put it in flashing
- * mode, flash it. One step is open at a time; a finished step folds to its bar.
+ * The flasher: pick a radio, pick a firmware build, back the radio up, put it in
+ * flashing mode, flash it. One step is open at a time; a finished step folds to its bar.
+ * It is one page of the site (site/components/FlasherIsland.astro mounts it), so the
+ * site's header and the page's title are not its business.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { backupStore, type BackupRecord } from './backup/store.ts';
@@ -18,12 +20,22 @@ import { pickDevice, type PickedDevice, type Purpose } from './flash/run.ts';
 import { apiFor, backupFor, radioById, radioForFile, RADIOS, type Radio } from './radios.ts';
 import { experimental } from './settings.ts';
 import { BackupsSection } from './ui/BackupsSection.tsx';
-import { BackupStep, NO_BACKUP, shortId, type BackupState } from './ui/BackupStep.tsx';
-import { Step, type StepMode } from './ui/common.tsx';
+import {
+  BackupStep,
+  NO_BACKUP,
+  readThroughOriginal,
+  shortId,
+  startBackup,
+  type BackupState,
+} from './ui/BackupStep.tsx';
+import { BeforeYouStart } from './ui/BeforeYouStart.tsx';
+import { BuildFacts } from './ui/BuildFacts.tsx';
+import { formatDateTime, Notice, Step, type StepMode } from './ui/common.tsx';
 import { EnterStep } from './ui/EnterStep.tsx';
 import { FirmwareStep } from './ui/FirmwareStep.tsx';
 import { FlashStep } from './ui/FlashStep.tsx';
-import { RadioArt } from './ui/RadioArt.tsx';
+import { ProgressRail, type RailStep } from './ui/ProgressRail.tsx';
+import { RadioPicker } from './ui/RadioPicker.tsx';
 import { ReportLink } from './ui/Report.tsx';
 
 const APIS: WebApi[] = ['usb', 'serial', 'hid'];
@@ -37,11 +49,14 @@ type StepId = 'radio' | 'firmware' | 'backup' | 'enter' | 'flash';
 /** Which steps are done; the flash step never is. */
 type Done = Record<Exclude<StepId, 'flash'>, boolean>;
 
+/** The radio the address names (`#md3x0`), if it names one. */
+function radioInAddress(): Radio | undefined {
+  return radioById(location.hash.slice(1));
+}
+
 /** True when `radio` is backed up in normal mode, before it is put in flashing mode. */
 function backupFirst(radio: Radio | null): boolean {
-  if (!radio) return true;
-  const backup = backupFor(radio);
-  return backup.how === 'read' && backup.mode === 'normal';
+  return !radio || readThroughOriginal(radio);
 }
 
 /** The steps in the order they happen for `radio`. */
@@ -54,25 +69,40 @@ function stepsFor(radio: Radio | null): StepId[] {
   ];
 }
 
+/** Each step's name as the page shows it. */
+const TITLES: Record<StepId, string> = {
+  radio: 'Radio',
+  firmware: 'Firmware',
+  backup: 'Back up',
+  enter: 'Flashing mode',
+  flash: 'Flash',
+};
+
 /** The first step of `order` that is not done. */
 function firstUndone(order: StepId[], done: Done): StepId {
   return order.find((step) => step === 'flash' || !done[step]) ?? 'flash';
 }
 
-/** The whole page. */
+/** True when the backup step of `state` needs nothing more from the user. */
+function backedUp(state: BackupState): boolean {
+  return state.saved !== null || state.skipped || state.already !== null;
+}
+
+/** The flasher. */
 export function App() {
   const [env, setEnv] = useState<DeviceEnv | null>(SIM ? null : browserEnv());
-  const [radio, setRadio] = useState<Radio | null>(() => radioById(location.hash.slice(1)) ?? null);
+  const [radio, setRadio] = useState<Radio | null>(() => radioInAddress() ?? null);
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [build, setBuild] = useState<Build | null>(null);
   const [exp, setExp] = useState(experimental.get());
-  const [backup, setBackup] = useState<BackupState>(NO_BACKUP);
+  const [backup, setBackup] = useState<BackupState>(() => (radio ? startBackup(radio) : NO_BACKUP));
   const [entered, setEntered] = useState(false);
   const [open, setOpen] = useState<StepId>(radio ? 'firmware' : 'radio');
   const [busy, setBusy] = useState(false);
   const [dropError, setDropError] = useState('');
   const [records, setRecords] = useState<BackupRecord[]>([]);
-  const [unreleasedOpen, setUnreleasedOpen] = useState(false);
+  /** Counts the radios flashed in a row; a new count starts the flash step afresh. */
+  const [round, setRound] = useState(0);
   // The device stays picked for as long as the radio stays chosen and in the same mode,
   // so backing up in flashing mode and then flashing asks for it only once.
   const device = useRef<PickedDevice | null>(null);
@@ -91,7 +121,7 @@ export function App() {
   const done: Done = {
     radio: !!radio,
     firmware: !!file,
-    backup: backup.saved !== null || backup.skipped || backup.already !== null,
+    backup: backedUp(backup),
     enter: entered,
   };
 
@@ -109,23 +139,48 @@ export function App() {
   /** Chooses a radio and remembers it in the address, so the page can be linked. */
   function selectRadio(next: Radio, withBuild: Build | null = latest.current.build) {
     const same = next.id === latest.current.radio?.id;
+    const fresh = startBackup(next);
     if (!same) {
       device.current = null;
-      setBackup(NO_BACKUP);
+      setBackup(fresh);
       setEntered(false);
     }
     setRadio(next);
-    history.replaceState(null, '', `#${next.id}`);
+    if (location.hash !== `#${next.id}`) history.replaceState(null, '', `#${next.id}`);
     const now = latest.current.done;
     setOpen(
       firstUndone(stepsFor(next), {
         radio: true,
         firmware: !!fileForRadio(next, withBuild),
-        backup: same && now.backup,
+        backup: same ? now.backup : backedUp(fresh),
         enter: same && now.enter,
       }),
     );
   }
+
+  // The address carries the radio: a link, the back button or an edited address chooses it.
+  useEffect(() => {
+    const changed = () => {
+      const named = radioInAddress();
+      // Not while a radio is being read or written: that radio stays the radio.
+      if (named && named.id !== latest.current.radio?.id && !latest.current.busy) selectRadio(named);
+    };
+    window.addEventListener('hashchange', changed);
+    return () => window.removeEventListener('hashchange', changed);
+  }, []);
+
+  // Leaving the page in the middle of a read or a write asks first: a flash that is cut
+  // off can leave the radio without working firmware.
+  useEffect(() => {
+    if (!busy) return;
+    const ask = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Chrome asks only when this is set as well.
+      e.returnValue = true;
+    };
+    window.addEventListener('beforeunload', ask);
+    return () => window.removeEventListener('beforeunload', ask);
+  }, [busy]);
 
   /** Takes a build; when it has a file for the radio, the firmware step is done. */
   function chooseBuild(next: Build | null) {
@@ -209,6 +264,19 @@ export function App() {
     setOpen(firstUndone(order, { ...done, backup: true, enter: reenter ? false : done.enter }));
   };
 
+  /**
+   * Starts over for a second radio of the same model: it is a new radio, so its backup,
+   * its flashing mode and the device the browser was given are all asked for again. The
+   * radio model and the firmware stay.
+   */
+  const flashAnother = () => {
+    device.current = null;
+    setBackup(NO_BACKUP);
+    setEntered(false);
+    setRound((n) => n + 1);
+    setOpen(firstUndone(order, { ...done, backup: false, enter: false }));
+  };
+
   const dropDevice = useCallback(() => {
     device.current = null;
   }, []);
@@ -246,6 +314,20 @@ export function App() {
   /** Opens a step, unless the radio is being read or written. */
   const opener = (step: StepId) => (busy ? undefined : () => setOpen(step));
   const number = (step: StepId) => order.indexOf(step) + 1;
+  /** The steps as the progress rail shows them: the open one, those done, those to come. */
+  const rail: RailStep[] = order.map((step) => ({
+    id: step,
+    title: TITLES[step],
+    status:
+      step === open
+        ? 'current'
+        : step !== 'flash' && done[step] && mode(step) !== 'waiting'
+          ? 'done'
+          : 'upcoming',
+    onOpen: opener(step),
+  }));
+  /** True when there is nothing to back up because the radio already runs OpenRTX. */
+  const runsOpenrtx = backup.skipped && backup.runs === 'openrtx';
   /** How the backup step ended, for a report. Says nothing about what the backup holds. */
   const backupSummary = backup.saved
     ? backup.saved.manifest.parts.every((part) => part.complete)
@@ -253,11 +335,13 @@ export function App() {
       : 'saved, some parts incomplete'
     : backup.already
       ? 'taken earlier'
-      : backup.skipped
-        ? how?.how === 'copy'
-          ? 'copied by hand'
-          : 'skipped'
-        : undefined;
+      : runsOpenrtx
+        ? 'none: the radio already ran OpenRTX'
+        : backup.skipped
+          ? how?.how === 'copy'
+            ? 'copied by hand'
+            : 'skipped'
+          : undefined;
 
   const backupStep = (
     <Step
@@ -267,26 +351,28 @@ export function App() {
       id="step-backup"
       mode={mode('backup')}
       onOpen={opener('backup')}
+      hint={runsOpenrtx ? 'change' : undefined}
       state={
         backup.saved
           ? `saved · radio ${shortId(backup.saved.manifest.radioId)}`
           : backup.already
             ? `already backed up · radio ${shortId(backup.already.manifest.radioId)}`
-            : backup.skipped
-              ? how?.how === 'copy'
-                ? 'done'
-                : 'skipped'
-              : undefined
+            : runsOpenrtx
+              ? 'not needed: runs OpenRTX'
+              : backup.skipped
+                ? how?.how === 'copy'
+                  ? 'done'
+                  : 'skipped'
+                : undefined
       }
     >
       {radio && env && (
         <BackupStep
+          key={round}
           radio={radio}
           env={env}
           store={store}
           supported={supported}
-          allowed={allowed}
-          onExperimental={() => setExperimental(true)}
           getDevice={getDevice}
           dropDevice={dropDevice}
           state={backup}
@@ -295,6 +381,7 @@ export function App() {
           onStored={refreshRecords}
           onDone={backupDone}
           records={records}
+          onShowBackups={() => document.getElementById('backups')?.scrollIntoView({ block: 'start' })}
         />
       )}
     </Step>
@@ -322,146 +409,119 @@ export function App() {
     </Step>
   );
 
-  /** One radio in the picker. */
-  const card = (r: Radio) => (
-    <button
-      key={r.id}
-      type="button"
-      class="radio-card"
-      aria-pressed={radio?.id === r.id}
-      data-testid={`radio-${r.id}`}
-      onClick={() => selectRadio(r)}
-    >
-      <RadioArt id={r.id} />
-      <span class="name">{r.name}</span>
-      {r.aka && <span class="aka">{r.aka}</span>}
-    </button>
-  );
-
   return (
-    <div class="page">
-      <header class="topbar">
-        <img src="openrtx_logo.svg" alt="" />
-        <h1>OpenRTX Flasher</h1>
-        <span class="tag" title="Community prototype, not an official OpenRTX release">
-          prototype
-        </span>
-      </header>
-
-      <p class="intro">
-        Put <a href="https://openrtx.org">OpenRTX</a>, the free firmware for digital ham radios, on your
-        radio. Pick the radio, pick a version, and follow the steps.
+    <div class="flex flex-col gap-4 text-base leading-normal" data-testid="flasher">
+      <p class="max-w-[70ch] text-lg text-base-content/80">
+        Pick the radio, pick a version, and follow the steps: a backup first, then flashing mode, then the
+        flash. <span class="badge badge-outline badge-primary badge-sm align-middle">Prototype</span>{' '}
+        <span class="text-sm">A community project, not an official OpenRTX release.</span>
       </p>
 
       {env?.simulated && (
-        <p class="banner sim" data-testid="sim-banner">
+        <Notice tone="info" testid="sim-banner">
           Simulator: flashing goes to a simulated radio. Nothing is sent to real hardware.
-        </p>
+        </Notice>
       )}
       {!anyApi && (
-        <p class="banner" data-testid="no-apis">
+        <Notice tone="warning" testid="no-apis">
           This browser cannot talk to radios. Downloads and instructions work everywhere; to flash from the
           page, use Chrome or Edge on a computer.
-        </p>
+        </Notice>
       )}
 
-      <Step
-        num={1}
-        title="Radio"
-        id="step-radio"
-        mode={mode('radio')}
-        onOpen={opener('radio')}
-        state={radio?.name}
-        hint="change"
-      >
-        {/* Drawn once the builds are known, so no radio moves between the lists. */}
-        {manifest && (
-          <>
-            <div class="radios">{released.map(card)}</div>
-            {unreleased.length > 0 && (
-              <details
-                class="more unreleased"
-                data-testid="no-release"
-                open={unreleasedOpen || (radio !== null && unreleased.includes(radio))}
-                onToggle={(e) => setUnreleasedOpen(e.currentTarget.open)}
-              >
-                <summary>No release yet ({unreleased.length})</summary>
-                <p class="muted">
-                  OpenRTX has not released firmware for these radios yet. They take a development build, or a
-                  file you bring.
-                </p>
-                <div class="radios">{unreleased.map(card)}</div>
-              </details>
+      <BeforeYouStart />
+
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-8">
+        <ProgressRail steps={rail} />
+        <div class="flex min-w-0 flex-1 flex-col gap-3">
+          <Step
+            num={1}
+            title="Radio"
+            id="step-radio"
+            mode={mode('radio')}
+            onOpen={opener('radio')}
+            state={radio?.name}
+            hint="change"
+          >
+            {/* Drawn once the builds are known, so no radio moves between the lists. */}
+            {manifest && (
+              <RadioPicker
+                released={released}
+                unreleased={unreleased}
+                chosen={radio}
+                onChoose={selectRadio}
+              />
             )}
-          </>
-        )}
-      </Step>
+          </Step>
 
-      <Step
-        num={2}
-        title="Firmware"
-        id="step-firmware"
-        mode={mode('firmware')}
-        onOpen={opener('firmware')}
-        state={file ? build?.label : undefined}
-        hint="change"
-      >
-        {radio && <FirmwareStep radio={radio} manifest={manifest} build={build} onBuild={chooseBuild} />}
-        {dropError && (
-          <p class="panel error" role="alert" data-testid="drop-error">
-            {dropError}
-          </p>
-        )}
-      </Step>
+          <Step
+            num={2}
+            title="Firmware"
+            id="step-firmware"
+            mode={mode('firmware')}
+            onOpen={opener('firmware')}
+            state={file ? build?.label : undefined}
+            detail={file && build ? <BuildFacts build={build} testid="chosen-build" /> : undefined}
+            hint="change"
+          >
+            {radio && <FirmwareStep radio={radio} manifest={manifest} build={build} onBuild={chooseBuild} />}
+            {dropError && (
+              <Notice tone="warning" role="alert" testid="drop-error">
+                {dropError}
+              </Notice>
+            )}
+          </Step>
 
-      {backupFirst(radio) ? [backupStep, enterStep] : [enterStep, backupStep]}
+          {backupFirst(radio) ? [backupStep, enterStep] : [enterStep, backupStep]}
 
-      <Step num={5} title="Flash" id="step-flash" mode={mode('flash')} onOpen={opener('flash')}>
-        {radio && build && file && env && (
-          <FlashStep
-            radio={radio}
-            build={build}
-            file={file}
-            env={env}
-            supported={supported}
-            allowed={allowed}
-            onExperimental={setExperimental}
-            getDevice={getDevice}
-            dropDevice={dropDevice}
-            onBusy={setBusy}
-            backupSummary={backupSummary}
-          />
-        )}
-      </Step>
+          <Step num={5} title="Flash" id="step-flash" mode={mode('flash')} onOpen={opener('flash')}>
+            {radio && build && file && env && (
+              <FlashStep
+                key={round}
+                radio={radio}
+                build={build}
+                file={file}
+                env={env}
+                supported={supported}
+                allowed={allowed}
+                onExperimental={setExperimental}
+                getDevice={getDevice}
+                dropDevice={dropDevice}
+                onBusy={setBusy}
+                backupSummary={backupSummary}
+                radioId={backup.saved?.manifest.radioId ?? backup.already?.manifest.radioId}
+                onAnother={flashAnother}
+              />
+            )}
+          </Step>
+        </div>
+      </div>
 
       {records.length > 0 && (
-        <Step title="Backups" id="backups" mode="open">
-          <BackupsSection
-            store={store}
-            records={records}
-            onChanged={refreshRecords}
-            onRestore={(name) => void restore(name)}
-            busy={busy}
-          />
-        </Step>
+        <BackupsSection
+          store={store}
+          records={records}
+          onChanged={refreshRecords}
+          onRestore={(name) => void restore(name)}
+          busy={busy}
+        />
       )}
 
-      <footer>
+      {/* The site's footer has the licences and credits; this keeps what is the flasher's own. */}
+      <footer class="pt-2 text-sm text-muted">
         <p>
-          Community prototype for the <a href="https://openrtx.org">OpenRTX</a> project. Free software under
-          the GNU GPL v3 or later; <a href="https://github.com/turnrye/openrtx-web-flasher">source</a>,{' '}
-          <a href="licences.html" data-testid="licences">
-            licences and credits
-          </a>
-          . Flashing firmware is at your own risk.{' '}
-          <ReportLink report={{ outcome: 'suggestion' }} label="Feedback" testid="feedback" plain />.
+          {manifest?.generated && (
+            <>
+              Firmware copied from {manifest.source} on {formatDateTime(manifest.generated)}.{' '}
+            </>
+          )}
+          <ReportLink
+            report={{ outcome: 'suggestion' }}
+            label="Feedback on the flasher"
+            testid="feedback"
+            plain
+          />
         </p>
-        {manifest?.generated && (
-          <p>
-            Firmware copied from {manifest.source} on {new Date(manifest.generated).toLocaleString()}.
-          </p>
-        )}
-        <p data-testid="site-build">Build {__BUILD_ID__}.</p>
       </footer>
     </div>
   );

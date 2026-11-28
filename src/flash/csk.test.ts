@@ -3,7 +3,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { backupCsk, flashCsk, readCsk, readCskChipId, type CskOptions } from './csk.ts';
-import { quietContext, type Progress } from './types.ts';
+import { FlashError, quietContext, WrongRadioError, type Progress } from './types.ts';
 import { SimCsk6 } from '../sim/csk6.ts';
 
 const options: CskOptions = {
@@ -15,6 +15,25 @@ const md5 = (bytes: Uint8Array) => new Uint8Array(createHash('md5').update(bytes
 function sim(extra: Partial<ConstructorParameters<typeof SimCsk6>[0]> = {}) {
   const dev = new SimCsk6({ md5, ...extra });
   return { dev, port: dev as unknown as SerialPort };
+}
+
+/** How a promise ended, or 'pending' when it has not ended after `ms`: a hang must fail a test, not stall it. */
+async function outcome(run: Promise<unknown>, ms = 8000): Promise<unknown> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const pending = new Promise<string>((resolve) => {
+    timer = setTimeout(() => resolve('pending'), ms);
+  });
+  try {
+    return await Promise.race([
+      run.then(
+        () => 'resolved',
+        (e: unknown) => e,
+      ),
+      pending,
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 describe('cskburn (C62) over a simulated serial port', () => {
@@ -51,6 +70,77 @@ describe('cskburn (C62) over a simulated serial port', () => {
     const last = seen[seen.length - 1];
     expect(last).toEqual({ phase: 'done', done: app.length + dsp.length, total: app.length + dsp.length });
     expect(seen.filter((p) => p.phase === 'write').length).toBeGreaterThan(50);
+  });
+
+  it('refuses images that overlap before anything is sent', async () => {
+    const { dev, port } = sim();
+    // An application that has grown past 1 MiB, written after the DSP image as the page orders them.
+    const app = new Uint8Array(randomBytes(0x100000 + 4096));
+    const dsp = new Uint8Array(randomBytes(64 * 1024));
+    const attempt = flashCsk(
+      port,
+      [
+        { address: 0x100000, data: dsp },
+        { address: 0, data: app },
+      ],
+      quietContext(),
+      options,
+    );
+    await expect(attempt).rejects.toBeInstanceOf(FlashError);
+    await expect(attempt).rejects.toThrow(
+      'The image written at 0x0 (1052672 bytes) runs into the one written at 0x100000. Nothing was sent to the radio.',
+    );
+    expect(dev.opens).toEqual([]);
+    expect(dev.trace).toEqual([]);
+  });
+
+  it('writes images that only touch', async () => {
+    const { dev, port } = sim();
+    const first = new Uint8Array(randomBytes(0x2000));
+    const second = new Uint8Array(randomBytes(0x1000));
+    await flashCsk(
+      port,
+      [
+        { address: 0x2000, data: second },
+        { address: 0, data: first },
+      ],
+      quietContext(),
+      options,
+    );
+    expect(Buffer.compare(dev.flash.subarray(0, 0x2000), first)).toBe(0);
+    expect(Buffer.compare(dev.flash.subarray(0x2000, 0x3000), second)).toBe(0);
+  });
+
+  it('writes for one chip only when told which, however its ID is spelled', async () => {
+    const { dev, port } = sim();
+    const image = new Uint8Array(randomBytes(20 * 1024));
+    await flashCsk(port, [{ address: 0, data: image }], quietContext(), options, 'c620240900065701');
+    expect(Buffer.compare(dev.flash.subarray(0, image.length), image)).toBe(0);
+    // The ID is asked for before the flash is touched.
+    expect(dev.trace.join(', ')).toMatch(/CHIP_ID x1, FLASH_ID x1, FLASH_BEGIN x1/);
+  });
+
+  it('stops at the chip ID, before anything is erased or written, when it is another chip', async () => {
+    const { dev, port } = sim();
+    const before = dev.flash.slice();
+    const lines: string[] = [];
+    const image = new Uint8Array(randomBytes(20 * 1024));
+    const attempt = flashCsk(
+      port,
+      [{ address: 0, data: image }],
+      quietContext({ log: (l) => lines.push(l) }),
+      options,
+      'C620240900069999',
+    );
+    await expect(attempt).rejects.toBeInstanceOf(WrongRadioError);
+    await expect(attempt).rejects.toThrow(
+      'This backup is of another radio (ID ending 00069999); the one connected ends 00065701. Nothing was written to it.',
+    );
+    // cskburn goes on by itself for a moment; nothing it sends after the ID reaches the radio.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(dev.trace.at(-1)).toBe('CHIP_ID x1');
+    expect(Buffer.compare(dev.flash, before)).toBe(0);
+    expect(lines.at(-1)).toBe('chip-id: C620240900065701');
   });
 
   it('reopens the port for a faster burn baud', async () => {
@@ -140,4 +230,98 @@ describe('cskburn (C62) over a simulated serial port', () => {
     expect(result.chipId).toBe('C620240900065701');
     expect(Buffer.compare(result.data, dev.flash)).toBe(0);
   });
+
+  it('fails, and does not hang, when the serial port cannot be opened', async () => {
+    const { dev, port } = sim();
+    // Another program or tab has the port.
+    dev.open = () => Promise.reject(new DOMException('Failed to open serial port.', 'NetworkError'));
+    const app = new Uint8Array(randomBytes(40 * 1024));
+    const ended = await outcome(flashCsk(port, [{ address: 0, data: app }], quietContext(), options));
+    expect(ended).toBeInstanceOf(FlashError);
+    expect((ended as Error).message).toMatch(/serial port could not be opened.*Failed to open serial port/);
+    expect(dev.trace).toEqual([]);
+  }, 20000);
+
+  it('fails, and does not hang, when the port rejects a write part-way', async () => {
+    const { dev, port } = sim();
+    // The cable is pulled: from 60 KB on, every write is rejected.
+    let sent = 0;
+    const open = dev.open.bind(dev);
+    dev.open = async (serialOptions) => {
+      await open(serialOptions);
+      const inner = dev.writable!.getWriter();
+      dev.writable = new WritableStream<Uint8Array>({
+        async write(chunk) {
+          sent += chunk.length;
+          if (sent > 60 * 1024) throw new DOMException('The device has been lost.', 'NetworkError');
+          await inner.write(chunk);
+        },
+      });
+    };
+    const lines: string[] = [];
+    const app = new Uint8Array(randomBytes(200 * 1024));
+    const ended = await outcome(
+      flashCsk(port, [{ address: 0, data: app }], quietContext({ log: (l) => lines.push(l) }), options),
+    );
+    expect(ended).toBeInstanceOf(FlashError);
+    expect((ended as Error).message).toMatch(/connection to the radio was lost.*The device has been lost/);
+    // Cut off from the radio, cskburn reports errors of its own; none of them reaches the log.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(lines.join('\n')).not.toContain('ERROR');
+  }, 20000);
+
+  /**
+   * Makes the port's `readable` fail with `error` once, when `after` chunks have been read
+   * from it and none is waiting. Like Chrome, the port then offers a fresh stream, or with
+   * `gone` none at all.
+   */
+  function failingRead(dev: SimCsk6, error: DOMException, after: number, gone = false): void {
+    const open = dev.open.bind(dev);
+    dev.open = async (serialOptions) => {
+      await open(serialOptions);
+      const inner = dev.readable!.getReader();
+      let chunks = 0;
+      let failed = false;
+      /** A stream that passes the radio's bytes on. */
+      const passOn = (): ReadableStream<Uint8Array> =>
+        new ReadableStream<Uint8Array>({
+          pull: async (controller) => {
+            if (!failed && chunks >= after) {
+              failed = true;
+              dev.readable = gone ? null : passOn();
+              controller.error(error);
+              return;
+            }
+            const { value, done } = await inner.read();
+            if (done) return controller.close();
+            chunks++;
+            controller.enqueue(value);
+          },
+          cancel: () => inner.cancel(),
+        });
+      dev.readable = passOn();
+    };
+  }
+
+  it.each(['FramingError', 'BreakError', 'BufferOverrunError', 'ParityError'])(
+    'reads on after a %s, which Web Serial does not count as fatal',
+    async (name) => {
+      const { dev, port } = sim();
+      failingRead(dev, new DOMException('A read error the port recovers from.', name), 3);
+      const app = new Uint8Array(randomBytes(40 * 1024));
+      const ended = await outcome(flashCsk(port, [{ address: 0, data: app }], quietContext(), options));
+      expect(ended).toBe('resolved');
+      expect(Buffer.compare(dev.flash.subarray(0, app.length), app)).toBe(0);
+    },
+    20000,
+  );
+
+  it('ends the run when the port is lost while reading', async () => {
+    const { dev, port } = sim();
+    failingRead(dev, new DOMException('The device has been lost.', 'NetworkError'), 3, true);
+    const app = new Uint8Array(randomBytes(40 * 1024));
+    const ended = await outcome(flashCsk(port, [{ address: 0, data: app }], quietContext(), options));
+    expect(ended).toBeInstanceOf(FlashError);
+    expect((ended as Error).message).toMatch(/connection to the radio was lost.*The device has been lost/);
+  }, 20000);
 });

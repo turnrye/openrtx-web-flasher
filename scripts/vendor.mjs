@@ -7,6 +7,7 @@
  *   public/cskburn/             cskburn compiled to WebAssembly
  *   public/openrtx_logo.svg     the OpenRTX logo, editor metadata removed
  *   public/art/<radio>.svg      the radio drawings (scripts/art.mjs)
+ *   public/screens/<kind>.png   OpenRTX's own screen, colour and monochrome, for the home page
  *
  * Downloads, checkouts, the Emscripten toolchain and the compiled cskburn are kept in the
  * per-user cache (scripts/cache.mjs), so once they are there this script needs no
@@ -25,6 +26,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildArt } from './art.mjs';
 import { cacheDir, download, retry } from './cache.mjs';
+import { importDocs } from './import-docs.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const cache = cacheDir();
@@ -33,6 +35,8 @@ const pins = JSON.parse(readFileSync(pinsPath, 'utf8'));
 const update = process.argv.includes('--update');
 const noWasm = process.argv.includes('--no-wasm');
 const glue = join(root, 'tools', 'cskburn-wasm');
+/** Files of the old website, copied into public/ as they are: not pages, but addresses in use. */
+const WEBSITE_FILES = ['emulator', '.well-known/matrix/server', 'favicon.ico'];
 
 /** cskburn sources compiled in; the USB backend and its libusb are left out. */
 const CSKBURN_SOURCES = [
@@ -251,5 +255,28 @@ if (update) writeFileSync(pinsPath, JSON.stringify(pins, null, 2) + '\n');
 buildLogo(files['openrtx_logo.svg']);
 const drawn = buildArt({ files, out: join(root, 'public', 'art') });
 console.log(`art: ${drawn.length} drawings in public/art/`);
+// The same screen captures, as they are, for the home page's screen frames.
+mkdirSync(join(root, 'public', 'screens'), { recursive: true });
+cpSync(files['screen-colour.png'], join(root, 'public', 'screens', 'colour.png'));
+cpSync(files['screen-mono.png'], join(root, 'public', 'screens', 'mono.png'));
+// The website's pages, for the site that Astro builds around the flasher.
+const website = await checkout('website', pins.website.repo, pins.website.commit);
+const docs = importDocs({
+  source: website,
+  out: join(root, 'site', 'content', 'docs'),
+  edit: pins.website.edit,
+});
+console.log(`website: ${docs.pages} pages and ${docs.media} pictures in ${docs.out}/`);
+// The website's files that are not pages but have addresses in use, so this site can
+// take over openrtx.org: the emulator, Matrix's delegation for the domain, and the icon
+// browsers ask for at the top.
+for (const path of WEBSITE_FILES) {
+  if (!existsSync(join(website, path))) throw new Error(`website: ${path} is missing at the pinned commit`);
+  rmSync(join(root, 'public', path), { recursive: true, force: true });
+  cpSync(join(website, path), join(root, 'public', path), { recursive: true });
+}
+console.log(`website: ${WEBSITE_FILES.join(', ')} in public/`);
+// The flasher's own notes in docs/ are for whoever works on it: they stay there, read
+// on the forge, and are not pages of the site.
 if (noWasm) console.log('cskburn: skipped (--no-wasm)');
 else await buildCskburn();

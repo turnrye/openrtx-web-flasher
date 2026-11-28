@@ -1,0 +1,48 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// The radios with firmware in the newest OpenRTX release, each leading to the flasher,
+// with what each needs for M17. Drawn with the flasher's drawings until each radio has
+// a photo.
+import { m17Label } from '../../../src/radios.ts';
+import { inRelease, radios, top } from '../../home.ts';
+
+/** Radios that do M17 as they come first, then those that need a mod, then the rest. */
+const ORDER = { good: 0, mod: 1, none: 2 };
+const shown = radios
+  .filter((r) => inRelease(r))
+  .sort((a, b) => ORDER[m17Label(a).tone] - ORDER[m17Label(b).tone]);
+---
+
+<ul class="not-content m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-4 p-0" data-testid="home-radios">
+  {
+    shown.map((radio) => {
+      const m17 = m17Label(radio);
+      return (
+        <li>
+          <a
+            href={`${top}flash/#${radio.id}`}
+            class="card card-border h-full overflow-hidden border-base-200 bg-[#0c0d0f] transition-colors hover:border-gray-400"
+            data-testid={`home-radio-${radio.id}`}
+          >
+            <span class="dot-grid flex h-48 items-center justify-center border-b border-base-200">
+              <img src={`${top}art/${radio.id}.svg`} alt="" class="h-40 max-w-[80%] object-contain" loading="lazy" />
+            </span>
+            <span class="flex flex-col gap-1.5 p-4">
+              <b class="text-base leading-snug text-white">{radio.name}</b>
+              {radio.aka && <span class="text-sm text-gray-400">{radio.aka}</span>}
+              <span
+                class:list={[
+                  'font-mono text-xs tracking-wider uppercase',
+                  m17.tone === 'good' ? 'text-success' : m17.tone === 'mod' ? 'text-warning' : 'text-gray-400',
+                ]}
+                data-testid="home-m17"
+              >
+                {m17.tone === 'good' ? '●' : '○'} {m17.text}
+              </span>
+            </span>
+          </a>
+        </li>
+      );
+    })
+  }
+</ul>

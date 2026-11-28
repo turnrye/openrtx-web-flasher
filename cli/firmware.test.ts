@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { zipSync } from 'fflate';
 import { afterAll, describe, expect, it } from 'vitest';
-import { fileForRadio } from '../src/firmware/builds.ts';
+import { companionsFor, fileForRadio } from '../src/firmware/builds.ts';
 import { radioById } from '../src/radios.ts';
 import { developmentRun, fileData, releases, resolveBuild, type Source } from './firmware.ts';
 import { folder, removeFolders } from './test-support.ts';
@@ -126,6 +126,35 @@ describe('firmware for the command line', () => {
     expect((await releases(undefined, source)).map((b) => b.label)).toEqual(['v0.4.5', 'v0.4.4']);
   });
 
+  it('keeps the second image a radio needs from a release, though it is not named openrtx_', async () => {
+    const tag = 'v9.9.9';
+    const dsp = new Uint8Array(randomBytes(300));
+    const base = `https://github.com/${REPO}/releases/download/${tag}`;
+    const withCompanion = {
+      ...release(tag),
+      assets: [
+        {
+          name: `openrtx_c62_${tag}.bin`,
+          size: firmware.length,
+          browser_download_url: `${base}/openrtx_c62_${tag}.bin`,
+        },
+        { name: 'dsp_firmware.bin', size: dsp.length, browser_download_url: `${base}/dsp_firmware.bin` },
+        { name: 'notes.txt', size: 5, browser_download_url: `${base}/notes.txt` },
+        { name: `openrtx_linux_${tag}`, size: 5, browser_download_url: `${base}/openrtx_linux_${tag}` },
+      ],
+    };
+    const { source } = fakeWeb({
+      [`${API}/repos/${REPO}/releases?`]: [withCompanion],
+      [`${base}/dsp_firmware.bin`]: dsp,
+    });
+    const build = await resolveBuild('release', c62, undefined, source);
+    expect(build.files.map((f) => f.name)).toEqual([`openrtx_c62_${tag}.bin`, 'dsp_firmware.bin']);
+    // It is found as the C62's DSP image, and its bytes can be had.
+    const [companion] = companionsFor(c62, build);
+    expect(companion.found?.name).toBe('dsp_firmware.bin');
+    expect(Buffer.compare(await fileData(build, companion.found!, source), dsp)).toBe(0);
+  });
+
   it('refuses a release file that is not the one GitHub described', async () => {
     const routes = {
       [`${API}/repos/${REPO}/releases/tags/v0.4.5`]: release('v0.4.5'),
@@ -245,6 +274,29 @@ describe('firmware for the command line', () => {
     // A cached file that no longer matches is downloaded again, not trusted.
     writeFileSync(join(kept, 'releases', 'v0.4.5', 'openrtx_mod17_v0.4.5.bin'), 'damaged');
     expect(Buffer.compare(await fileData(released, released.files[0], source), firmware)).toBe(0);
+  });
+
+  it('uses a download that arrived and checked out even when the cache cannot keep it', async () => {
+    // Where the cache should be there is a file: nothing can be written under it, by anyone.
+    const blocked = join(folder(), 'taken');
+    writeFileSync(blocked, 'not a folder');
+    const routes = {
+      [`${API}/repos/${REPO}/releases?`]: [release('v0.4.5')],
+      [`https://github.com/${REPO}/releases/download/v0.4.5/`]: firmware,
+      ...ciRoutes(),
+    };
+    const { source, said } = fakeWeb(routes, { cache: join(blocked, 'cache') });
+    const build = await resolveBuild('release', mod17, undefined, source);
+    const data = await fileData(build, fileForRadio(mod17, build)!, source);
+    expect(Buffer.compare(data, firmware)).toBe(0);
+    expect(said).toHaveLength(2);
+    expect(said[1]).toMatch(
+      /^The download could not be kept in the cache \(.*taken.*\); it is used all the same\.$/,
+    );
+
+    // A CI zip goes the same way.
+    const ci = await resolveBuild('588', c62, undefined, source);
+    expect(fileForRadio(c62, ci)!.name).toBe('zephyr.bin');
   });
 
   it('takes a file on this computer: firmware, or a CI zip', async () => {

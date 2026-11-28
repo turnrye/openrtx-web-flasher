@@ -29,8 +29,12 @@ function unused(): Promise<never> {
   return Promise.reject(new Error('this test must not load that package'));
 }
 
-/** A fake `usb` package that has `devices` connected and records the filters it was asked with. */
-function usbWith(devices: USBDevice[]): UsbModule & { filters: USBDeviceFilter[][] } {
+/**
+ * A fake `usb` package that has `devices` connected and records the filters it was asked
+ * with. With `libusb` it is the older package the USB drives go through (usb 2.19): that
+ * one turns whatever `devicesFound` throws into its own "No device selected".
+ */
+function usbWith(devices: USBDevice[], libusb = false): UsbModule & { filters: USBDeviceFilter[][] } {
   const filters: USBDeviceFilter[][] = [];
   /** The package's WebUSB class: it leaves the choice to `devicesFound`, as the real one does. */
   class WebUSB {
@@ -44,7 +48,8 @@ function usbWith(devices: USBDevice[]): UsbModule & { filters: USBDeviceFilter[]
       const found = devices.filter((d) =>
         request.filters.some((f) => f.vendorId === d.vendorId && f.productId === d.productId),
       );
-      const picked = found.length > 0 ? await this.options.devicesFound(found) : undefined;
+      const choice = found.length > 0 ? this.options.devicesFound(found) : Promise.resolve(undefined);
+      const picked = await (libusb ? choice.catch(() => undefined) : choice);
       if (!picked) throw Object.assign(new Error('No device selected.'), { name: 'NotFoundError' });
       return picked;
     }
@@ -215,6 +220,26 @@ describe('devices of this computer for the page’s flashers', () => {
     );
     await expect(pickDevice(mod17, nodeEnv(modules({ usb }), fakeIo([null])))).rejects.toThrow(
       'No device was chosen.',
+    );
+  });
+
+  it('keeps the chooser’s own words when the package would call every failure "not found"', async () => {
+    const drives = [new SimCs7000Robot(), new SimCs7000Robot()] as unknown as USBDevice[];
+    /** The libusb package with two radios in robot mode connected. */
+    const usb = () => Promise.resolve(usbWith(drives, true));
+
+    const guess = pickDevice(cs7000p, nodeEnv(modules({ usb }), fakeIo()));
+    await expect(guess).rejects.toBeInstanceOf(FlashError);
+    await expect(guess).rejects.toThrow(
+      /^More than one USB device fits \(.*\)\. Unplug the others and try again\.$/,
+    );
+    await expect(pickDevice(cs7000p, nodeEnv(modules({ usb }), fakeIo([null])))).rejects.toThrow(
+      'No device was chosen.',
+    );
+    // With none connected it is still "not found".
+    const none = nodeEnv(modules({ usb: () => Promise.resolve(usbWith([], true)) }), fakeIo());
+    await expect(pickDevice(cs7000p, none)).rejects.toThrow(
+      'No Connect Systems CS7000-M17 Plus was found on USB. Connect it and put it in flashing mode.',
     );
   });
 

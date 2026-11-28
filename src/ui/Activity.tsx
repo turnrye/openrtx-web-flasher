@@ -83,14 +83,20 @@ export function Console({ lines, running }: { lines: string[]; running: boolean 
   }, [lines.length]);
   if (lines.length === 0 && !running) return null;
   return (
-    <details class="log" data-testid="console">
-      <summary>
+    <details class="collapse-arrow collapse border border-separator bg-base-200" data-testid="console">
+      <summary class="collapse-title min-h-0 py-2 text-sm text-base-content/80">
         Console
         {lines.length > 0 && ` (${lines.length} ${lines.length === 1 ? 'line' : 'lines'})`}
       </summary>
-      <pre ref={pre} data-testid="log">
-        {lines.length > 0 ? lines.join('\n') : 'Nothing yet.'}
-      </pre>
+      <div class="collapse-content">
+        <pre
+          ref={pre}
+          class="max-h-64 overflow-auto font-mono text-sm break-words whitespace-pre-wrap"
+          data-testid="log"
+        >
+          {lines.length > 0 ? lines.join('\n') : 'Nothing yet.'}
+        </pre>
+      </div>
     </details>
   );
 }
@@ -125,15 +131,15 @@ export function Activity({ progress, running, failed, log, startedAt }: Props) {
 
   const last = log.at(-1);
   return (
-    <div class="activity">
+    <div class="flex flex-col gap-2">
       <Meter progress={progress} failed={failed} active={running} />
       {running && (
         <>
-          <p class="activity-now" role="status" data-testid="activity">
+          <p class="tabular-nums" role="status" data-testid="activity">
             {describe(progress, now - startedAt, now - phase.current.at, phase.current.done)}
           </p>
           {last && (
-            <p class="muted small activity-last" data-testid="activity-last">
+            <p class="truncate text-sm text-muted" data-testid="activity-last">
               {last}
             </p>
           )}

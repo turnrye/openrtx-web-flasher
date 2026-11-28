@@ -6,6 +6,10 @@
 #   ci/build.sh                 vendor, check, mirror firmware, test, build
 #   MIRROR=skip ci/build.sh     the same without contacting GitHub for firmware
 #
+# SITE_BASE is the path the site will be served under (ci/site-base.sh works it out in
+# CI). Without it the build is for /sub/path/, which is what the browser tests serve
+# locally: a sub-path, so that a link that ignores the base fails.
+#
 # GITHUB_TOKEN, when set, is only used to raise GitHub's API rate limit for the mirror.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -17,6 +21,11 @@ npm ci
 
 step "Fetch and build pinned third-party parts (vendor.json)"
 node scripts/vendor.mjs
+
+# The site's code reads the pages through astro:content, whose types Astro writes from
+# them: lint and the type check need those, and a fresh checkout has none.
+step "Astro's content types"
+npx astro sync
 
 step "Format, lint and types"
 npm run format:check
@@ -32,6 +41,15 @@ else
   node scripts/mirror-firmware.mjs --out public --strict
 fi
 
+# Stars and contributors for the home page; offline when the mirror is skipped. It
+# falls back to its last copy and never stops the build.
+step "Contributors for the home page"
+if [ "${MIRROR:-strict}" = "skip" ]; then
+  node scripts/community.mjs --out public --offline
+else
+  node scripts/community.mjs --out public
+fi
+
 step "Unit tests"
 # With firmware mirrored, the flasher tests also parse and flash real release files.
 releases="public/firmware/v0.4.5"
@@ -43,7 +61,9 @@ fi
 bash ci/test-publish.sh
 
 step "Build"
-npx vite build
+export SITE_BASE="${SITE_BASE:-/sub/path/}"
+echo "for ${SITE_BASE}"
+npx astro build
 # GitHub Pages must not run the files through Jekyll.
 touch dist/.nojekyll
 echo "Built dist/: $(find dist -type f | wc -l | tr -d ' ') files, $(du -sh dist | cut -f1)"

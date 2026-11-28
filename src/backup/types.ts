@@ -40,13 +40,6 @@ export type IdKind =
   /** No ID can be read: a checksum of the radio's factory calibration stands in. */
   | 'fingerprint';
 
-/** How much to read. */
-export type BackupScope =
-  /** What matters most and reads fast: codeplug, settings, factory data. */
-  | 'quick'
-  /** Everything the radio will give. */
-  | 'all';
-
 /** The result of reading a radio. */
 export interface RadioBackup {
   /** Identifies this unit, or null when nothing could be read that does. */
@@ -57,6 +50,8 @@ export interface RadioBackup {
   parts: BackupPart[];
   /** Things worth telling the user, e.g. "the radio gave only the first megabyte". */
   notes: string[];
+  /** True when what was read is a simulated radio, not a real one. */
+  simulated?: boolean;
 }
 
 /** Total bytes in a backup's parts. */

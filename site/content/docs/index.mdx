@@ -1,0 +1,122 @@
+---
+title: OpenRTX
+description: Free and open source firmware for digital amateur radios.
+template: splash
+editUrl: false
+eyebrow: Free your radio · GPL-3.0 · M17 built in
+hero:
+  title: Firmware that frees your radio
+  tagline: OpenRTX is community-built firmware for handhelds and mobiles from TYT, Connect Systems, Retevis and others. It is open source, and it brings M17 digital voice to the radio you already own.
+  image:
+    file: ./_media/ttwrplus.jpg
+    alt: A LILYGO T-TWR Plus running OpenRTX, its screen showing the OpenRTX logo
+  actions:
+    - text: Flash your radio
+      link: flash/
+      icon: right-arrow
+      variant: primary
+    - text: Is my radio supported?
+      link: flash/radios/
+      variant: secondary
+    - text: Read the users' guide
+      link: user_guide/
+      variant: minimal
+---
+
+import { LinkCard, CardGrid } from '@astrojs/starlight/components';
+import BenchPhotos from '../../components/home/BenchPhotos.astro';
+import CommunityLinks from '../../components/home/CommunityLinks.astro';
+import Feature from '../../components/home/Feature.astro';
+import News from '../../components/home/News.astro';
+import People from '../../components/home/People.astro';
+import RadioRail from '../../components/home/RadioRail.astro';
+import Section from '../../components/home/Section.astro';
+import Stats from '../../components/home/Stats.astro';
+
+<Stats />
+
+<Section
+  eyebrow="Runs on"
+  title="Radios that are supported today"
+  lead="These radios have a supported release."
+  testid="home-runs-on"
+>
+  <RadioRail />
+</Section>
+
+<Feature
+  eyebrow="M17 digital voice"
+  title="Talk M17 on a radio that never had it"
+  media="screen-mono"
+  more={{ text: 'What works on each radio', href: 'dev_status/' }}
+>
+  M17 receive and transmit work on the MD-UV380, the UHF MD-380, Module 17 and both CS7000-M17 models, and
+  receive on the VHF MD-380. Some TYT radios need a [small hardware mod](m17/m17/#hardware-modifications)
+  first.
+</Feature>
+
+<Feature
+  eyebrow="Open all the way down"
+  title="Firmware you can read, change and build"
+  media={{
+    photos: [
+      { file: 'md380.jpg', alt: 'An MD-380 main board' },
+      { file: 'md380_mod_after.jpg', alt: 'An MD-380 board after the M17 mod' },
+    ],
+  }}
+  reverse
+  more={{ text: "Developers' guide", href: 'developers_guide/' }}
+>
+  OpenRTX is GPL-3.0 and written in the open on GitHub. Every change is built by CI, and the [flasher](flash/)
+  can put any of those builds on a radio, so trying a change takes minutes.
+</Feature>
+
+<Section
+  eyebrow="The people"
+  title="Made by hams, for hams"
+  band
+  more={{ text: 'Get in touch', href: 'get_in_touch/' }}
+>
+  <People />
+</Section>
+
+<Section
+  eyebrow="From the bench"
+  title="Radios people have opened up"
+  more={{ text: 'How to send a photo', href: 'contribute/' }}
+>
+  <BenchPhotos />
+</Section>
+
+<Section title="News" more={{ text: 'All posts', href: 'posts/' }}>
+  <News />
+</Section>
+
+<Section eyebrow="Join in" title="Come and talk" band>
+  <CommunityLinks />
+</Section>
+
+## For developers
+
+<CardGrid>
+  <LinkCard
+    title="Developers' guide"
+    href="developers_guide/"
+    description="How the firmware is put together."
+  />
+  <LinkCard
+    title="Compiling"
+    href="compiling/"
+    description="Build OpenRTX for a radio or for your computer."
+  />
+  <LinkCard
+    title="Help with this site"
+    href="contribute/"
+    description="Fix a page or send a photo, no programming."
+  />
+  <LinkCard
+    title="Source code"
+    href="https://github.com/OpenRTX/OpenRTX"
+    description="The firmware on GitHub, GPL-3.0-or-later."
+  />
+</CardGrid>

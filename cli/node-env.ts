@@ -8,7 +8,8 @@
  */
 import { accessSync, constants } from 'node:fs';
 import type { DeviceEnv } from '../src/devices.ts';
-import { FlashError } from '../src/flash/types.ts';
+import { driverFor } from '../src/drivers/index.ts';
+import { FlashError, messageOf } from '../src/flash/types.ts';
 import { backupFor, type Radio } from '../src/radios.ts';
 import type { Io } from './io.ts';
 import { NodeHidDevice, type HidInfo, type HidModule } from './node-hid.ts';
@@ -203,7 +204,7 @@ function takingOver(device: USBDevice): USBDevice {
       try {
         await device.claimInterface(interfaceNumber);
       } catch (e) {
-        throw new FlashError(driveRefusal(e instanceof Error ? e.message : String(e)));
+        throw new FlashError(driveRefusal(messageOf(e)));
       }
       const inner = (device as unknown as { device?: LibusbDevice }).device;
       for (const iface of inner?.interfaces ?? []) {
@@ -267,16 +268,26 @@ export function nodeEnv(modules: NodeModules, io: Io, port?: string, platform = 
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 
     usb: async (filters, radio, purpose) => {
-      const drive = radio.method === 'cs7000-robot';
+      const driver = driverFor(radio);
+      // A USB drive is held by the operating system: it needs the library that can take it over.
+      const drive = driver.api === 'usb' && driver.massStorage === true;
       const usbModule = await modules.usb(drive ? 'storage' : undefined);
+      /** Why no device was picked from the ones that fit, when that is why there is none. */
+      let unpicked: Error | undefined;
       const usb = new usbModule.WebUSB({
-        devicesFound: (devices) => pickOne(devices, usbLabel, 'USB device', io),
+        devicesFound: (devices) =>
+          pickOne(devices, usbLabel, 'USB device', io).catch((e: unknown) => {
+            unpicked = e instanceof Error ? e : new Error(String(e));
+            throw unpicked;
+          }),
       });
       try {
         const device = await usb.requestDevice({ filters });
         if (platform === 'linux' && !drive) await tryOpening(device, radio);
         return drive ? takingOver(device) : patient(device);
       } catch (e) {
+        // The libusb package calls whatever the choice threw "not found"; the reason is kept here.
+        if (unpicked) throw unpicked;
         if (e instanceof Error && e.name === 'NotFoundError') {
           const why = platform === 'linux' ? whyLeftOut(usbModule, filters) : null;
           if (why && isRefusal(why)) throw new NoAccessError(noAccess(radio, why));

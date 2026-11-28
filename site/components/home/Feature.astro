@@ -1,0 +1,60 @@
+---
+// SPDX-License-Identifier: GPL-3.0-or-later
+// A row of the home page: words on one side (written in the page, so they are edited
+// there) and a picture on the other: the radio's screen, or photos from the website.
+import { Image } from 'astro:assets';
+import { photo } from '../../home.ts';
+import ScreenFrame from './ScreenFrame.astro';
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  /** A screen (`screen-colour`, `screen-mono`) or photos from the website, by file name. */
+  media: 'screen-colour' | 'screen-mono' | { photos: { file: string; alt: string }[] };
+  /** Picture first on wide screens. */
+  reverse?: boolean;
+  more?: { text: string; href: string };
+}
+
+const { eyebrow, title, media, reverse = false, more } = Astro.props;
+const photos =
+  typeof media === 'object'
+    ? media.photos.flatMap((p) => {
+        const image = photo(p.file);
+        return image ? [{ image, alt: p.alt }] : [];
+      })
+    : [];
+---
+
+<section
+  class:list={['not-content flex flex-wrap items-center gap-12 py-12', reverse && 'flex-row-reverse']}
+  data-testid="home-feature"
+>
+  <div class="flex min-w-0 flex-[1_1_24rem] flex-col gap-4">
+    <p class="font-mono text-sm tracking-widest text-primary uppercase">{eyebrow}</p>
+    <h2 class="text-3xl leading-tight font-bold text-white">{title}</h2>
+    <div class="text-lg leading-relaxed text-gray-300 [&_a]:text-primary [&_a]:underline"><slot /></div>
+    {
+      more && (
+        <a class="link link-primary no-underline" href={more.href}>
+          {more.text} →
+        </a>
+      )
+    }
+  </div>
+  <div class="flex min-w-0 flex-[1_1_24rem] justify-center">
+    {media === 'screen-colour' && <ScreenFrame kind="colour" scale={2} />}
+    {media === 'screen-mono' && <ScreenFrame kind="mono" scale={3} />}
+    {
+      photos.length > 0 && (
+        <div class="grid w-full grid-cols-2 gap-4">
+          {photos.map((p) => (
+            <div class="corner-ticks m-2">
+              <Image src={p.image} alt={p.alt} widths={[320, 640]} sizes="(min-width: 72rem) 16rem, 45vw" class="block h-64 w-full rounded object-cover" />
+            </div>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</section>

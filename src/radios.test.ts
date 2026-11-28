@@ -1,6 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { describe, expect, it } from 'vitest';
-import { backupFor, filesFor, forCommandLine, pickFile, radioById, radioForFile, RADIOS } from './radios.ts';
+import {
+  backupFor,
+  checksFor,
+  filesFor,
+  forCommandLine,
+  m17Label,
+  MAKERS,
+  makersOf,
+  pickFile,
+  radioById,
+  radioForFile,
+  RADIOS,
+  type Maker,
+} from './radios.ts';
 
 const RELEASE = [
   'openrtx_cs7000p_v0.4.5.bin',
@@ -85,8 +98,18 @@ describe('radio catalogue', () => {
       const backup = backupFor(r);
       return backup.how === 'read' && backup.unchecked;
     }).map((r) => r.id);
-    // Of the TYT radios only the MD-9600 read was measured; the RT-950 Pro's never was.
-    expect(unchecked).toEqual(['md3x0', 'mduv3x0', 'dm1701', 'rt950pro']);
+    // docs/bench-notes.md: only the C62 has been read from the page on a real radio.
+    expect(unchecked).toEqual(
+      RADIOS.filter((r) => r.method !== 'uf2-copy' && r.id !== 'c62').map((r) => r.id),
+    );
+    // Each of those reads names what it leaves out, or leaves nothing out.
+    const silent = RADIOS.filter((r) => {
+      const backup = backupFor(r);
+      return backup.how === 'read' && !backup.notIncluded;
+    }).map((r) => r.id);
+    expect(silent).toEqual(['mod17', 'c62']);
+    const rt4d = backupFor(radioById('rt4d')!);
+    expect(rt4d.how === 'read' && rt4d.time).toBe('about half an hour');
     const c62 = backupFor(radioById('c62')!);
     expect(c62.how === 'read' && c62.endsFlashingMode).toBe(true);
   });
@@ -116,9 +139,66 @@ describe('radio catalogue', () => {
     expect(RADIOS.filter((r) => r.flashNotes).map((r) => r.id)).toEqual(['cs7000p', 'rt950pro', 'ttwrplus']);
   });
 
+  it('names the maker of every radio, as its name does', () => {
+    for (const radio of RADIOS) {
+      expect(radio.maker, radio.id).toBeTruthy();
+      // Module 17 is named for the protocol, not its maker.
+      if (radio.id !== 'mod17') {
+        expect(radio.name.toLowerCase().startsWith(radio.maker.toLowerCase()), radio.id).toBe(true);
+      }
+    }
+    expect(radioById('mod17')!.maker).toBe('M17 Project');
+  });
+
+  it('lists every maker an "also sold as" name names, so the maker filter finds rebadged radios', () => {
+    for (const radio of RADIOS) {
+      // Each part of `aka` ("Retevis RT3 / RT8") that starts with a maker's name.
+      const named = (radio.aka ?? '')
+        .split('/')
+        .map((part) => MAKERS.find((m) => part.trim().startsWith(`${m} `)))
+        .filter((m): m is Maker => m !== undefined);
+      expect([...new Set(named)], radio.id).toEqual(radio.alsoSoldBy ?? []);
+    }
+    expect(makersOf(radioById('mduv3x0')!)).toEqual(['Tytera', 'Retevis']);
+    expect(makersOf(radioById('c62')!)).toEqual(['Retevis']);
+  });
+
+  it('says for every radio what it needs for M17, with a guide for each mod', () => {
+    for (const radio of RADIOS) {
+      expect(['built-in', 'mod', 'none', 'not-yet', 'unknown'], radio.id).toContain(radio.m17.need);
+      expect(Boolean(radio.m17.guide), radio.id).toBe(radio.m17.need === 'mod');
+    }
+    // The website's M17 page names these; the GD-77 family has no M17 at all.
+    const by = (need: string) => RADIOS.filter((r) => r.m17.need === need).map((r) => r.id);
+    expect(by('built-in')).toEqual(['cs7000', 'cs7000p', 'mod17']);
+    expect(by('mod')).toEqual(['md3x0', 'mduv3x0', 'dm1701']);
+    expect(by('none')).toEqual(['gd77', 'dm1801']);
+    expect(m17Label(radioById('md3x0')!)).toEqual({
+      text: 'M17 after a hardware mod (UHF; VHF models receive only)',
+      tone: 'mod',
+    });
+  });
+
   it('marks as checked only the radios with a line in the bench record', () => {
     // docs/verification.md has the evidence for each of these.
-    expect(RADIOS.filter((r) => r.verified).map((r) => r.id)).toEqual(['cs7000', 'c62']);
+    expect(RADIOS.filter((r) => r.verified).map((r) => r.id)).toEqual(['mduv3x0', 'dm1701', 'cs7000', 'c62']);
+    // The command line's checks are a record of their own, by what was done.
+    const withCommandLine = (purpose: 'flash' | 'backup') =>
+      RADIOS.filter((r) => checksFor(r).commandLine[purpose]).map((r) => r.id);
+    expect(withCommandLine('flash')).toEqual(['mduv3x0', 'md9600', 'cs7000p']);
+    expect(withCommandLine('backup')).toEqual([]);
+  });
+
+  it('gives the page’s check and the command line’s side by side, and neither for the other', () => {
+    for (const radio of RADIOS) {
+      const checks = checksFor(radio);
+      expect(checks.page, radio.id).toBe(radio.verified);
+      expect(checks.commandLine, radio.id).toEqual(radio.commandLineVerified ?? {});
+      // The command line flashes the radio as `forCommandLine` gives it; the record stays with it.
+      expect(checksFor(forCommandLine(radio)), radio.id).toEqual(checks);
+    }
+    expect(checksFor(radioById('md9600')!)).toMatchObject({ page: null, commandLine: { flash: {} } });
+    expect(checksFor(radioById('c62')!)).toMatchObject({ page: { date: '2026-11-21' }, commandLine: {} });
   });
 
   it('names the two states of a radio the same way for every radio', () => {

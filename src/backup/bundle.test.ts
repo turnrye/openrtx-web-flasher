@@ -70,6 +70,27 @@ describe('backup bundles', () => {
     });
   });
 
+  it('keeps a part that could not be read: empty, marked incomplete, with its note', async () => {
+    const backup = stockBackup();
+    backup.parts.push({
+      file: 'calibration.bin',
+      kind: 'info',
+      address: 0x7c00,
+      data: new Uint8Array(0),
+      complete: false,
+      note: 'The radio refused the request.',
+    });
+    const { zip, manifest } = await makeBundle(RADIO, backup, 'original-firmware', WHEN);
+    expect(manifest.parts.at(-1)).toMatchObject({ file: 'calibration.bin', size: 0, complete: false });
+    const opened = await openBundle(zip);
+    const part = opened.parts.at(-1)!;
+    expect(part.file).toBe('calibration.bin');
+    expect(part.data).toHaveLength(0);
+    expect(part.complete).toBe(false);
+    expect(part.note).toBe('The radio refused the request.');
+    expect(opened.manifest.parts.every((p) => p.complete)).toBe(false);
+  });
+
   it('names a backup without an ID by radio and date only', async () => {
     const { name } = await makeBundle(
       RADIO,
